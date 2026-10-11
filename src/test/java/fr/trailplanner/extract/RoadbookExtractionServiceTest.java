@@ -29,9 +29,9 @@ class RoadbookExtractionServiceTest {
     @Test
     void remetAuPropreLaReponseDuModele() {
         ExtractedRoadbook raw = new ExtractedRoadbook(" Raid ", "23/10/2026", "9h", Arrays.asList(
-                new ExtractedRoadbook.Point("1P", " Départ ", 0.0, 0.0, 0.0, "", null, "none"),
+                new ExtractedRoadbook.Point("1P", " Départ ", 0.0, 0.0, 0.0, "", null, "none", null),
                 null,
-                new ExtractedRoadbook.Point(" 3 ", "Molières", 20.0, 772.0, null, "Vend 23 12h30", "n/a", "ravito")),
+                new ExtractedRoadbook.Point(" 3 ", "Molières", 20.0, 772.0, null, "Vend 23 12h30", "n/a", "ravito", null)),
                 Arrays.asList("  À vérifier  ", " ", null));
 
         ExtractedRoadbook clean = RoadbookExtractionService.normalize(raw);
@@ -40,8 +40,8 @@ class RoadbookExtractionServiceTest {
         assertNull(clean.startDate(), "date hors format ISO : le coureur la saisira");
         assertEquals("09:00", clean.startTime());
         assertEquals(2, clean.checkpoints().size());
-        assertEquals(new ExtractedRoadbook.Point("1P", "Départ", 0.0, 0.0, 0.0, null, null, "NONE"), clean.checkpoints().get(0));
-        assertEquals(new ExtractedRoadbook.Point("3", "Molières", 20.0, 772.0, null, "12h30", null, "NONE"), clean.checkpoints().get(1));
+        assertEquals(new ExtractedRoadbook.Point("1P", "Départ", 0.0, 0.0, 0.0, null, null, "NONE", null), clean.checkpoints().get(0));
+        assertEquals(new ExtractedRoadbook.Point("3", "Molières", 20.0, 772.0, null, "12h30", null, "NONE", null), clean.checkpoints().get(1));
         assertEquals(List.of("À vérifier"), clean.warnings());
     }
 
@@ -49,12 +49,19 @@ class RoadbookExtractionServiceTest {
     void sansDPlusAuxPointsOnConseilleLaTraceGpx() {
         // Roadbook type livret : distances et barrières, mais le dénivelé n'existe que dans le dessin du profil.
         ExtractedRoadbook clean = RoadbookExtractionService.normalize(new ExtractedRoadbook("Malène", null, "06:40", List.of(
-                new ExtractedRoadbook.Point("1", "Départ La Malène", 0.0, null, null, null, null, "NONE"),
-                new ExtractedRoadbook.Point("2", "La Caxe", 10.0, null, null, null, null, "LIGHT")), List.of()));
+                new ExtractedRoadbook.Point("1", "Départ La Malène", 0.0, null, null, null, null, "NONE", null),
+                new ExtractedRoadbook.Point("2", "La Caxe", 10.0, null, null, null, null, "LIGHT", null)), List.of()));
 
         assertEquals(0.0, clean.checkpoints().get(0).gainM(), "D+ nul au départ, même non écrit");
         assertEquals(1, clean.warnings().size());
         assertTrue(clean.warnings().get(0).contains("ajoute la trace GPX"), clean.warnings().get(0));
+    }
+
+    @Test
+    void neGardeQueLesServicesConnusDansUnOrdreStable() {
+        assertEquals(List.of("WATER", "COLD_FOOD", "ASSISTANCE"),
+                RoadbookExtractionService.services(List.of("assistance", "COLD_FOOD", "WIFI", " water ", "WATER")));
+        assertEquals(List.of(), RoadbookExtractionService.services(List.of()));
     }
 
     @Test

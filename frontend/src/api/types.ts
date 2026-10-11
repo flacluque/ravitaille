@@ -2,6 +2,8 @@
 // Dates : LocalDateTime ISO sans fuseau ("2026-10-23T14:30:00"), durées : ISO-8601 ("PT8H48M").
 
 export type AidLevel = 'NONE' | 'LIGHT' | 'FULL';
+/** Ce qu'on trouve à un point (fr.trailplanner.model.Service). */
+export type Service = 'WATER' | 'DRINKS' | 'COLD_FOOD' | 'HOT_FOOD' | 'DROP_BAG' | 'ASSISTANCE';
 export type ElevationSource = 'AUTO' | 'ROADBOOK' | 'TRACK';
 export type CutoffStatus = 'NONE' | 'OK' | 'TIGHT' | 'MISSED';
 
@@ -14,6 +16,7 @@ export interface Checkpoint {
   cutoffIn: string | null;
   cutoffOut: string | null;
   aid: AidLevel;
+  services: Service[];
 }
 
 export interface RaceDefinition {
@@ -154,6 +157,7 @@ export interface ExtractedRoadbook {
     cutoffIn: string | null;
     cutoffOut: string | null;
     aid: AidLevel;
+    services: Service[];
   }[];
   warnings: string[];
 }

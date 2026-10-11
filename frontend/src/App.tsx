@@ -263,7 +263,7 @@ export function App() {
           )}
 
           {plan && course && (
-            <PassageTable plan={plan} markers={course.markers} onHover={setHoverKm} />
+            <PassageTable plan={plan} markers={course.markers} services={course.race.checkpoints.map((c) => c.services ?? [])} onHover={setHoverKm} />
           )}
 
           {plans.length > 1 && <CompareTable plans={plans} />}

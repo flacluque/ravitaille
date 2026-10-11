@@ -12,6 +12,7 @@ import {
   type RaceDraft,
 } from '../lib/draft';
 import { formatClock } from '../lib/format';
+import { aidFor, SERVICE_INFO, SERVICES, sortServices } from '../lib/services';
 
 interface Props {
   draft: RaceDraft;
@@ -194,6 +195,22 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
                   <button type="button" className="ghost icon-btn" onClick={() => removeCp(cp.id)} aria-label={`Supprimer ${cp.name || `le point ${i + 1}`}`}>✕</button>
                 )}
               </span>
+              <div className="cp-services" role="group" aria-label={`Services à ${cp.name || `point ${i + 1}`}`}>
+                {SERVICES.map((service) => {
+                  const on = cp.services.includes(service);
+                  return (
+                    <button key={service} type="button" className={`chip ${on ? 'on' : ''}`} aria-pressed={on}
+                      title={SERVICE_INFO[service].label}
+                      onClick={() => {
+                        const services = sortServices(on ? cp.services.filter((x) => x !== service) : [...cp.services, service]);
+                        // Le type d'arrêt suit les services (repas chaud = base de vie) ; il reste modifiable à la main.
+                        setCp(cp.id, { services, aid: i === 0 || i === draft.checkpoints.length - 1 ? cp.aid : aidFor(services) });
+                      }}>
+                      <span aria-hidden>{SERVICE_INFO[service].icon}</span> {SERVICE_INFO[service].short}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           );
         })}

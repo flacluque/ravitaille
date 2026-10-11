@@ -42,6 +42,14 @@ public final class RoadbookPrompt {
             "LIGHT" pour un ravito classique (eau, boissons, solides froids, éventuellement boisson \
             chaude) ; "FULL" pour un gros ravito (solides chauds / repas chaud, base de vie, sac de \
             délestage).
+            - services : ce que le roadbook indique pour ce point, souvent en icônes ou en colonnes \
+            cochées. "WATER" : eau, boissons froides, goutte d'eau, gourde. "DRINKS" : autres boissons \
+            (boissons froides sucrées, cola, isotonique, boissons chaudes, thé, soupe). "COLD_FOOD" : \
+            solides froids, nourriture, fourchette et couteau. "HOT_FOOD" : solides chauds, repas chaud. \
+            "DROP_BAG" : sac de délestage. "ASSISTANCE" : assistance personnelle autorisée (une croix, \
+            un panneau d'interdiction ou « interdite » veut dire non autorisée : ne la mets pas). \
+            « Boissons froides » donne à la fois "WATER" et "DRINKS". Liste vide si rien n'est indiqué. \
+            Recopie aussi les services du départ et de l'arrivée s'ils sont indiqués.
 
             Pour la course :
             - name : le nom de la course, avec l'année si elle est indiquée.
@@ -57,9 +65,9 @@ public final class RoadbookPrompt {
             {"name": "Trail des Crêtes 2026", "startDate": null, "startTime": "08:00",
              "checkpoints": [
               {"code": "1", "name": "Départ Place du Village", "km": 0, "gainM": 0, "lossM": 0,
-               "cutoffIn": null, "cutoffOut": null, "aid": "NONE"},
+               "cutoffIn": null, "cutoffOut": null, "aid": "NONE", "services": []},
               {"code": "2", "name": "Col du Loup", "km": 12.5, "gainM": 640, "lossM": 210,
-               "cutoffIn": "11h30", "cutoffOut": null, "aid": "LIGHT"}],
+               "cutoffIn": "11h30", "cutoffOut": null, "aid": "LIGHT", "services": ["WATER", "COLD_FOOD"]}],
              "warnings": []}
             """;
 
@@ -116,9 +124,13 @@ public final class RoadbookPrompt {
                       "lossM": { "type": ["number", "null"] },
                       "cutoffIn": { "type": ["string", "null"] },
                       "cutoffOut": { "type": ["string", "null"] },
-                      "aid": { "type": "string", "enum": ["NONE", "LIGHT", "FULL"] }
+                      "aid": { "type": "string", "enum": ["NONE", "LIGHT", "FULL"] },
+                      "services": {
+                        "type": "array",
+                        "items": { "type": "string", "enum": ["WATER", "DRINKS", "COLD_FOOD", "HOT_FOOD", "DROP_BAG", "ASSISTANCE"] }
+                      }
                     },
-                    "required": ["code", "name", "km", "gainM", "lossM", "cutoffIn", "cutoffOut", "aid"]
+                    "required": ["code", "name", "km", "gainM", "lossM", "cutoffIn", "cutoffOut", "aid", "services"]
                   }
                 },
                 "warnings": { "type": "array", "items": { "type": "string" } }

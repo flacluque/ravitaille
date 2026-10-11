@@ -92,6 +92,8 @@ class RoadbookExtractionEvalTest {
                     {"barrière entrée", clock(e.cutoffIn()), a == null ? null : a.cutoffIn()},
                     {"barrière sortie", clock(e.cutoffOut()), a == null ? null : a.cutoffOut()},
                     {"type", e.aid().name(), a == null ? null : a.aid()},
+                    {"services", e.services().stream().map(Enum::name).sorted().toList(),
+                            a == null ? null : a.services().stream().sorted().toList()},
             };
             for (Object[] f : fields) {
                 total++;

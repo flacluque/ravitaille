@@ -1,4 +1,4 @@
-import type { RaceDraft } from '../lib/draft';
+import { normalizeDraft, type RaceDraft } from '../lib/draft';
 
 // Ta course reste dans ton navigateur : le roadbook (petit) dans localStorage, la trace GPX
 // (plusieurs Mo, au-delà du quota de localStorage) dans IndexedDB.
@@ -16,7 +16,7 @@ export function saveDraft(draft: RaceDraft): void {
 export function loadDraft(): RaceDraft | null {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
-    return raw ? (JSON.parse(raw) as RaceDraft) : null;
+    return raw ? normalizeDraft(JSON.parse(raw) as RaceDraft) : null;
   } catch {
     return null;
   }

@@ -1,4 +1,5 @@
-import type { AidLevel, Checkpoint, ExtractedRoadbook, RaceDefinition } from '../api/types';
+import type { AidLevel, Checkpoint, ExtractedRoadbook, RaceDefinition, Service } from '../api/types';
+import { defaultServices, sortServices } from './services';
 
 /**
  * Roadbook tel que saisi dans l'éditeur : des champs texte, validés et convertis en RaceDefinition
@@ -19,6 +20,7 @@ export interface DraftCheckpoint {
   cutoffIn: string;
   cutoffOut: string;
   aid: AidLevel;
+  services: Service[];
 }
 
 export interface RaceDraft {
@@ -47,7 +49,19 @@ export function newId(): string {
 }
 
 export function emptyCheckpoint(partial: Partial<DraftCheckpoint> = {}): DraftCheckpoint {
-  return { id: newId(), code: '', name: '', km: '', gainM: '', lossM: '', cutoffIn: '', cutoffOut: '', aid: 'LIGHT', ...partial };
+  const aid = partial.aid ?? 'LIGHT';
+  return {
+    id: newId(), code: '', name: '', km: '', gainM: '', lossM: '', cutoffIn: '', cutoffOut: '',
+    aid, services: defaultServices(aid), ...partial,
+  };
+}
+
+/** Brouillon gardé dans le navigateur par une version sans services : on les déduit du type d'arrêt. */
+export function normalizeDraft(draft: RaceDraft): RaceDraft {
+  return {
+    ...draft,
+    checkpoints: draft.checkpoints.map((cp) => ({ ...cp, services: cp.services ?? defaultServices(cp.aid) })),
+  };
 }
 
 export function emptyDraft(): RaceDraft {
@@ -181,6 +195,7 @@ export function draftToRace(draft: RaceDraft, hasTrack: boolean): DraftResult {
       cutoffIn: resolved[i].cutoffIn,
       cutoffOut: resolved[i].cutoffOut,
       aid: cp.aid,
+      services: sortServices(cp.services),
     });
   });
 
@@ -222,6 +237,7 @@ export function raceToDraft(race: RaceDefinition, night?: Partial<NightWindow>):
       cutoffIn: clockText(cp.cutoffIn),
       cutoffOut: clockText(cp.cutoffOut),
       aid: cp.aid ?? 'NONE',
+      services: cp.services ?? defaultServices(cp.aid ?? 'NONE'),
     })),
   };
 }
@@ -285,6 +301,7 @@ export function extractedToDraft(extracted: ExtractedRoadbook, current: RaceDraf
         cutoffIn: cp.cutoffIn ?? '',
         cutoffOut: cp.cutoffOut ?? '',
         aid: cp.aid ?? 'NONE',
+        services: cp.services ?? [],
       })),
     },
   };

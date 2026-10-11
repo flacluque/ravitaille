@@ -31,8 +31,8 @@ class RoadbookControllerTest {
     @Test
     void litUneImageEtRenvoieLeRoadbookNormalise() throws Exception {
         when(extractor.extract(any(RoadbookDocument.class))).thenReturn(new ExtractedRoadbook("Raid", null, "9h00", List.of(
-                new ExtractedRoadbook.Point("1P", "Départ", 0.0, null, null, null, null, "NONE"),
-                new ExtractedRoadbook.Point("3", "Molières", 20.0, null, null, "Vend 23 12h30", null, "LIGHT")), List.of()));
+                new ExtractedRoadbook.Point("1P", "Départ", 0.0, null, null, null, null, "NONE", null),
+                new ExtractedRoadbook.Point("3", "Molières", 20.0, null, null, "Vend 23 12h30", null, "LIGHT", null)), List.of()));
 
         mvc.perform(multipart("/api/roadbooks/extract").file(image()))
                 .andExpect(status().isOk())

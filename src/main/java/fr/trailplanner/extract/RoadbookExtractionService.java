@@ -1,8 +1,9 @@
 package fr.trailplanner.extract;
 
-import org.springframework.stereotype.Service;
+import fr.trailplanner.model.Service;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -12,7 +13,7 @@ import java.util.regex.Pattern;
  * Lecture d'un roadbook : préparation du fichier, appel de l'IA configurée, puis remise au propre
  * de sa réponse (les modèles, surtout locaux, prennent des libertés avec les formats demandés).
  */
-@Service
+@org.springframework.stereotype.Service   // nom qualifié : Service désigne ici les services d'un ravito
 public class RoadbookExtractionService {
 
     private final RoadbookExtractor extractor;
@@ -50,7 +51,7 @@ public class RoadbookExtractionService {
                     trim(p.code()), trim(p.name()), p.km(),
                     start && p.gainM() == null ? Double.valueOf(0) : p.gainM(),
                     start && p.lossM() == null ? Double.valueOf(0) : p.lossM(),
-                    clock(p.cutoffIn()), clock(p.cutoffOut()), aid(p.aid())));
+                    clock(p.cutoffIn()), clock(p.cutoffOut()), aid(p.aid()), services(p.services())));
         }
         if (points.isEmpty()) {
             warnings.add("Aucun point de passage n'a été reconnu : vérifie que le fichier est bien le roadbook.");
@@ -92,6 +93,19 @@ public class RoadbookExtractionService {
             case "LIGHT", "FULL" -> aid.trim().toUpperCase(Locale.ROOT);
             default -> "NONE";
         };
+    }
+
+    /** Services connus, sans doublon, dans l'ordre de l'enum (le modèle peut en inventer ou en répéter). */
+    static List<String> services(List<String> raw) {
+        EnumSet<Service> set = EnumSet.noneOf(Service.class);
+        for (String s : raw) {
+            try {
+                set.add(Service.valueOf(s.trim().toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException ignored) {
+                // service inconnu : ignoré
+            }
+        }
+        return set.stream().map(Enum::name).toList();
     }
 
     private static String trim(String s) {
