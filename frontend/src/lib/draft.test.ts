@@ -178,6 +178,15 @@ describe('roadbook lu par l\'IA', () => {
     expect(warnings[1]).toBe('Date de départ non lue sur le roadbook : indique-la (heure lue : 09h00).');
   });
 
+  it('ne garde pas le nom de la course précédente quand le nom est illisible', () => {
+    const current = { ...emptyDraft(), name: 'Raid des Troubadours 2026', start: '2026-10-23T07:00' };
+    const noName = { ...extracted, name: null };
+    const fromFile = extractedToDraft(noName, current, 'roadbook_bogomiles-2026.jpg');
+    expect(fromFile.draft.name).toBe('Roadbook bogomiles 2026');
+    expect(fromFile.warnings).toContain('Nom de la course non lu sur le roadbook : « Roadbook bogomiles 2026 » vient du nom du fichier, corrige-le si besoin.');
+    expect(extractedToDraft(noName, current).draft.name).toBe('');
+  });
+
   it("sait si l'éditeur contient déjà une saisie", () => {
     expect(hasContent(emptyDraft())).toBe(false);
     expect(hasContent({ ...emptyDraft(), name: 'Mon trail' })).toBe(true);

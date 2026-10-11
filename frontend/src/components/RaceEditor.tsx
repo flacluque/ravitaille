@@ -85,7 +85,7 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
     if (hasContent(draft) && !window.confirm('Remplacer la saisie actuelle par la lecture de ce roadbook ?')) return;
     const extracted = await scan.read(file);
     if (extracted) {
-      const { draft: next, warnings } = extractedToDraft(extracted, draft);
+      const { draft: next, warnings } = extractedToDraft(extracted, draft, file.name);
       scan.setWarnings(warnings);
       onChange(next);
       onLoaded(next);

@@ -177,7 +177,8 @@ export function App() {
     && computedSignature !== draftSignature(draft, gpx);
   // Saisie d'une autre course (nouveau roadbook pas encore calculable) : l'ancien plan n'a plus
   // rien à faire à l'écran, même grisé.
-  const otherRace = stale && !!course && draft.name.trim() !== '' && draft.name.trim() !== course.race.name;
+  const otherRace = stale && !!course && draft.name.trim() !== course.race.name;
+  const draftName = draft.name.trim() || 'Ta nouvelle course';
   // Services de chaque point (déduits du type d'arrêt pour un plan gardé par une ancienne version).
   const services = useMemo(
     () => course?.race.checkpoints.map((c) => c.services ?? defaultServices(c.aid)) ?? [],
@@ -215,7 +216,7 @@ export function App() {
         </div>
         {otherRace ? (
           <div className="race-title">
-            <h1>{draft.name.trim()}</h1>
+            <h1>{draftName}</h1>
             <p>Plan à calculer</p>
           </div>
         ) : course && (
@@ -293,7 +294,7 @@ export function App() {
 
           {otherRace ? (
             <div className="banner warn stale-banner" role="status">
-              Le plan de « {draft.name.trim()} » n'est pas encore calculé :
+              Le plan de « {draftName} » n'est pas encore calculé :
               {' '}{draftErrors.length ? 'complète la saisie ci-dessus (voir les erreurs)' : 'clique sur « Calculer mon plan »'}.
             </div>
           ) : stale && course && (

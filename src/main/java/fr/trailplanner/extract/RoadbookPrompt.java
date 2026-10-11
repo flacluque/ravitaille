@@ -52,7 +52,8 @@ public final class RoadbookPrompt {
             Recopie aussi les services du départ et de l'arrivée s'ils sont indiqués.
 
             Pour la course :
-            - name : le nom de la course, avec l'année si elle est indiquée.
+            - name : le nom de la course, avec l'année si elle est indiquée. Cherche-le dans le titre, \
+            le logo ou l'en-tête ; null seulement s'il n'apparaît nulle part.
             - startTime : l'heure de départ au format "09:00". S'il y a plusieurs vagues, la première, \
             et cite les vagues dans warnings.
             - startDate : la date de départ au format "2026-10-23", seulement si le jour, le mois et \

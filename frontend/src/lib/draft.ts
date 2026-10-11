@@ -272,8 +272,18 @@ export function draftToFile(draft: RaceDraft): string | null {
  * Roadbook lu par l'IA → brouillon de l'éditeur. Ce qui n'a pas été lu (date, plage de nuit) est
  * repris de la saisie en cours ; les points à vérifier s'ajoutent aux remarques de l'IA.
  */
-export function extractedToDraft(extracted: ExtractedRoadbook, current: RaceDraft): { draft: RaceDraft; warnings: string[] } {
+export function extractedToDraft(extracted: ExtractedRoadbook, current: RaceDraft, fileName = ''):
+  { draft: RaceDraft; warnings: string[] } {
   const warnings = [...extracted.warnings];
+  // Nom non lu : surtout ne pas garder celui de la course précédente, le plan d'une autre course
+  // s'afficherait sous son nom. On part du nom du fichier.
+  let name = extracted.name?.trim() ?? '';
+  if (!name) {
+    name = nameFromFile(fileName);
+    warnings.push(name
+      ? `Nom de la course non lu sur le roadbook : « ${name} » vient du nom du fichier, corrige-le si besoin.`
+      : 'Nom de la course non lu sur le roadbook : indique-le.');
+  }
   const currentDate = /^\d{4}-\d{2}-\d{2}/.exec(current.start)?.[0] ?? null;
   const currentTime = /T(\d{2}:\d{2})/.exec(current.start)?.[1] ?? null;
   const date = extracted.startDate ?? currentDate;
@@ -287,7 +297,7 @@ export function extractedToDraft(extracted: ExtractedRoadbook, current: RaceDraf
   return {
     warnings,
     draft: {
-      name: extracted.name ?? current.name,
+      name,
       start: date && time ? `${date}T${time}` : '',
       nightStart: current.nightStart,
       nightEnd: current.nightEnd,
@@ -305,6 +315,12 @@ export function extractedToDraft(extracted: ExtractedRoadbook, current: RaceDraf
       })),
     },
   };
+}
+
+/** "roadbook_bogomiles-2026.jpg" → "Roadbook bogomiles 2026". */
+function nameFromFile(fileName: string): string {
+  const base = fileName.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return base ? base[0].toUpperCase() + base.slice(1) : '';
 }
 
 /** Vrai si l'éditeur contient déjà une saisie (au-delà du brouillon vide) : on demande avant d'écraser. */
