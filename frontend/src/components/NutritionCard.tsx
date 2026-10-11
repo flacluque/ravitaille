@@ -165,7 +165,7 @@ function ProfileEditor({ profile, onChange }: { profile: NutritionProfile; onCha
           <input inputMode="numeric" value={profile.flasks} onChange={(e) => set({ flasks: Math.max(1, Math.round(num(e.target.value))) })} /></label>
         <label><span>Contenance (ml)</span>
           <input inputMode="numeric" value={profile.flaskMl} onChange={(e) => set({ flaskMl: Math.max(100, num(e.target.value)) })} /></label>
-        <label><span>Dont de boisson</span>
+        <label><span>Dont de boisson énergétique</span>
           <input inputMode="numeric" value={profile.drinkFlasks} onChange={(e) => set({ drinkFlasks: Math.min(profile.flasks, Math.round(num(e.target.value))) })} /></label>
       </div>
       <label className="check">
