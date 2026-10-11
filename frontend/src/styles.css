@@ -372,7 +372,8 @@ tbody tr:hover { background: var(--surface-2); }
   font: inherit; width: 100%; min-width: 0; padding: 6px 8px; border-radius: 8px;
   border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
 }
-.profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin: 10px 0; }
+/* Alignés par le bas : un libellé sur deux lignes ne décale pas son champ. */
+.profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); align-items: end; gap: 8px; margin: 10px 0; }
 .profile-grid label { display: flex; flex-direction: column; gap: 3px; font-size: 0.8rem; font-weight: 500; }
 .check { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
 .check input { width: auto; }
