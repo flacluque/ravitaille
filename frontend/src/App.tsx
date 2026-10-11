@@ -5,6 +5,7 @@ import type { ElevationSource, Reference } from './api/types';
 import { CompareTable } from './components/CompareTable';
 import { CourseMap } from './components/CourseMap';
 import { ElevationProfile } from './components/ElevationProfile';
+import { Legend } from './components/Legend';
 import { PassageTable } from './components/PassageTable';
 import { RaceEditor } from './components/RaceEditor';
 import { ReferenceForm } from './components/ReferenceForm';
@@ -271,6 +272,7 @@ export function App() {
           {status.kind === 'loading' && !shown && mode === 'demo' && <p className="muted">Calcul en cours…</p>}
         </section>
       </main>
+      <Legend />
     </div>
   );
 }

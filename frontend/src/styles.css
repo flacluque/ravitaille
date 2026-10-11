@@ -332,3 +332,33 @@ tbody tr:hover { background: var(--surface-2); }
 @media (max-width: 1100px) {
   .cp-services { margin: 2px 0 0; }
 }
+
+/* ---------- Légende (toujours visible) ---------- */
+.app { padding-bottom: 64px; }   /* la barre de légende ne cache pas le bas de la page */
+.legend {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 24px;
+  padding: 8px 48px 8px 20px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(6px);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 8px rgb(0 0 0 / 0.05);
+  font-size: 0.8rem;
+}
+.legend-group { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.legend-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.legend-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.legend .short { display: none; }
+.legend-close { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 2px 8px; }
+.legend-pill {
+  position: fixed; right: 12px; bottom: 12px; z-index: 1000;
+  padding: 6px 12px; border-radius: 999px; font-size: 0.8rem;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+}
+@media (max-width: 860px) {
+  .app { padding-bottom: 80px; }
+  .legend { padding: 6px 40px 6px 12px; gap: 4px 14px; font-size: 0.74rem; }
+  .legend .long { display: none; }
+  .legend .short { display: inline; }
+}
