@@ -2,6 +2,7 @@ package fr.trailplanner.report;
 
 import fr.trailplanner.engine.CheckpointEta;
 import fr.trailplanner.engine.RacePlan;
+import fr.trailplanner.engine.ReferenceInsight;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -48,6 +49,13 @@ public final class TextReport {
                     margin == null ? "" : (margin.isNegative() ? "-" : "") + hm(margin.abs()) + flag(e.status())));
         }
         sb.append("(* barrière en sortie de ravito)\n");
+        if (plan.references().size() > 1) {
+            sb.append("Références (poids, arrivée prédite par chacune seule) :\n");
+            for (ReferenceInsight r : plan.references()) {
+                sb.append(String.format(Locale.FRANCE, "  %-28s %3.0f %%  %s%n", cut(r.label(), 28),
+                        r.weight() * 100, day(r.predictedFinish())));
+            }
+        }
         for (String w : plan.warnings()) {
             sb.append("⚠ ").append(w).append('\n');
         }

@@ -6,7 +6,11 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/** Plan de course complet pour un scénario. */
+/**
+ * Plan de course complet pour un scénario.
+ *
+ * @param references ce que prédit chaque référence seule, et son poids dans ce plan
+ */
 public record RacePlan(
         String raceName,
         Scenario scenario,
@@ -20,5 +24,6 @@ public record RacePlan(
         Duration totalStops,
         Duration nightDuration,
         List<CheckpointEta> checkpoints,
-        List<String> warnings) {
+        List<String> warnings,
+        List<ReferenceInsight> references) {
 }

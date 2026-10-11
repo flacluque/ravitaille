@@ -20,7 +20,7 @@ function plan(checkpoints: CheckpointEta[]): RacePlan {
   return {
     raceName: 'Test', elevationSource: 'ROADBOOK', totalDistanceKm: 0, totalGainM: 0, totalEffortKm: 0,
     scenario: { name: 'Réaliste', paceFactor: 1, fatigueExponent: 1.07, nightFactor: 1.1, lightStopMinutes: 4, fullStopMinutes: 15 },
-    start: '', finish: '', totalDuration: 'PT0S', totalStops: 'PT0S', nightDuration: 'PT0S', warnings: [], checkpoints,
+    start: '', finish: '', totalDuration: 'PT0S', totalStops: 'PT0S', nightDuration: 'PT0S', warnings: [], references: [], checkpoints,
   };
 }
 

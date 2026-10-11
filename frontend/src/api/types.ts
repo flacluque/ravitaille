@@ -104,14 +104,37 @@ export interface RacePlan {
   nightDuration: string;
   checkpoints: CheckpointEta[];
   warnings: string[];
+  references: ReferenceInsight[];
 }
 
-/** Course de référence saisie par le coureur. */
+export type ReferenceKind = 'RACE' | 'TRAINING';
+
+/** Performance de référence saisie par le coureur : une course, ou une sortie d'entraînement chronométrée. */
 export interface Reference {
+  label: string;
+  /** "2026-04-12", null si inconnue : les références récentes comptent plus. */
+  date: string | null;
+  kind: ReferenceKind;
   km: number;
   gainM: number;
   /** Durée ISO-8601, ex. "PT8H48M". */
   time: string;
+}
+
+/** Ce que prédit une référence seule, et son poids dans le plan (fr.trailplanner.engine.ReferenceInsight). */
+export interface ReferenceInsight {
+  label: string;
+  date: string | null;
+  kind: ReferenceKind;
+  distanceKm: number;
+  elevationGainM: number;
+  duration: string;
+  /** Poids normalisé, 0 à 1. */
+  weight: number;
+  recencyFactor: number;
+  distanceFactor: number;
+  predictedFinish: string;
+  predictedDuration: string;
 }
 
 /** Roadbook lu par l'IA (fr.trailplanner.extract.ExtractedRoadbook) : à relire avant tout calcul. */

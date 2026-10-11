@@ -125,8 +125,16 @@ test : l'image dans `src/test/resources/roadbooks/`, la saisie de référence da
 1. **Kilomètre-effort** (convention ITRA) : `E = distance (km) + D+ (m) / 100`.
 2. **Loi de fatigue de Riegel** appliquée à l'effort : le temps pour atteindre l'effort cumulé `E`
    vaut `T(E) = a × E^b`. Avec `b > 1`, l'allure se dégrade au fil de la course.
-3. **Calibration** : `a` est déduit de tes courses de référence (`a = T_ref / E_ref^b`, moyenné
-   si tu en donnes plusieurs). Le temps de référence inclut les arrêts de cette course-là.
+3. **Calibration** : `a` est déduit de tes performances de référence (`a = T_ref / E_ref^b`).
+   Le temps de référence inclut les arrêts. Avec plusieurs références, on fait une moyenne pondérée
+   pour tenir compte de ta progression depuis ta course de référence :
+   - **récence** : le poids est divisé par deux tous les 6 mois écoulés avant la course ;
+   - **distance** : poids `1 / (1 + |ln(effort course / effort référence)|)`, soit ×0,6 pour un
+     effort deux fois plus court ;
+   - **entraînement** : une sortie chronométrée compte comme une course 10 % plus rapide, avec un
+     poids ×0,6 (la conversion reste approximative).
+
+   Le plan indique aussi l'arrivée prédite par chaque référence seule, et son poids.
 4. **Simulation pas à pas** (tous les 0,05 km-effort) : on applique la forme du jour, le facteur
    de nuit si l'horloge est dans la plage frontale, puis les arrêts aux ravitos.
 5. **Barrières horaires** : entrée et/ou sortie de ravito. Statut `OK` (> 1 h de marge), `TIGHT`
@@ -176,6 +184,7 @@ et pourra être réutilisé tel quel (CLI, appli mobile via une API, batch de ca
 - [x] **v0.1-front** : React + TypeScript, carte Leaflet, profil altimétrique, tableau imprimable, PWA hors ligne
 - [x] **v0.1-import** : saisir / importer son roadbook, trace GPX facultative
 - [x] **v0.1-lecture** : lecture du roadbook (image / PDF) par une IA configurable, Ollama par défaut
+- [x] **v0.1-références** : plusieurs références datées (courses, entraînements), pondérées
 - [ ] **v0.2** : plan nutrition / hydratation par tronçon, checklist matériel obligatoire
 - [ ] **v0.3** : import de l'historique (Strava/Garmin) et calibration par tranche de pente (montée/descente)
 - [ ] **v0.4** : mode assistance (crew) : où et quand retrouver le coureur

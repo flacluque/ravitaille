@@ -119,6 +119,19 @@ public class PlanController {
         return service.plan(request, sample.track() == null ? null : sample.track().profile());
     }
 
+    /**
+     * Démo avec plusieurs références (datées, course ou entraînement) : c'est ce qu'utilise le front.
+     * Corps : { "references": [...], "elevationSource": "AUTO" }.
+     */
+    @PostMapping(path = "/demo/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public List<RacePlan> demoPlans(@PathVariable String id, @RequestBody DemoRequest body) {
+        PlanningService.Sample sample = service.loadSample(id);
+        PlanRequest request = new PlanRequest(sample.race(), body.references(), DEMO_NIGHT, body.elevationSource(), null);
+        return service.plan(request, sample.track() == null ? null : sample.track().profile());
+    }
+
+    public record DemoRequest(List<ReferencePerformance> references, ElevationSource elevationSource) {}
+
     /** Version texte imprimable de la démo. */
     @GetMapping(path = "/demo/{id}/report", produces = MediaType.TEXT_PLAIN_VALUE)
     public String demoReport(@PathVariable String id,
@@ -156,11 +169,14 @@ public class PlanController {
     public record CheckpointComparison(String code, String name, double roadbookKm, Double roadbookGainM,
                                        double trackKm, double trackGainM, double trackElevationM) {}
 
+    /** Fin octobre à Carcassonne : coucher ~18h40, lever ~8h15 (marge frontale comprise). */
+    private static final NightWindow DEMO_NIGHT = new NightWindow(LocalTime.of(19, 0), LocalTime.of(7, 45));
+
     private static PlanRequest demoRequest(PlanningService.Sample sample, double refKm, double refGain,
                                            Duration refTime, ElevationSource source) {
         return new PlanRequest(sample.race(),
                 List.of(new ReferencePerformance("Référence", refKm, refGain, refTime)),
-                new NightWindow(LocalTime.of(19, 0), LocalTime.of(7, 45)),
+                DEMO_NIGHT,
                 source, null);
     }
 

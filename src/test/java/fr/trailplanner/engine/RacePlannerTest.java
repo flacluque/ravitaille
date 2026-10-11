@@ -139,4 +139,36 @@ class RacePlannerTest {
         System.out.println(TextReport.render(surTrace));
         assertTrue(surTrace.totalDuration().compareTo(realiste.totalDuration()) < 0);
     }
+
+    @Test
+    void uneReferenceRecentePlusRapideAvanceLArrivee() {
+        RaceDefinition race = courseDeReference(null);
+        var ancienne = new ReferencePerformance("60 km l'an dernier", 60, 3200, Duration.ofMinutes(528),
+                START.toLocalDate().minusDays(365), ReferencePerformance.Kind.RACE);
+        var recente = new ReferencePerformance("30 km le mois dernier", 30, 1600, Duration.ofMinutes(230),
+                START.toLocalDate().minusDays(30), ReferencePerformance.Kind.RACE);
+
+        RacePlan seule = planner.plan(race, null, List.of(ancienne), SANS_ARRET, null, ElevationSource.ROADBOOK);
+        RacePlan deux = planner.plan(race, null, List.of(ancienne, recente), SANS_ARRET, null, ElevationSource.ROADBOOK);
+
+        // Le 30 km récent, plus rapide à effort égal, tire l'arrivée vers l'avant.
+        assertTrue(deux.finish().isBefore(seule.finish()));
+        assertEquals(2, deux.references().size());
+        ReferenceInsight vieille = deux.references().get(0), neuve = deux.references().get(1);
+        assertTrue(neuve.weight() > vieille.weight());
+        assertEquals(1, vieille.weight() + neuve.weight(), 0.002);
+        // Chaque référence seule encadre le plan combiné.
+        assertEquals(seule.finish(), vieille.predictedFinish());
+        assertTrue(neuve.predictedFinish().isBefore(deux.finish()));
+        assertTrue(deux.finish().isBefore(vieille.predictedFinish()));
+    }
+
+    @Test
+    void avecUneSeuleReferenceSaPredictionEstLePlan() {
+        RacePlan plan = planner.plan(courseDeReference(null), null, REFS, SANS_ARRET, null, ElevationSource.ROADBOOK);
+
+        assertEquals(1, plan.references().size());
+        assertEquals(1, plan.references().get(0).weight());
+        assertEquals(plan.finish(), plan.references().get(0).predictedFinish());
+    }
 }

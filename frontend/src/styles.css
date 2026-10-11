@@ -304,3 +304,19 @@ tbody tr:hover { background: var(--surface-2); }
   .editor-head { flex-direction: column; }
   .editor-actions { flex-wrap: wrap; }
 }
+
+/* ---------- Références ---------- */
+.ref-card { border: 1px solid var(--border); border-radius: 8px; padding: 8px; margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ref-head { display: flex; gap: 6px; align-items: center; }
+.form .ref-label { font-weight: 600; }
+.ref-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ref-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+.ref-grid label { font-size: 0.78rem; font-weight: 500; gap: 2px; }
+.ref-grid input, .ref-grid select { padding: 6px 7px; min-width: 0; }
+.ref-card .icon-btn { flex: none; }
+.insights .ref-detail { display: block; }
+.tag { margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: var(--surface-2); font-size: 0.72rem; color: var(--muted); }
+.weight { position: relative; display: inline-flex; align-items: center; justify-content: flex-end; width: 90px; height: 20px; border-radius: 4px; background: var(--surface-2); overflow: hidden; vertical-align: middle; }
+.weight-bar { position: absolute; left: 0; top: 0; bottom: 0; background: color-mix(in srgb, var(--accent) 30%, transparent); }
+.weight-value { position: relative; padding-right: 6px; font-size: 0.82rem; font-weight: 600; }
+.hint-line { margin: -8px 0 0; }

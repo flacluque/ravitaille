@@ -8,6 +8,7 @@ import { ElevationProfile } from './components/ElevationProfile';
 import { PassageTable } from './components/PassageTable';
 import { RaceEditor } from './components/RaceEditor';
 import { ReferenceForm } from './components/ReferenceForm';
+import { ReferenceInsights } from './components/ReferenceInsights';
 import { ScenarioCards } from './components/ScenarioCards';
 import { draftToRace, emptyDraft, type RaceDraft } from './lib/draft';
 import { formatClock, formatKm, formatMeters } from './lib/format';
@@ -15,7 +16,7 @@ import { formatClock, formatKm, formatMeters } from './lib/format';
 // Course d'exemple embarquée (src/main/resources/samples/bogomiles).
 const SAMPLE_ID = 'bogomiles';
 const CUSTOM_ID = 'custom';
-const DEFAULT_REFERENCE: Reference = { km: 60, gainM: 3200, time: 'PT8H48M' };
+const DEFAULT_REFERENCES: Reference[] = [{ label: '', date: null, kind: 'RACE', km: 60, gainM: 3200, time: 'PT8H48M' }];
 
 type Mode = 'demo' | 'custom';
 
@@ -41,16 +42,16 @@ export function App() {
   const [editorOpen, setEditorOpen] = useState(false);
 
   // Dernière référence demandée : l'éditeur de course relance le calcul avec elle.
-  const [reference, setReference] = useState<Reference>(initial?.reference ?? DEFAULT_REFERENCE);
+  const [references, setReferences] = useState<Reference[]>(initial?.references.length ? initial.references : DEFAULT_REFERENCES);
   const [source, setSource] = useState<ElevationSource>(initial?.source ?? 'AUTO');
   const hasData = useRef(initial !== null);
 
   const run = useCallback(async (sampleId: string, load: () => Promise<Pick<Snapshot, 'course' | 'plans'>>,
-    ref: Reference, src: ElevationSource) => {
+    refs: Reference[], src: ElevationSource) => {
     setStatus({ kind: 'loading' });
     try {
       const { course, plans } = await load();
-      const snapshot: Snapshot = { sampleId, reference: ref, source: src, course, plans, savedAt: new Date().toISOString() };
+      const snapshot: Snapshot = { sampleId, references: refs, source: src, course, plans, savedAt: new Date().toISOString() };
       setData(snapshot);
       saveSnapshot(snapshot);
       hasData.current = true;
@@ -63,13 +64,13 @@ export function App() {
     }
   }, []);
 
-  const computeDemo = useCallback((ref: Reference, src: ElevationSource) =>
+  const computeDemo = useCallback((refs: Reference[], src: ElevationSource) =>
     run(SAMPLE_ID, async () => {
-      const [course, plans] = await Promise.all([fetchCourse(SAMPLE_ID), fetchPlans(SAMPLE_ID, ref, src)]);
+      const [course, plans] = await Promise.all([fetchCourse(SAMPLE_ID), fetchPlans(SAMPLE_ID, refs, src)]);
       return { course, plans };
-    }, ref, src), [run]);
+    }, refs, src), [run]);
 
-  const computeCustom = useCallback(async (ref: Reference, src: ElevationSource, d: RaceDraft, file: File | null) => {
+  const computeCustom = useCallback(async (refs: Reference[], src: ElevationSource, d: RaceDraft, file: File | null) => {
     const result = draftToRace(d, file !== null);
     if (!result.ok) {
       setDraftErrors(result.errors);
@@ -77,33 +78,33 @@ export function App() {
       return false;
     }
     setDraftErrors([]);
-    return run(CUSTOM_ID, () => fetchCustomPlans(result.race, result.night, file, ref, src), ref, src);
+    return run(CUSTOM_ID, () => fetchCustomPlans(result.race, result.night, file, refs, src), refs, src);
   }, [run]);
 
-  const compute = (ref: Reference, src: ElevationSource) => {
-    setReference(ref);
+  const compute = (refs: Reference[], src: ElevationSource) => {
+    setReferences(refs);
     setSource(src);
-    return mode === 'demo' ? computeDemo(ref, src) : computeCustom(ref, src, draft, gpx);
+    return mode === 'demo' ? computeDemo(refs, src) : computeCustom(refs, src, draft, gpx);
   };
 
   // Seul un calcul lancé depuis l'éditeur le referme : un calcul encore en cours au moment où
   // le coureur rouvre l'éditeur ne doit pas le lui fermer sous les doigts.
   async function submitEditor() {
-    if (await computeCustom(reference, source, draft, gpx)) setEditorOpen(false);
+    if (await computeCustom(references, source, draft, gpx)) setEditorOpen(false);
   }
 
   // Premier chargement : on recalcule ce qui était affiché la dernière fois (la trace GPX est relue
   // depuis IndexedDB). Hors ligne, le dernier plan reste affiché.
   useEffect(() => {
-    const ref = initial?.reference ?? DEFAULT_REFERENCE;
+    const refs = initial?.references.length ? initial.references : DEFAULT_REFERENCES;
     const src = initial?.source ?? 'AUTO';
     if (initial?.sampleId === CUSTOM_ID) {
       void loadGpx().then((file) => {
         setGpx(file);
-        void computeCustom(ref, src, loadDraft() ?? emptyDraft(), file);
+        void computeCustom(refs, src, loadDraft() ?? emptyDraft(), file);
       });
     } else {
-      void computeDemo(ref, src);
+      void computeDemo(refs, src);
     }
   }, [initial, computeDemo, computeCustom]);
 
@@ -113,12 +114,12 @@ export function App() {
     setScenarioIndex(1);
     if (next === 'demo') {
       setEditorOpen(false);
-      void computeDemo(reference, source);
+      void computeDemo(references, source);
     } else {
       // Course déjà saisie : on calcule tout de suite ; sinon, place à la saisie (sans erreurs d'emblée).
       void loadGpx().then((file) => {
         setGpx(file);
-        if (draftToRace(draft, file !== null).ok) void computeCustom(reference, source, draft, file);
+        if (draftToRace(draft, file !== null).ok) void computeCustom(references, source, draft, file);
         else setEditorOpen(true);
       });
     }
@@ -198,10 +199,10 @@ export function App() {
             </button>
           </div>
           <ReferenceForm
-            initialReference={reference}
+            initialReferences={references}
             initialSource={source}
             loading={status.kind === 'loading'}
-            onSubmit={(ref, src) => void compute(ref, src)}
+            onSubmit={(refs, src) => void compute(refs, src)}
           />
           {plan && <SourceNote source={plan.elevationSource} hasTrack={!!course?.track} />}
         </aside>
@@ -230,6 +231,8 @@ export function App() {
           {plans.length > 0 && (
             <ScenarioCards plans={plans} selected={scenarioIndex} onSelect={setScenarioIndex} />
           )}
+
+          {plan && <ReferenceInsights plan={plan} />}
 
           {plan?.warnings.length ? (
             <ul className="warnings">

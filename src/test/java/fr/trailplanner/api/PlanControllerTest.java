@@ -12,6 +12,7 @@ import java.io.InputStream;
 import static org.hamcrest.Matchers.closeTo;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -112,6 +113,36 @@ class PlanControllerTest {
         mvc.perform(multipart("/api/plans/full").file(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("triés par kilométrage")));
+    }
+
+    @Test
+    void laDemoAccepteDesReferencesDateesEtDesEntrainements() throws Exception {
+        String body = """
+                {"elevationSource": "AUTO", "references": [
+                  {"label": "60 km avril", "distanceKm": 60, "elevationGainM": 3200, "duration": "PT8H48M",
+                   "date": "2026-04-12", "kind": "RACE"},
+                  {"label": "Sortie longue", "distanceKm": 32, "elevationGainM": 1600, "duration": "PT4H30M",
+                   "date": "2026-09-20", "kind": "TRAINING"},
+                  {"label": "Sans date", "distanceKm": 42, "elevationGainM": 2000, "duration": "PT6H"}]}
+                """;
+        mvc.perform(post("/api/demo/bogomiles").contentType("application/json").content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[1].references.length()").value(3))
+                .andExpect(jsonPath("$[1].references[1].kind").value("TRAINING"))
+                .andExpect(jsonPath("$[1].references[1].date").value("2026-09-20"))
+                .andExpect(jsonPath("$[1].references[2].kind").value("RACE"))
+                .andExpect(jsonPath("$[1].references[0].predictedFinish").exists());
+    }
+
+    @Test
+    void uneReferenceInvalideRemonteUnMessageClair() throws Exception {
+        String body = """
+                {"references": [{"label": "Erreur", "distanceKm": 0, "elevationGainM": 0, "duration": "PT1H"}]}
+                """;
+        mvc.perform(post("/api/demo/bogomiles").contentType("application/json").content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Performance de référence invalide : Erreur"));
     }
 
     @Test

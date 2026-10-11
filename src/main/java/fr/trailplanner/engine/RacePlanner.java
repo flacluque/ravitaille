@@ -34,7 +34,32 @@ public class RacePlanner {
 
         ElevationSource source = CourseBuilder.resolve(requestedSource, race, track);
         List<Leg> legs = CourseBuilder.legs(race, track, source);
-        EffortModel model = EffortModel.calibrate(references, scenario.fatigueExponent());
+        double raceEffort = legs.stream().mapToDouble(Leg::effortKm).sum();
+        List<ReferenceWeighting.Weighted> weighted =
+                ReferenceWeighting.weigh(references, raceEffort, race.start().toLocalDate());
+
+        RacePlan plan = simulate(race, legs, source, EffortModel.calibrateWeighted(weighted, scenario.fatigueExponent()),
+                scenario, night, List.of());
+
+        // Ce que prédit chaque référence seule : même course, même scénario, poids 100 %.
+        List<ReferenceInsight> insights = new ArrayList<>();
+        for (ReferenceWeighting.Weighted w : weighted) {
+            ReferenceWeighting.Weighted alone = new ReferenceWeighting.Weighted(w.reference(), w.effortKm(),
+                    w.raceMinutes(), 1, w.recencyFactor(), w.distanceFactor());
+            RacePlan solo = simulate(race, legs, source,
+                    EffortModel.calibrateWeighted(List.of(alone), scenario.fatigueExponent()), scenario, night, List.of());
+            ReferencePerformance ref = w.reference();
+            insights.add(new ReferenceInsight(ref.label(), ref.date(), ref.kind(), ref.distanceKm(), ref.elevationGainM(),
+                    ref.duration(), round3(w.weight()), round3(w.recencyFactor()), round3(w.distanceFactor()),
+                    solo.finish(), solo.totalDuration()));
+        }
+        return new RacePlan(plan.raceName(), plan.scenario(), plan.elevationSource(), plan.totalDistanceKm(),
+                plan.totalGainM(), plan.totalEffortKm(), plan.start(), plan.finish(), plan.totalDuration(),
+                plan.totalStops(), plan.nightDuration(), plan.checkpoints(), plan.warnings(), List.copyOf(insights));
+    }
+
+    private RacePlan simulate(RaceDefinition race, List<Leg> legs, ElevationSource source, EffortModel model,
+                              Scenario scenario, NightWindow night, List<ReferenceInsight> insights) {
         List<String> warnings = new ArrayList<>();
 
         LocalDateTime clock = race.start();
@@ -112,7 +137,7 @@ public class RacePlanner {
         return new RacePlan(race.name(), scenario, source, round1(cumulativeKm), Math.round(cumulativeGain),
                 round1(totalEffort), race.start(), finish, total,
                 Duration.ofSeconds((long) stopSeconds), Duration.ofSeconds((long) nightSeconds),
-                List.copyOf(etas), List.copyOf(warnings));
+                List.copyOf(etas), List.copyOf(warnings), insights);
     }
 
     /** Raccourci : les trois scénarios par défaut. */
@@ -121,6 +146,10 @@ public class RacePlanner {
         return Scenario.defaults().stream()
                 .map(s -> plan(race, track, references, s, night, source))
                 .toList();
+    }
+
+    private static double round3(double v) {
+        return Math.round(v * 1000) / 1000.0;
     }
 
     static CutoffStatus status(Duration marginIn, Duration marginOut) {

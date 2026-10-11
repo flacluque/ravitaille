@@ -15,7 +15,7 @@ import java.util.List;
  *       T(E) = a × E^b. Avec b &gt; 1, l'allure se dégrade naturellement au fil de la course,
  *       ce qui modélise la fatigue sans paramètre supplémentaire.</li>
  *   <li>Le coefficient a est calibré sur les performances de référence du coureur :
- *       a = T_ref / E_ref^b (moyenne si plusieurs références).</li>
+ *       a = T_ref / E_ref^b, moyenne pondérée si plusieurs références (voir {@link ReferenceWeighting}).</li>
  * </ul>
  * Les temps sont exprimés en minutes.
  */
@@ -33,17 +33,18 @@ public final class EffortModel {
         return distanceKm + gainM / 100.0;
     }
 
+    /** Calibration à poids égaux (références de course, sans date ni course cible). */
     public static EffortModel calibrate(List<ReferencePerformance> references, double exponent) {
-        if (references == null || references.isEmpty()) {
-            throw new IllegalArgumentException("Au moins une performance de référence est nécessaire");
+        return calibrateWeighted(ReferenceWeighting.weigh(references, Double.NaN, null), exponent);
+    }
+
+    /** a = Σ poids × T_ref / E_ref^b, avec les poids de {@link ReferenceWeighting}. */
+    public static EffortModel calibrateWeighted(List<ReferenceWeighting.Weighted> references, double exponent) {
+        double a = 0;
+        for (ReferenceWeighting.Weighted ref : references) {
+            a += ref.weight() * ref.raceMinutes() / Math.pow(ref.effortKm(), exponent);
         }
-        double sum = 0;
-        for (ReferencePerformance ref : references) {
-            double e = effortKm(ref.distanceKm(), ref.elevationGainM());
-            double minutes = ref.duration().toSeconds() / 60.0;
-            sum += minutes / Math.pow(e, exponent);
-        }
-        return new EffortModel(sum / references.size(), exponent);
+        return new EffortModel(a, exponent);
     }
 
     /** Temps (min) pour atteindre l'effort cumulé donné, sans arrêts ni nuit. */

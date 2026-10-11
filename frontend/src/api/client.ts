@@ -17,14 +17,24 @@ export function fetchCourse(sampleId: string): Promise<CourseView> {
   return getJson(`/api/demo/${encodeURIComponent(sampleId)}/course?stepKm=0.1`);
 }
 
-export function fetchPlans(sampleId: string, ref: Reference, source: ElevationSource): Promise<RacePlan[]> {
-  const params = new URLSearchParams({
-    refKm: String(ref.km),
-    refGain: String(ref.gainM),
-    refTime: ref.time,
-    source,
+/** Format attendu par l'API (fr.trailplanner.model.ReferencePerformance). */
+function toApi(refs: Reference[]) {
+  return refs.map((r, i) => ({
+    label: r.label.trim() || `Référence ${i + 1}`,
+    distanceKm: r.km,
+    elevationGainM: r.gainM,
+    duration: r.time,
+    date: r.date,
+    kind: r.kind,
+  }));
+}
+
+export function fetchPlans(sampleId: string, refs: Reference[], source: ElevationSource): Promise<RacePlan[]> {
+  return getJson(`/api/demo/${encodeURIComponent(sampleId)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ references: toApi(refs), elevationSource: source }),
   });
-  return getJson(`/api/demo/${encodeURIComponent(sampleId)}?${params}`);
 }
 
 /**
@@ -35,14 +45,14 @@ export function fetchCustomPlans(
   race: RaceDefinition,
   night: NightWindow,
   gpx: File | null,
-  ref: Reference,
+  refs: Reference[],
   source: ElevationSource,
 ): Promise<{ course: CourseView; plans: RacePlan[] }> {
   const request = {
     race,
     night,
     elevationSource: source,
-    references: [{ label: 'Référence', distanceKm: ref.km, elevationGainM: ref.gainM, duration: ref.time }],
+    references: toApi(refs),
   };
   const form = new FormData();
   form.append('request', new Blob([JSON.stringify(request)], { type: 'application/json' }));
@@ -69,7 +79,7 @@ export function extractRoadbook(file: File): Promise<ExtractedRoadbook> {
 export interface Snapshot {
   /** Identifiant de l'exemple embarqué, ou "custom" pour ta course. */
   sampleId: string;
-  reference: Reference;
+  references: Reference[];
   source: ElevationSource;
   course: CourseView;
   plans: RacePlan[];
@@ -89,8 +99,15 @@ export function saveSnapshot(snapshot: Snapshot): void {
 export function loadSnapshot(): Snapshot | null {
   try {
     const raw = localStorage.getItem(SNAPSHOT_KEY);
-    return raw ? (JSON.parse(raw) as Snapshot) : null;
+    return raw ? migrateSnapshot(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
+}
+
+/** Les premières versions gardaient une seule référence, sans date ni type, et des plans sans « references ». */
+export function migrateSnapshot(data: Snapshot & { reference?: Omit<Reference, 'label' | 'date' | 'kind'> }): Snapshot {
+  const { reference, ...rest } = data;
+  const references = rest.references ?? (reference ? [{ label: '', date: null, kind: 'RACE' as const, ...reference }] : []);
+  return { ...rest, references, plans: rest.plans.map((p) => ({ ...p, references: p.references ?? [] })) };
 }
