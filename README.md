@@ -4,7 +4,7 @@ Planificateur de course trail : à partir du roadbook (et/ou de la trace GPX) et
 de référence, il calcule les **heures de passage à chaque ravito**, les **marges sur les barrières
 horaires** et le **temps total**, selon trois scénarios (optimiste / réaliste / prudent).
 
-> v0.1 : moteur de calcul + API REST. Le front (React + carte + profil) arrive à l'étape suivante.
+> v0.1 : moteur de calcul + API REST + front React (carte, profil altimétrique, tableau imprimable, hors ligne).
 
 ## Lancer le projet
 
@@ -15,7 +15,31 @@ mvn test                 # tests unitaires (parser GPX, analyse, modèle, planif
 mvn spring-boot:run      # API sur http://localhost:8080
 ```
 
-### Essayer tout de suite (Raid des Bogomiles embarqué)
+### Le front (React)
+
+Prérequis : Node.js 20+. Dans un second terminal, l'API tournant à côté :
+
+```bash
+cd frontend
+npm install              # la première fois
+npm run dev              # http://localhost:5173 (les appels /api sont relayés vers le port 8080)
+```
+
+- **Carte et profil synchronisés** : survole l'un ou l'autre pour voir l'altitude, le D+ cumulé et
+  l'heure de passage estimée (interpolée entre deux ravitos).
+- **Trois scénarios** : clique sur une carte pour afficher son tableau détaillé ; le tableau de
+  comparaison les met côte à côte.
+- **Imprimer** : mise en page dédiée (scénarios, profil, tableaux), sans la carte ni le formulaire.
+- **Hors ligne** : le dernier plan calculé est gardé dans le navigateur, et l'appli est une PWA
+  (installable sur le téléphone, fonctionne sans réseau une fois chargée — build de production :
+  `npm run build && npm run preview`).
+
+```bash
+npm test                 # tests unitaires (formatage, barrières, interpolation, profil)
+npm run build            # vérification TypeScript + build de production dans frontend/dist
+```
+
+### Essayer l'API tout de suite (Raid des Bogomiles embarqué)
 
 ```bash
 # Tableau texte des 3 scénarios avec ta référence 60 km / 3 200 m D+ en 8h48
@@ -26,6 +50,9 @@ curl "http://localhost:8080/api/demo/bogomiles"
 
 # Comparaison roadbook 2026 vs trace GPX, point par point
 curl "http://localhost:8080/api/demo/bogomiles/check"
+
+# Ce que le front dessine : roadbook, trace rééchantillonnée et position des ravitos sur la trace
+curl "http://localhost:8080/api/demo/bogomiles/course?stepKm=0.1"
 ```
 
 ### Avec tes propres fichiers
@@ -33,6 +60,10 @@ curl "http://localhost:8080/api/demo/bogomiles/check"
 ```bash
 # Analyse d'une trace : distance, D+/D-, profil rééchantillonné tous les 100 m
 curl -F "gpx=@ma-trace.gpx" http://localhost:8080/api/tracks/analyze
+
+# Course à dessiner (carte, profil, ravitos) à partir de ton roadbook et de ta trace
+curl -F "race=@mon-roadbook.json;type=application/json" -F "gpx=@ma-trace.gpx" \
+     http://localhost:8080/api/courses
 
 # Plan de course : roadbook + références en JSON, trace GPX optionnelle
 curl -F "request=@requests/plan-bogomiles.json;type=application/json" \
@@ -82,6 +113,11 @@ fr.trailplanner
 ├── engine    Modèle d'effort, découpage en tronçons, planificateur
 ├── report    Rendu texte imprimable
 └── api       Spring Boot : contrôleur REST, service, DTO
+
+frontend/src
+├── api         Types (miroir des records Java), client, copie hors ligne du dernier plan
+├── lib         Formatage (durées ISO, heures), barrières, interpolation, géométrie du profil
+└── components  Formulaire, scénarios, carte Leaflet, profil SVG, tableaux
 ```
 
 Le cœur (`gpx`, `track`, `model`, `engine`, `report`) est en Java pur : il ne dépend pas de Spring
@@ -90,7 +126,8 @@ et pourra être réutilisé tel quel (CLI, appli mobile via une API, batch de ca
 ## Feuille de route
 
 - [x] **v0.1** : GPX, roadbook, heures de passage, barrières, 3 scénarios, nuit
-- [ ] **v0.1-front** : React + TypeScript, carte Leaflet, profil altimétrique, tableau imprimable, PWA hors ligne
+- [x] **v0.1-front** : React + TypeScript, carte Leaflet, profil altimétrique, tableau imprimable, PWA hors ligne
+- [ ] **v0.1-import** : charger son propre roadbook et sa trace GPX depuis le front (l'API `/api/courses` est prête)
 - [ ] **v0.2** : plan nutrition / hydratation par tronçon, checklist matériel obligatoire
 - [ ] **v0.3** : import de l'historique (Strava/Garmin) et calibration par tranche de pente (montée/descente)
 - [ ] **v0.4** : mode assistance (crew) : où et quand retrouver le coureur

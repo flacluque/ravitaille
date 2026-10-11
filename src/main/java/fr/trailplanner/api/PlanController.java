@@ -5,6 +5,7 @@ import fr.trailplanner.engine.ElevationSource;
 import fr.trailplanner.engine.RacePlan;
 import fr.trailplanner.gpx.GpxParser;
 import fr.trailplanner.model.NightWindow;
+import fr.trailplanner.model.RaceDefinition;
 import fr.trailplanner.model.ReferencePerformance;
 import fr.trailplanner.report.TextReport;
 import fr.trailplanner.track.TrackProfile;
@@ -45,6 +46,20 @@ public class PlanController {
         try (InputStream in = gpx.getInputStream()) {
             PlanningService.LoadedTrack track = service.loadTrack(in);
             return TrackSummary.of(track.name(), track.profile(), stepKm);
+        }
+    }
+
+    /** Course à dessiner (carte, profil, ravitos) : roadbook (JSON) et trace GPX optionnelle. */
+    @PostMapping(path = "/courses", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public CourseView course(@RequestPart("race") RaceDefinition race,
+                             @RequestPart(value = "gpx", required = false) MultipartFile gpx,
+                             @RequestParam(defaultValue = "0.1") double stepKm) throws IOException {
+        if (gpx == null || gpx.isEmpty()) {
+            return CourseView.of(race, null, null, stepKm);
+        }
+        try (InputStream in = gpx.getInputStream()) {
+            PlanningService.LoadedTrack track = service.loadTrack(in);
+            return CourseView.of(race, track.profile(), track.name(), stepKm);
         }
     }
 
@@ -90,6 +105,15 @@ public class PlanController {
                              @RequestParam(defaultValue = "PT8H48M") Duration refTime,
                              @RequestParam(defaultValue = "AUTO") ElevationSource source) {
         return TextReport.render(demo(id, refKm, refGain, refTime, source));
+    }
+
+    /** Course d'exemple à dessiner : roadbook, trace et position des ravitos sur la trace. */
+    @GetMapping("/demo/{id}/course")
+    public CourseView demoCourse(@PathVariable String id, @RequestParam(defaultValue = "0.1") double stepKm) {
+        PlanningService.Sample sample = service.loadSample(id);
+        return sample.track() == null
+                ? CourseView.of(sample.race(), null, null, stepKm)
+                : CourseView.of(sample.race(), sample.track().profile(), sample.track().name(), stepKm);
     }
 
     /** Roadbook vs trace GPX, point par point : pour vérifier que la trace colle au parcours officiel. */
