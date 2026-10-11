@@ -34,6 +34,9 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
   que `src/main/resources/samples/bogomiles/roadbook.json`). La trace GPX est **facultative** : sans
   elle, pas de carte ni de profil, et le calcul se fait sur le D+ du roadbook. Ta course et ta trace
   restent dans ton navigateur ; « Exporter » télécharge le roadbook pour le garder.
+- **Lire un roadbook (image / PDF)** : une IA lit le roadbook de l'organisation et remplit le
+  tableau de « Ma course » ; tu vérifies ligne par ligne, le roadbook d'origine affiché au-dessus.
+  Voir « Lecture automatique des roadbooks » plus bas.
 - **Imprimer** : mise en page dédiée (scénarios, profil, tableaux), sans la carte ni le formulaire.
 - **Hors ligne** : le dernier plan calculé est gardé dans le navigateur, et l'appli est une PWA
   (installable sur le téléphone, fonctionne sans réseau une fois chargée — build de production :
@@ -83,6 +86,35 @@ curl -F "request=@requests/plan-bogomiles.json;type=application/json" \
 `requests/plan-bogomiles.json` est un exemple complet de requête. Les durées sont au format
 ISO-8601 (`PT8H48M` = 8 h 48) et les dates en heure locale (`2026-10-23T14:30:00`).
 
+## Lecture automatique des roadbooks
+
+L'IA qui lit les roadbooks se choisit dans `src/main/resources/application.properties`
+(`trailplanner.extraction.*`). Par défaut : **Ollama**, une IA locale et gratuite, rien ne sort de ta machine.
+
+```bash
+# 1. Installer Ollama : https://ollama.com (appli macOS), puis la lancer
+# 2. Télécharger le modèle de vision (~6 Go, une seule fois)
+ollama pull qwen2.5vl:7b
+# 3. Relancer l'API : le bouton « Lire un roadbook » de l'éditeur est prêt
+```
+
+- Images (PNG, JPEG, photo de téléphone) et PDF jusqu'à 4 pages. Compter 30 s à 2 min par roadbook.
+- L'IA ne fait que **pré-remplir** l'éditeur : rien n'est calculé sans ta relecture.
+- Changer de modèle : `trailplanner.extraction.ollama.model=...` (après `ollama pull ...`).
+- Désactiver : `trailplanner.extraction.provider=none`.
+- Ajouter une autre IA (cloud...) : une implémentation de `RoadbookExtractor` et une ligne dans
+  `ExtractionConfig` ; ni le front ni le reste du backend ne changent.
+
+**Mesurer la qualité d'un modèle** sur de vrais roadbooks (comparés à une saisie à la main) :
+
+```bash
+mvn test -Dtest=RoadbookExtractionEvalTest -Dollama=true -Dollama.model=qwen2.5vl:7b
+```
+
+Le test affiche, point par point, les champs mal lus et un score global. Pour ajouter un roadbook de
+test : l'image dans `src/test/resources/roadbooks/`, la saisie de référence dans
+`src/main/resources/samples/<course>/roadbook.json`, et une ligne dans `RoadbookExtractionEvalTest`.
+
 ## Le modèle de calcul
 
 1. **Kilomètre-effort** (convention ITRA) : `E = distance (km) + D+ (m) / 100`.
@@ -121,7 +153,8 @@ fr.trailplanner
 ├── model     Course, ravitos, références, scénarios, plage de nuit (records)
 ├── engine    Modèle d'effort, découpage en tronçons, planificateur
 ├── report    Rendu texte imprimable
-└── api       Spring Boot : contrôleur REST, service, DTO
+├── api       Spring Boot : contrôleur REST, service, DTO
+└── extract   Lecture des roadbooks par une IA (interface + Ollama), préparation des images / PDF
 
 frontend/src
 ├── api         Types (miroir des records Java), client, copie hors ligne du dernier plan
@@ -137,6 +170,7 @@ et pourra être réutilisé tel quel (CLI, appli mobile via une API, batch de ca
 - [x] **v0.1** : GPX, roadbook, heures de passage, barrières, 3 scénarios, nuit
 - [x] **v0.1-front** : React + TypeScript, carte Leaflet, profil altimétrique, tableau imprimable, PWA hors ligne
 - [x] **v0.1-import** : saisir / importer son roadbook, trace GPX facultative
+- [x] **v0.1-lecture** : lecture du roadbook (image / PDF) par une IA configurable, Ollama par défaut
 - [ ] **v0.2** : plan nutrition / hydratation par tronçon, checklist matériel obligatoire
 - [ ] **v0.3** : import de l'historique (Strava/Garmin) et calibration par tranche de pente (montée/descente)
 - [ ] **v0.4** : mode assistance (crew) : où et quand retrouver le coureur

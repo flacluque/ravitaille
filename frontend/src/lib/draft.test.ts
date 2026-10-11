@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { RaceDefinition } from '../api/types';
+import type { ExtractedRoadbook, RaceDefinition } from '../api/types';
 import {
   draftToFile,
   draftToRace,
   emptyCheckpoint,
   emptyDraft,
+  extractedToDraft,
+  hasContent,
   parseClock,
   parseRoadbookFile,
   raceToDraft,
@@ -136,5 +138,49 @@ describe('fichier roadbook', () => {
 
   it("n'exporte pas une saisie invalide", () => {
     expect(draftToFile(emptyDraft())).toBeNull();
+  });
+});
+
+describe('roadbook lu par l\'IA', () => {
+  const extracted: ExtractedRoadbook = {
+    name: 'Raid des Troubadours 2026',
+    startDate: null,
+    startTime: '09:00',
+    checkpoints: [
+      { code: '1P', name: 'Départ', km: 0, gainM: 0, lossM: 0, cutoffIn: null, cutoffOut: null, aid: 'NONE' },
+      { code: '3', name: 'Molières', km: 20, gainM: 772, lossM: null, cutoffIn: '12h30', cutoffOut: null, aid: 'LIGHT' },
+      { code: '1D', name: 'Arrivée', km: 88, gainM: 3426, lossM: 3564, cutoffIn: '04h30', cutoffOut: null, aid: 'NONE' },
+    ],
+    warnings: ['Le logo annonce 85 km, le tableau 88 km.'],
+  };
+
+  it('reprend la date déjà saisie quand le roadbook ne la donne pas', () => {
+    const current = { ...emptyDraft(), start: '2026-10-23T07:00', nightStart: '18h40' };
+    const { draft, warnings } = extractedToDraft(extracted, current);
+    expect(draft.start).toBe('2026-10-23T09:00');
+    expect(draft.nightStart).toBe('18h40');
+    expect(warnings).toHaveLength(2);
+    expect(warnings[1]).toContain('celle déjà saisie a été gardée');
+
+    const result = draftToRace(draft, false);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.race.checkpoints[1]).toMatchObject({ km: 20, gainM: 772, lossM: null, cutoffIn: '2026-10-23T12:30:00' });
+      expect(result.race.checkpoints[2].cutoffIn).toBe('2026-10-24T04:30:00');
+    }
+  });
+
+  it('demande la date quand personne ne la connaît', () => {
+    const { draft, warnings } = extractedToDraft(extracted, emptyDraft());
+    expect(draft.start).toBe('');
+    expect(warnings[1]).toBe('Date de départ non lue sur le roadbook : indique-la (heure lue : 09h00).');
+  });
+
+  it("sait si l'éditeur contient déjà une saisie", () => {
+    expect(hasContent(emptyDraft())).toBe(false);
+    expect(hasContent({ ...emptyDraft(), name: 'Mon trail' })).toBe(true);
+    const draft = emptyDraft();
+    draft.checkpoints[1].km = '42';
+    expect(hasContent(draft)).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import type { CourseView, ElevationSource, RaceDefinition, RacePlan, Reference } from './types';
+import type { CourseView, ElevationSource, ExtractedRoadbook, ExtractorStatus, RaceDefinition, RacePlan, Reference } from './types';
 import type { NightWindow } from '../lib/draft';
 
 export class ApiError extends Error {}
@@ -48,6 +48,17 @@ export function fetchCustomPlans(
   form.append('request', new Blob([JSON.stringify(request)], { type: 'application/json' }));
   if (gpx) form.append('gpx', gpx);
   return getJson('/api/plans/full?stepKm=0.1', { method: 'POST', body: form });
+}
+
+export function fetchExtractorStatus(): Promise<ExtractorStatus> {
+  return getJson('/api/roadbooks/extractor');
+}
+
+/** Lecture du roadbook (image ou PDF) par l'IA configurée côté serveur. Compter 30 s à 2 min en local. */
+export function extractRoadbook(file: File): Promise<ExtractedRoadbook> {
+  const form = new FormData();
+  form.append('file', file);
+  return getJson('/api/roadbooks/extract', { method: 'POST', body: form });
 }
 
 /**

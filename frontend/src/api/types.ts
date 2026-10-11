@@ -113,3 +113,32 @@ export interface Reference {
   /** Durée ISO-8601, ex. "PT8H48M". */
   time: string;
 }
+
+/** Roadbook lu par l'IA (fr.trailplanner.extract.ExtractedRoadbook) : à relire avant tout calcul. */
+export interface ExtractedRoadbook {
+  name: string | null;
+  /** "2026-10-23", null si la date complète n'est pas lisible. */
+  startDate: string | null;
+  /** "09:00". */
+  startTime: string | null;
+  checkpoints: {
+    code: string | null;
+    name: string | null;
+    km: number | null;
+    gainM: number | null;
+    lossM: number | null;
+    /** "12h30" */
+    cutoffIn: string | null;
+    cutoffOut: string | null;
+    aid: AidLevel;
+  }[];
+  warnings: string[];
+}
+
+export interface ExtractorStatus {
+  enabled: boolean;
+  provider: string;
+  model: string | null;
+  ready: boolean;
+  message: string | null;
+}

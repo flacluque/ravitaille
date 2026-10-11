@@ -1,8 +1,11 @@
-import { useRef, useState, type ChangeEvent } from 'react';
-import type { AidLevel } from '../api/types';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { extractRoadbook, fetchExtractorStatus } from '../api/client';
+import type { AidLevel, ExtractorStatus } from '../api/types';
 import {
   draftToFile,
   emptyCheckpoint,
+  extractedToDraft,
+  hasContent,
   parseRoadbookFile,
   resolveCutoffs,
   type DraftCheckpoint,
@@ -31,7 +34,9 @@ const AIDS: { value: AidLevel; label: string }[] = [
 export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading, onSubmit, onCancel }: Props) {
   const roadbookInput = useRef<HTMLInputElement>(null);
   const gpxInput = useRef<HTMLInputElement>(null);
+  const scanInput = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const scan = useRoadbookScan();
   const resolved = resolveCutoffs(draft);
   const exported = draftToFile(draft);
 
@@ -68,6 +73,19 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
     URL.revokeObjectURL(url);
   }
 
+  async function scanRoadbook(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (hasContent(draft) && !window.confirm('Remplacer la saisie actuelle par la lecture de ce roadbook ?')) return;
+    const extracted = await scan.read(file);
+    if (extracted) {
+      const { draft: next, warnings } = extractedToDraft(extracted, draft);
+      scan.setWarnings(warnings);
+      onChange(next);
+    }
+  }
+
   function chooseGpx(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -82,7 +100,15 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
           <p className="muted small">Recopie le roadbook de l'organisation : un point par ravito ou pointage, avec le km et le D+ cumulés.</p>
         </div>
         <div className="editor-actions">
-          <button type="button" className="ghost" onClick={() => roadbookInput.current?.click()}>Importer</button>
+          {scan.status?.enabled !== false && (
+            <button type="button" onClick={() => scanInput.current?.click()} disabled={scan.reading}
+              title="Une IA lit l'image ou le PDF du roadbook et remplit le tableau ; tu n'as plus qu'à vérifier">
+              Lire un roadbook (image / PDF)
+            </button>
+          )}
+          <input ref={scanInput} type="file" accept="image/*,.pdf,application/pdf" hidden onChange={scanRoadbook} />
+          <button type="button" className="ghost" onClick={() => roadbookInput.current?.click()}
+            title="Recharger un roadbook exporté en JSON">Importer</button>
           <button type="button" className="ghost" onClick={exportRoadbook} disabled={!exported}
             title={exported ? 'Télécharger le roadbook en JSON' : 'Complète la saisie pour pouvoir exporter'}>
             Exporter
@@ -91,6 +117,7 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
         </div>
       </div>
       {importError && <p className="field-error">{importError}</p>}
+      <ScanPanel scan={scan} onRetryStatus={scan.refreshStatus} />
 
       <div className="editor-fields">
         <label className="grow">
@@ -184,6 +211,85 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
         <button type="button" onClick={onSubmit} disabled={loading}>{loading ? 'Calcul…' : 'Calculer mon plan'}</button>
       </div>
     </section>
+  );
+}
+
+/** Lecture du roadbook par l'IA : état du service, lecture en cours, image d'origine, points à vérifier. */
+function useRoadbookScan() {
+  const [status, setStatus] = useState<ExtractorStatus | null>(null);
+  const [reading, setReading] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [preview, setPreview] = useState<{ url: string; pdf: boolean; name: string } | null>(null);
+
+  const refreshStatus = () => {
+    fetchExtractorStatus().then(setStatus).catch(() => setStatus(null));
+  };
+  useEffect(refreshStatus, []);
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview.url); }, [preview]);
+  useEffect(() => {
+    if (!reading) return;
+    const started = Date.now();
+    setElapsed(0);
+    const timer = setInterval(() => setElapsed(Math.round((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(timer);
+  }, [reading]);
+
+  async function read(file: File) {
+    setReading(true);
+    setError(null);
+    setWarnings([]);
+    setPreview({ url: URL.createObjectURL(file), pdf: file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'), name: file.name });
+    try {
+      return await extractRoadbook(file);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      refreshStatus();
+      return null;
+    } finally {
+      setReading(false);
+    }
+  }
+
+  return { status, reading, elapsed, error, warnings, setWarnings, preview, read, refreshStatus };
+}
+
+function ScanPanel({ scan, onRetryStatus }: { scan: ReturnType<typeof useRoadbookScan>; onRetryStatus: () => void }) {
+  const { status, reading, elapsed, error, warnings, preview } = scan;
+  const notReady = status?.enabled && !status.ready && !reading && !preview;
+  if (!reading && !error && !preview && !notReady) return null;
+  return (
+    <div className="scan">
+      {notReady && (
+        <p className="scan-hint">
+          Lecture automatique pas encore prête : {status?.message}{' '}
+          <button type="button" className="link-btn" onClick={onRetryStatus}>Revérifier</button>
+        </p>
+      )}
+      {reading && (
+        <p className="scan-progress" role="status">
+          <span className="spinner" aria-hidden /> Lecture du roadbook par {status?.model ?? "l'IA"}… {elapsed} s
+          <span className="muted small"> (de 30 s à 2 min selon le modèle et la machine)</span>
+        </p>
+      )}
+      {error && <p className="field-error" role="alert">{error}</p>}
+      {!reading && !error && preview && (
+        <div className="scan-check" role="note">
+          <strong>Vérifie chaque ligne avec le roadbook ci-dessous</strong>, en particulier les barrières horaires :
+          l'IA peut se tromper.
+          {warnings.length > 0 && <ul>{warnings.map((w) => <li key={w}>{w}</li>)}</ul>}
+        </div>
+      )}
+      {preview && (
+        <details className="scan-preview" open>
+          <summary>Roadbook d'origine : {preview.name}</summary>
+          {preview.pdf
+            ? <object data={preview.url} type="application/pdf" aria-label={preview.name} />
+            : <a href={preview.url} target="_blank" rel="noreferrer" title="Ouvrir en grand"><img src={preview.url} alt={`Roadbook ${preview.name}`} /></a>}
+        </details>
+      )}
+    </div>
   );
 }
 

@@ -1,4 +1,4 @@
-import type { AidLevel, Checkpoint, RaceDefinition } from '../api/types';
+import type { AidLevel, Checkpoint, ExtractedRoadbook, RaceDefinition } from '../api/types';
 
 /**
  * Roadbook tel que saisi dans l'éditeur : des champs texte, validés et convertis en RaceDefinition
@@ -250,4 +250,49 @@ export function parseRoadbookFile(text: string): RaceDraft {
 export function draftToFile(draft: RaceDraft): string | null {
   const result = draftToRace(draft, true);
   return result.ok ? JSON.stringify({ ...result.race, night: result.night }, null, 2) : null;
+}
+
+/**
+ * Roadbook lu par l'IA → brouillon de l'éditeur. Ce qui n'a pas été lu (date, plage de nuit) est
+ * repris de la saisie en cours ; les points à vérifier s'ajoutent aux remarques de l'IA.
+ */
+export function extractedToDraft(extracted: ExtractedRoadbook, current: RaceDraft): { draft: RaceDraft; warnings: string[] } {
+  const warnings = [...extracted.warnings];
+  const currentDate = /^\d{4}-\d{2}-\d{2}/.exec(current.start)?.[0] ?? null;
+  const currentTime = /T(\d{2}:\d{2})/.exec(current.start)?.[1] ?? null;
+  const date = extracted.startDate ?? currentDate;
+  const time = extracted.startTime ?? currentTime;
+  if (!extracted.startDate) {
+    warnings.push(date
+      ? 'Date de départ non lue sur le roadbook : celle déjà saisie a été gardée, vérifie-la.'
+      : `Date de départ non lue sur le roadbook : indique-la${time ? ` (heure lue : ${time.replace(':', 'h')})` : ''}.`);
+  }
+  const num = (v: number | null) => (v === null || v === undefined ? '' : String(v));
+  return {
+    warnings,
+    draft: {
+      name: extracted.name ?? current.name,
+      start: date && time ? `${date}T${time}` : '',
+      nightStart: current.nightStart,
+      nightEnd: current.nightEnd,
+      checkpoints: extracted.checkpoints.map((cp) => ({
+        id: newId(),
+        code: cp.code ?? '',
+        name: cp.name ?? '',
+        km: num(cp.km),
+        gainM: num(cp.gainM),
+        lossM: num(cp.lossM),
+        cutoffIn: cp.cutoffIn ?? '',
+        cutoffOut: cp.cutoffOut ?? '',
+        aid: cp.aid ?? 'NONE',
+      })),
+    },
+  };
+}
+
+/** Vrai si l'éditeur contient déjà une saisie (au-delà du brouillon vide) : on demande avant d'écraser. */
+export function hasContent(draft: RaceDraft): boolean {
+  return draft.name.trim() !== ''
+    || draft.checkpoints.length > 2
+    || draft.checkpoints.some((cp, i) => i > 0 && (cp.km.trim() !== '' || cp.gainM.trim() !== '' || cp.cutoffIn.trim() !== ''));
 }
