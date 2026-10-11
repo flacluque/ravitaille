@@ -1,0 +1,110 @@
+{
+  "race" : {
+    "name" : "Raid des Bogomiles 2026",
+    "start" : "2026-10-23T11:00:00",
+    "maxDuration" : "PT26H",
+    "checkpoints" : [ {
+      "code" : "1P",
+      "name" : "Départ Cité de Carcassonne",
+      "km" : 0.0,
+      "gainM" : 0.0,
+      "lossM" : 0.0,
+      "cutoffIn" : null,
+      "cutoffOut" : null,
+      "aid" : "NONE"
+    }, {
+      "code" : "2",
+      "name" : "Lac de Cavayère",
+      "km" : 6.0,
+      "gainM" : 137.0,
+      "lossM" : 126.0,
+      "cutoffIn" : null,
+      "cutoffOut" : null,
+      "aid" : "NONE"
+    }, {
+      "code" : "3",
+      "name" : "Molières-sur-l'Alberte",
+      "km" : 20.0,
+      "gainM" : 772.0,
+      "lossM" : 590.0,
+      "cutoffIn" : "2026-10-23T14:30:00",
+      "cutoffOut" : null,
+      "aid" : "LIGHT"
+    }, {
+      "code" : "4",
+      "name" : "Caunette-sur-Lauquet",
+      "km" : 33.0,
+      "gainM" : 1511.0,
+      "lossM" : 1210.0,
+      "cutoffIn" : "2026-10-23T17:30:00",
+      "cutoffOut" : null,
+      "aid" : "LIGHT"
+    }, {
+      "code" : "5",
+      "name" : "Château d'Arques",
+      "km" : 52.0,
+      "gainM" : 2239.0,
+      "lossM" : 2055.0,
+      "cutoffIn" : "2026-10-23T21:00:00",
+      "cutoffOut" : "2026-10-23T22:00:00",
+      "aid" : "FULL"
+    }, {
+      "code" : "10",
+      "name" : "Villardebelle",
+      "km" : 66.0,
+      "gainM" : 2852.0,
+      "lossM" : 2485.0,
+      "cutoffIn" : "2026-10-24T01:00:00",
+      "cutoffOut" : null,
+      "aid" : "LIGHT"
+    }, {
+      "code" : "11",
+      "name" : "Greffeil",
+      "km" : 75.0,
+      "gainM" : 3119.0,
+      "lossM" : 3044.0,
+      "cutoffIn" : null,
+      "cutoffOut" : "2026-10-24T03:45:00",
+      "aid" : "FULL"
+    }, {
+      "code" : "12",
+      "name" : "Ladern-sur-Lauquet",
+      "km" : 82.0,
+      "gainM" : 3427.0,
+      "lossM" : 3431.0,
+      "cutoffIn" : "2026-10-24T06:00:00",
+      "cutoffOut" : null,
+      "aid" : "LIGHT"
+    }, {
+      "code" : "13",
+      "name" : "Palaja (camp de Villemaury)",
+      "km" : 94.0,
+      "gainM" : 3871.0,
+      "lossM" : 3801.0,
+      "cutoffIn" : "2026-10-24T09:50:00",
+      "cutoffOut" : null,
+      "aid" : "LIGHT"
+    }, {
+      "code" : "1D",
+      "name" : "Arrivée Carcassonne (Dôme)",
+      "km" : 103.0,
+      "gainM" : 4000.0,
+      "lossM" : 4090.0,
+      "cutoffIn" : "2026-10-24T13:00:00",
+      "cutoffOut" : null,
+      "aid" : "NONE"
+    } ]
+  },
+  "references" : [ {
+    "label" : "Ma référence 60 km",
+    "distanceKm" : 60.0,
+    "elevationGainM" : 3200.0,
+    "duration" : "PT8H48M"
+  } ],
+  "night" : {
+    "nightStart" : "19:00:00",
+    "nightEnd" : "07:45:00"
+  },
+  "elevationSource" : "AUTO",
+  "scenarios" : null
+}

@@ -1,0 +1,17 @@
+{
+  "name": "Raid des Bogomiles 2026",
+  "start": "2026-10-23T11:00:00",
+  "maxDuration": "PT26H",
+  "checkpoints": [
+    { "code": "1P", "name": "Départ Cité de Carcassonne", "km": 0,   "gainM": 0,    "lossM": 0,    "aid": "NONE" },
+    { "code": "2",  "name": "Lac de Cavayère",            "km": 6,   "gainM": 137,  "lossM": 126,  "aid": "NONE" },
+    { "code": "3",  "name": "Molières-sur-l'Alberte",     "km": 20,  "gainM": 772,  "lossM": 590,  "aid": "LIGHT", "cutoffIn": "2026-10-23T14:30:00" },
+    { "code": "4",  "name": "Caunette-sur-Lauquet",       "km": 33,  "gainM": 1511, "lossM": 1210, "aid": "LIGHT", "cutoffIn": "2026-10-23T17:30:00" },
+    { "code": "5",  "name": "Château d'Arques",           "km": 52,  "gainM": 2239, "lossM": 2055, "aid": "FULL",  "cutoffIn": "2026-10-23T21:00:00", "cutoffOut": "2026-10-23T22:00:00" },
+    { "code": "10", "name": "Villardebelle",              "km": 66,  "gainM": 2852, "lossM": 2485, "aid": "LIGHT", "cutoffIn": "2026-10-24T01:00:00" },
+    { "code": "11", "name": "Greffeil",                   "km": 75,  "gainM": 3119, "lossM": 3044, "aid": "FULL",  "cutoffOut": "2026-10-24T03:45:00" },
+    { "code": "12", "name": "Ladern-sur-Lauquet",         "km": 82,  "gainM": 3427, "lossM": 3431, "aid": "LIGHT", "cutoffIn": "2026-10-24T06:00:00" },
+    { "code": "13", "name": "Palaja (camp de Villemaury)","km": 94,  "gainM": 3871, "lossM": 3801, "aid": "LIGHT", "cutoffIn": "2026-10-24T09:50:00" },
+    { "code": "1D", "name": "Arrivée Carcassonne (Dôme)", "km": 103, "gainM": 4000, "lossM": 4090, "aid": "NONE",  "cutoffIn": "2026-10-24T13:00:00" }
+  ]
+}

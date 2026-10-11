@@ -1,0 +1,63 @@
+=== Raid des Bogomiles 2026 — scénario Optimiste ===
+103,0 km, 4000 m D+, 143 km-effort | arrivée sam 01h12 | temps total 14h12 (dont arrêts 0h26, nuit 5h58) | source : ROADBOOK
+Code Lieu                             Km     D+  Tronçon    Allure   Arrêt    Arrivée   Barrière     Marge
+1P   Départ Cité de Carcassonne      0,0      0                             ven 11h00                     
+2    Lac de Cavayère                 6,0    137     0h35   5'48/km          ven 11h34                     
+3    Molières-sur-l'Alberte         20,0    772     1h47   7'42/km   2 min  ven 13h22  ven 14h30      1h08
+4    Caunette-sur-Lauquet           33,0   1511     1h53   8'42/km   2 min  ven 15h16  ven 17h30      2h13
+5    Château d'Arques               52,0   2239     2h30   7'54/km   8 min  ven 17h48 ven 22h00*      3h11
+10   Villardebelle                  66,0   2852     2h00   8'30/km   2 min  ven 19h56  sam 01h00      5h04
+11   Greffeil                       75,0   3119     1h12   8'00/km   8 min  ven 21h10 sam 03h45*      6h27
+12   Ladern-sur-Lauquet             82,0   3427     1h03   8'54/km   2 min  ven 22h20  sam 06h00      7h39
+13   Palaja (camp de Villemaury)    94,0   3871     1h43   8'36/km   2 min  sam 00h05  sam 09h50      9h45
+1D   Arrivée Carcassonne (Dôme)    103,0   4000     1h05   7'12/km          sam 01h12  sam 13h00     11h48
+(* barrière en sortie de ravito)
+
+=== Raid des Bogomiles 2026 — scénario Réaliste ===
+103,0 km, 4000 m D+, 143 km-effort | arrivée sam 02h35 | temps total 15h35 (dont arrêts 0h50, nuit 7h08) | source : ROADBOOK
+Code Lieu                             Km     D+  Tronçon    Allure   Arrêt    Arrivée   Barrière     Marge
+1P   Départ Cité de Carcassonne      0,0      0                             ven 11h00                     
+2    Lac de Cavayère                 6,0    137     0h35   5'54/km          ven 11h35                     
+3    Molières-sur-l'Alberte         20,0    772     1h51   7'54/km   4 min  ven 13h26  ven 14h30      1h04
+4    Caunette-sur-Lauquet           33,0   1511     1h58   9'00/km   4 min  ven 15h27  ven 17h30      2h02
+5    Château d'Arques               52,0   2239     2h37   8'18/km  15 min  ven 18h08 ven 22h00*      2h51
+10   Villardebelle                  66,0   2852     2h11   9'24/km   4 min  ven 20h35  sam 01h00      4h25
+11   Greffeil                       75,0   3119     1h19   8'48/km  15 min  ven 21h58 sam 03h45*      5h32
+12   Ladern-sur-Lauquet             82,0   3427     1h09   9'54/km   4 min  ven 23h22  sam 06h00      6h38
+13   Palaja (camp de Villemaury)    94,0   3871     1h53   9'30/km   4 min  sam 01h19  sam 09h50      8h30
+1D   Arrivée Carcassonne (Dôme)    103,0   4000     1h12   7'54/km          sam 02h35  sam 13h00     10h25
+(* barrière en sortie de ravito)
+
+=== Raid des Bogomiles 2026 — scénario Prudent ===
+103,0 km, 4000 m D+, 143 km-effort | arrivée sam 04h20 | temps total 17h20 (dont arrêts 1h20, nuit 8h37) | source : ROADBOOK
+Code Lieu                             Km     D+  Tronçon    Allure   Arrêt    Arrivée   Barrière     Marge
+1P   Départ Cité de Carcassonne      0,0      0                             ven 11h00                     
+2    Lac de Cavayère                 6,0    137     0h36   6'00/km          ven 11h36                     
+3    Molières-sur-l'Alberte         20,0    772     1h55   8'12/km   6 min  ven 13h31  ven 14h30    0h58 !
+4    Caunette-sur-Lauquet           33,0   1511     2h04   9'30/km   6 min  ven 15h41  ven 17h30      1h49
+5    Château d'Arques               52,0   2239     2h45   8'42/km  25 min  ven 18h32 ven 22h00*      2h27
+10   Villardebelle                  66,0   2852     2h29  10'42/km   6 min  ven 21h26  sam 01h00      3h33
+11   Greffeil                       75,0   3119     1h28   9'48/km  25 min  ven 23h00 sam 03h45*      4h19
+12   Ladern-sur-Lauquet             82,0   3427     1h17  10'54/km   6 min  sam 00h42  sam 06h00      5h18
+13   Palaja (camp de Villemaury)    94,0   3871     2h06  10'30/km   6 min  sam 02h54  sam 09h50      6h55
+1D   Arrivée Carcassonne (Dôme)    103,0   4000     1h20   8'48/km          sam 04h20  sam 13h00      8h40
+(* barrière en sortie de ravito)
+⚠ Marge de moins d'1 h sur la barrière de Molières-sur-l'Alberte
+
+
+=== Raid des Bogomiles 2026 — scénario Réaliste ===
+101,5 km, 3769 m D+, 139 km-effort | arrivée sam 02h08 | temps total 15h09 (dont arrêts 0h50, nuit 6h41) | source : TRACK
+Code Lieu                             Km     D+  Tronçon    Allure   Arrêt    Arrivée   Barrière     Marge
+1P   Départ Cité de Carcassonne      0,0      0                             ven 11h00                     
+2    Lac de Cavayère                 5,9    164     0h36   6'12/km          ven 11h36                     
+3    Molières-sur-l'Alberte         19,7    882     1h54   8'18/km   4 min  ven 13h30  ven 14h30    0h59 !
+4    Caunette-sur-Lauquet           32,5   1541     1h52   8'42/km   4 min  ven 15h26  ven 17h30      2h03
+5    Château d'Arques               51,2   2161     2h29   7'54/km  15 min  ven 17h59 ven 22h00*      3h01
+10   Villardebelle                  65,0   2565     1h55   8'18/km   4 min  ven 20h09  sam 01h00      4h51
+11   Greffeil                       73,9   3073     1h35  10'42/km  15 min  ven 21h47 sam 03h45*      5h42
+12   Ladern-sur-Lauquet             80,8   3265     1h00   8'42/km   4 min  ven 23h02  sam 06h00      6h57
+13   Palaja (camp de Villemaury)    92,6   3652     1h48   9'06/km   4 min  sam 00h55  sam 09h50      8h55
+1D   Arrivée Carcassonne (Dôme)    101,5   3769     1h10   7'54/km          sam 02h08  sam 13h00     10h51
+(* barrière en sortie de ravito)
+⚠ Marge de moins d'1 h sur la barrière de Molières-sur-l'Alberte
+
