@@ -362,3 +362,38 @@ tbody tr:hover { background: var(--surface-2); }
   .legend .long { display: none; }
   .legend .short { display: inline; }
 }
+
+/* ---------- Nutrition ---------- */
+.nutrition { display: flex; flex-direction: column; gap: 12px; }
+.nutrition .card-head { margin-bottom: 0; }
+.nutrition-profile summary { cursor: pointer; font-weight: 600; font-size: 0.9rem; color: var(--accent); }
+.nutrition-profile[open] { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; }
+.nutrition-profile input, .nutrition-profile select {
+  font: inherit; width: 100%; min-width: 0; padding: 6px 8px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+}
+.profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin: 10px 0; }
+.profile-grid label { display: flex; flex-direction: column; gap: 3px; font-size: 0.8rem; font-weight: 500; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+.check input { width: auto; }
+.products { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.product-row { display: grid; grid-template-columns: minmax(120px, 1fr) 170px 100px 70px 32px; gap: 6px; align-items: center; }
+.product-head { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
+.product-actions { display: flex; gap: 8px; }
+.nutrition-start { display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.nutrition-table td { vertical-align: top; }
+.nutrition-table .leg-name { white-space: normal; min-width: 150px; max-width: 220px; }
+.nutrition-table .leg-name small { display: block; }
+.nutrition-table td:nth-child(5), .nutrition-table td:nth-child(6) { white-space: normal; min-width: 170px; }
+.nutrition-total { margin: 0; font-size: 0.9rem; }
+@media (max-width: 860px) {
+  .product-row { grid-template-columns: 1fr 1fr; }
+  .product-head { display: none; }
+  /* Une fiche par tronçon : nom, puis durée / glucides / eau sur une ligne, puis quoi faire. */
+  .nutrition-table thead { display: none; }
+  .nutrition-table tr { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .nutrition-table td { display: block; border: none; padding: 2px 0; text-align: left; min-width: 0 !important; max-width: none; }
+  .nutrition-table td.num { text-align: left; }
+  .nutrition-table .leg-name, .nutrition-table td:nth-child(5), .nutrition-table td:nth-child(6) { grid-column: 1 / -1; }
+  .nutrition-table td[data-label]::before { content: attr(data-label); display: block; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+}

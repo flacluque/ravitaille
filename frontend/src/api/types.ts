@@ -91,6 +91,8 @@ export interface CheckpointEta {
   marginIn: string | null;
   marginOut: string | null;
   status: CutoffStatus;
+  /** Part du tronçon courue de nuit (absente des plans gardés par une ancienne version). */
+  legNightDuration?: string;
 }
 
 export interface RacePlan {

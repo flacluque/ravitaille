@@ -73,7 +73,7 @@ public class RacePlanner {
         Checkpoint startCp = race.checkpoints().get(0);
         etas.add(new CheckpointEta(startCp.code(), startCp.name(), 0, 0, 0, 0, 0,
                 Duration.ZERO, 0, clock, Duration.ZERO, Duration.ZERO, clock,
-                startCp.cutoffIn(), startCp.cutoffOut(), null, null, CutoffStatus.NONE));
+                startCp.cutoffIn(), startCp.cutoffOut(), null, null, CutoffStatus.NONE, Duration.ZERO));
 
         for (int i = 0; i < legs.size(); i++) {
             Leg leg = legs.get(i);
@@ -82,6 +82,7 @@ public class RacePlanner {
 
             // --- Course sur le tronçon, pas à pas ---
             LocalDateTime legStart = clock;
+            double legNightSeconds = 0;
             double legEffort = leg.effortKm();
             int steps = Math.max(1, (int) Math.ceil(legEffort / STEP_EFFORT_KM));
             double stepEffort = legEffort / steps;
@@ -92,6 +93,7 @@ public class RacePlanner {
                 if (night != null && night.isNight(now)) {
                     minutes *= scenario.nightFactor();
                     nightSeconds += minutes * 60;
+                    legNightSeconds += minutes * 60;
                 }
                 clockSeconds += minutes * 60;
                 effort += stepEffort;
@@ -122,7 +124,8 @@ public class RacePlanner {
             etas.add(new CheckpointEta(cp.code(), cp.name(), round1(cumulativeKm), Math.round(cumulativeGain),
                     round1(leg.distanceKm()), Math.round(leg.gainM()), Math.round(leg.lossM()),
                     legDuration, round1(pace), arrival, Duration.between(race.start(), arrival), stop, departure,
-                    cp.cutoffIn(), cp.cutoffOut(), marginIn, marginOut, status));
+                    cp.cutoffIn(), cp.cutoffOut(), marginIn, marginOut, status,
+                    Duration.ofSeconds(Math.round(legNightSeconds))));
 
             clock = departure;
         }

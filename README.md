@@ -37,6 +37,10 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
 - **Lire un roadbook (image / PDF)** : une IA lit le roadbook de l'organisation et remplit le
   tableau de « Ma course » ; tu vérifies ligne par ligne, le roadbook d'origine affiché au-dessus.
   Voir « Lecture automatique des roadbooks » plus bas.
+- **Nutrition et hydratation** : pour chaque tronçon, glucides et eau à prévoir (moins d'eau la nuit),
+  quoi consommer (gels, compotes, boisson énergétique selon ton profil) et combien de flasques remplir
+  à chaque point d'eau pour tenir jusqu'au suivant. Ce qu'il faut emporter au départ, et récupérer au
+  sac de délestage ou auprès de l'assistance. Alerte si les flasques ne suffisent pas.
 - **Télécharger le PDF** : le plan en A4, prêt à garder sur le téléphone ou à imprimer. Il contient
   les trois scénarios, le profil avec les ravitos, tes références, les heures de passage du scénario
   sélectionné (marges en couleur) et la comparaison des scénarios. Il est généré dans le navigateur,

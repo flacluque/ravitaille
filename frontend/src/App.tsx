@@ -6,6 +6,7 @@ import { CompareTable } from './components/CompareTable';
 import { CourseMap } from './components/CourseMap';
 import { ElevationProfile } from './components/ElevationProfile';
 import { Legend } from './components/Legend';
+import { NutritionCard } from './components/NutritionCard';
 import { PassageTable } from './components/PassageTable';
 import { RaceEditor } from './components/RaceEditor';
 import { ReferenceForm } from './components/ReferenceForm';
@@ -13,6 +14,7 @@ import { ReferenceInsights } from './components/ReferenceInsights';
 import { ScenarioCards } from './components/ScenarioCards';
 import { draftToRace, emptyDraft, type RaceDraft } from './lib/draft';
 import { formatClock, formatKm, formatMeters } from './lib/format';
+import { defaultServices } from './lib/services';
 
 // Course d'exemple embarquée (src/main/resources/samples/bogomiles).
 const SAMPLE_ID = 'bogomiles';
@@ -150,6 +152,11 @@ export function App() {
   const plans = shown?.plans ?? [];
   const plan = plans[Math.min(scenarioIndex, plans.length - 1)];
   const course = shown?.course;
+  // Services de chaque point (déduits du type d'arrêt pour un plan gardé par une ancienne version).
+  const services = useMemo(
+    () => course?.race.checkpoints.map((c) => c.services ?? defaultServices(c.aid)) ?? [],
+    [course],
+  );
 
   const [savingPdf, setSavingPdf] = useState(false);
   async function savePdf() {
@@ -264,8 +271,10 @@ export function App() {
           )}
 
           {plan && course && (
-            <PassageTable plan={plan} markers={course.markers} services={course.race.checkpoints.map((c) => c.services ?? [])} onHover={setHoverKm} />
+            <PassageTable plan={plan} markers={course.markers} services={services} onHover={setHoverKm} />
           )}
+
+          {plan && course && <NutritionCard plan={plan} services={services} />}
 
           {plans.length > 1 && <CompareTable plans={plans} />}
 
