@@ -102,6 +102,21 @@ export function App() {
     if (await computeCustom(references, source, draft, gpx)) setEditorOpen(false);
   }
 
+  // Roadbook importé ou lu par l'IA : on recalcule aussitôt. La trace GPX d'une autre course ne
+  // correspond plus, on la retire. Si la saisie est incomplète, on montre ce qui manque.
+  async function loadedRoadbook(d: RaceDraft) {
+    let file = gpx;
+    const previous = data?.sampleId === CUSTOM_ID ? data.course.race.name : draft.name.trim();
+    if (file && previous && d.name.trim() && d.name.trim() !== previous) {
+      file = null;
+      setGpx(null);
+      void saveGpx(null);
+    }
+    if (!(await computeCustom(references, source, d, file))) {
+      requestAnimationFrame(() => document.querySelector('.editor-errors')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    }
+  }
+
   // Premier chargement : on recalcule ce qui était affiché la dernière fois (la trace GPX est relue
   // depuis IndexedDB). Hors ligne, le dernier plan reste affiché.
   useEffect(() => {
@@ -160,6 +175,9 @@ export function App() {
   const course = shown?.course;
   const stale = mode === 'custom' && shown !== null && computedSignature !== null
     && computedSignature !== draftSignature(draft, gpx);
+  // Saisie d'une autre course (nouveau roadbook pas encore calculable) : l'ancien plan n'a plus
+  // rien à faire à l'écran, même grisé.
+  const otherRace = stale && !!course && draft.name.trim() !== '' && draft.name.trim() !== course.race.name;
   // Services de chaque point (déduits du type d'arrêt pour un plan gardé par une ancienne version).
   const services = useMemo(
     () => course?.race.checkpoints.map((c) => c.services ?? defaultServices(c.aid)) ?? [],
@@ -195,7 +213,12 @@ export function App() {
           <img src="/icon.svg" alt="" width={28} height={28} />
           <span>Trail Planner</span>
         </div>
-        {course && (
+        {otherRace ? (
+          <div className="race-title">
+            <h1>{draft.name.trim()}</h1>
+            <p>Plan à calculer</p>
+          </div>
+        ) : course && (
           <div className="race-title">
             <h1>{course.race.name}</h1>
             <p>
@@ -257,7 +280,7 @@ export function App() {
               loading={status.kind === 'loading'}
               onSubmit={() => void submitEditor()}
               onCancel={shown ? () => setEditorOpen(false) : null}
-              onLoaded={(d) => void computeCustom(references, source, d, gpx)}
+              onLoaded={(d) => void loadedRoadbook(d)}
             />
           ) : mode === 'custom' && (
             <div className="editor-summary no-print">
@@ -268,14 +291,19 @@ export function App() {
             </div>
           )}
 
-          {stale && course && (
+          {otherRace ? (
+            <div className="banner warn stale-banner" role="status">
+              Le plan de « {draft.name.trim()} » n'est pas encore calculé :
+              {' '}{draftErrors.length ? 'complète la saisie ci-dessus (voir les erreurs)' : 'clique sur « Calculer mon plan »'}.
+            </div>
+          ) : stale && course && (
             <div className="banner warn stale-banner" role="status">
               Le plan ci-dessous est celui de « {course.race.name} » avant tes changements :
               {' '}{draftErrors.length ? 'complète la saisie' : 'clique sur « Calculer mon plan »'} pour le mettre à jour.
             </div>
           )}
 
-          <div className={stale ? 'results stale' : 'results'} aria-hidden={stale || undefined}>
+          {!otherRace && <div className={stale ? 'results stale' : 'results'} aria-hidden={stale || undefined}>
           {plans.length > 0 && (
             <ScenarioCards plans={plans} selected={scenarioIndex} onSelect={setScenarioIndex} />
           )}
@@ -308,7 +336,7 @@ export function App() {
           {course && <GearCard raceName={course.race.name} plan={plan} profile={nutritionProfile} />}
 
           {plans.length > 1 && <CompareTable plans={plans} />}
-          </div>
+          </div>}
 
           {status.kind === 'loading' && !shown && mode === 'demo' && <p className="muted">Calcul en cours…</p>}
         </section>
