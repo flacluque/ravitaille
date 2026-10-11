@@ -188,6 +188,6 @@ et pourra être réutilisé tel quel (CLI, appli mobile via une API, batch de ca
 - [x] **v0.1-import** : saisir / importer son roadbook, trace GPX facultative
 - [x] **v0.1-lecture** : lecture du roadbook (image / PDF) par une IA configurable, Ollama par défaut
 - [x] **v0.1-références** : plusieurs références datées (courses, entraînements), pondérées
-- [ ] **v0.2** : plan nutrition / hydratation par tronçon, checklist matériel obligatoire
+- [ ] **v0.2** : plan nutrition / hydratation par tronçon, checklist matériel obligatoire (voir [docs/v0.2-conception.md](docs/v0.2-conception.md))
 - [ ] **v0.3** : import de l'historique (Strava/Garmin) et calibration par tranche de pente (montée/descente)
 - [ ] **v0.4** : mode assistance (crew) : où et quand retrouver le coureur
