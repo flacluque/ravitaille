@@ -5,12 +5,14 @@ import fr.trailplanner.engine.ElevationSource;
 import fr.trailplanner.engine.RacePlan;
 import fr.trailplanner.gpx.GpxParser;
 import fr.trailplanner.model.NightWindow;
+import fr.trailplanner.model.RaceDefinition;
 import fr.trailplanner.model.ReferencePerformance;
 import fr.trailplanner.report.TextReport;
 import fr.trailplanner.track.TrackProfile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -48,6 +50,20 @@ public class PlanController {
         }
     }
 
+    /** Course à dessiner (carte, profil, ravitos) : roadbook (JSON) et trace GPX optionnelle. */
+    @PostMapping(path = "/courses", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public CourseView course(@RequestPart("race") RaceDefinition race,
+                             @RequestPart(value = "gpx", required = false) MultipartFile gpx,
+                             @RequestParam(defaultValue = "0.1") double stepKm) throws IOException {
+        if (gpx == null || gpx.isEmpty()) {
+            return CourseView.of(race, null, null, stepKm);
+        }
+        try (InputStream in = gpx.getInputStream()) {
+            PlanningService.LoadedTrack track = service.loadTrack(in);
+            return CourseView.of(race, track.profile(), track.name(), stepKm);
+        }
+    }
+
     /** Plan de course : roadbook + références (JSON) et trace GPX optionnelle. */
     @PostMapping(path = "/plans", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public List<RacePlan> plan(@RequestPart("request") PlanRequest request,
@@ -59,6 +75,27 @@ public class PlanController {
             }
         }
         return service.plan(request, track);
+    }
+
+    /**
+     * Plans de course et course à dessiner (carte, profil) d'un coup : c'est ce qu'utilise le front
+     * pour une course chargée par le coureur, avec ou sans trace GPX.
+     */
+    @PostMapping(path = "/plans/full", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public PlanView planFull(@RequestPart("request") PlanRequest request,
+                             @RequestPart(value = "gpx", required = false) MultipartFile gpx,
+                             @RequestParam(defaultValue = "0.1") double stepKm) throws IOException {
+        if (request.race() == null) {
+            throw new IllegalArgumentException("La course (race) est obligatoire");
+        }
+        if (gpx == null || gpx.isEmpty()) {
+            return new PlanView(CourseView.of(request.race(), null, null, stepKm), service.plan(request, null));
+        }
+        try (InputStream in = gpx.getInputStream()) {
+            PlanningService.LoadedTrack track = service.loadTrack(in);
+            return new PlanView(CourseView.of(request.race(), track.profile(), track.name(), stepKm),
+                    service.plan(request, track.profile()));
+        }
     }
 
     /** Même chose sans GPX, en JSON pur (le D+ officiel du roadbook suffit). */
@@ -82,6 +119,19 @@ public class PlanController {
         return service.plan(request, sample.track() == null ? null : sample.track().profile());
     }
 
+    /**
+     * Démo avec plusieurs références (datées, course ou entraînement) : c'est ce qu'utilise le front.
+     * Corps : { "references": [...], "elevationSource": "AUTO" }.
+     */
+    @PostMapping(path = "/demo/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public List<RacePlan> demoPlans(@PathVariable String id, @RequestBody DemoRequest body) {
+        PlanningService.Sample sample = service.loadSample(id);
+        PlanRequest request = new PlanRequest(sample.race(), body.references(), DEMO_NIGHT, body.elevationSource(), null);
+        return service.plan(request, sample.track() == null ? null : sample.track().profile());
+    }
+
+    public record DemoRequest(List<ReferencePerformance> references, ElevationSource elevationSource) {}
+
     /** Version texte imprimable de la démo. */
     @GetMapping(path = "/demo/{id}/report", produces = MediaType.TEXT_PLAIN_VALUE)
     public String demoReport(@PathVariable String id,
@@ -90,6 +140,15 @@ public class PlanController {
                              @RequestParam(defaultValue = "PT8H48M") Duration refTime,
                              @RequestParam(defaultValue = "AUTO") ElevationSource source) {
         return TextReport.render(demo(id, refKm, refGain, refTime, source));
+    }
+
+    /** Course d'exemple à dessiner : roadbook, trace et position des ravitos sur la trace. */
+    @GetMapping("/demo/{id}/course")
+    public CourseView demoCourse(@PathVariable String id, @RequestParam(defaultValue = "0.1") double stepKm) {
+        PlanningService.Sample sample = service.loadSample(id);
+        return sample.track() == null
+                ? CourseView.of(sample.race(), null, null, stepKm)
+                : CourseView.of(sample.race(), sample.track().profile(), sample.track().name(), stepKm);
     }
 
     /** Roadbook vs trace GPX, point par point : pour vérifier que la trace colle au parcours officiel. */
@@ -110,16 +169,33 @@ public class PlanController {
     public record CheckpointComparison(String code, String name, double roadbookKm, Double roadbookGainM,
                                        double trackKm, double trackGainM, double trackElevationM) {}
 
+    /** Fin octobre à Carcassonne : coucher ~18h40, lever ~8h15 (marge frontale comprise). */
+    private static final NightWindow DEMO_NIGHT = new NightWindow(LocalTime.of(19, 0), LocalTime.of(7, 45));
+
     private static PlanRequest demoRequest(PlanningService.Sample sample, double refKm, double refGain,
                                            Duration refTime, ElevationSource source) {
         return new PlanRequest(sample.race(),
                 List.of(new ReferencePerformance("Référence", refKm, refGain, refTime)),
-                new NightWindow(LocalTime.of(19, 0), LocalTime.of(7, 45)),
+                DEMO_NIGHT,
                 source, null);
     }
 
     @ExceptionHandler({IllegalArgumentException.class, GpxParser.GpxParseException.class})
     public ProblemDetail badRequest(RuntimeException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    /**
+     * JSON illisible, ou refusé par la validation d'un record (points non triés, référence invalide...) :
+     * Jackson enveloppe alors l'IllegalArgumentException, dont on remonte le message au coureur.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ProblemDetail unreadable(HttpMessageNotReadableException e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof IllegalArgumentException) {
+                return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, t.getMessage());
+            }
+        }
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Requête illisible : vérifie le format du roadbook");
     }
 }

@@ -16,6 +16,9 @@ public record TrackSummary(
         List<TrackProfile.ProfilePoint> profile) {
 
     public static TrackSummary of(String name, TrackProfile track, double stepKm) {
+        if (!(stepKm >= 0.01)) {
+            throw new IllegalArgumentException("Pas de rééchantillonnage trop petit (minimum 0,01 km) : " + stepKm);
+        }
         List<TrackProfile.ProfilePoint> profile = track.sample(stepKm);
         double min = profile.stream().mapToDouble(TrackProfile.ProfilePoint::elevationM).min().orElse(0);
         double max = profile.stream().mapToDouble(TrackProfile.ProfilePoint::elevationM).max().orElse(0);

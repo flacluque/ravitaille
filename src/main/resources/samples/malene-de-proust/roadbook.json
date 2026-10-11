@@ -1,0 +1,14 @@
+{
+  "name": "La Malène de Proust 2026",
+  "start": "2026-05-03T06:40:00",
+  "checkpoints": [
+    { "code": "1", "name": "Départ La Malène", "km": 0,    "gainM": 0, "lossM": 0, "aid": "NONE" },
+    { "code": "2", "name": "La Caxe",          "km": 10,   "aid": "LIGHT" },
+    { "code": "3", "name": "La Sablière",      "km": 19.9, "aid": "LIGHT" },
+    { "code": "4", "name": "Le Rozier",        "km": 25.5, "aid": "NONE",  "cutoffIn": "2026-05-03T12:15:00" },
+    { "code": "5", "name": "Puech Margue",     "km": 31.9, "aid": "LIGHT", "cutoffIn": "2026-05-03T14:00:00" },
+    { "code": "6", "name": "La Cresse",        "km": 36.3, "aid": "LIGHT" },
+    { "code": "7", "name": "Paulhe",           "km": 42.6, "aid": "LIGHT", "cutoffIn": "2026-05-03T16:20:00" },
+    { "code": "8", "name": "Arrivée Millau",   "km": 54.3, "aid": "NONE" }
+  ]
+}
