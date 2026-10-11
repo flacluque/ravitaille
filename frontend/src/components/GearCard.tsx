@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { extractGear, fetchExtractorStatus } from '../api/client';
 import { loadGear, saveGear } from '../api/storage';
+import { ConfirmBar } from './ConfirmBar';
 import type { ExtractorStatus, RacePlan } from '../api/types';
 import {
   GEAR_STATUS_LABEL,
@@ -30,6 +31,7 @@ export function GearCard({ raceName, plan, profile }: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [extractor, setExtractor] = useState<ExtractorStatus | null>(null);
   const [reading, setReading] = useState(false);
+  const [pendingRules, setPendingRules] = useState<File | null>(null);
   const [readError, setReadError] = useState<string | null>(null);
   const [readNotes, setReadNotes] = useState<string[]>([]);
 
@@ -52,12 +54,16 @@ export function GearCard({ raceName, plan, profile }: Props) {
     if (name.trim()) update([...items, { id: gearId(), name: name.trim(), status, packed: false }]);
   };
 
-  async function readRules(e: ChangeEvent<HTMLInputElement>) {
+  function chooseRules(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    const hasRules = items.some((i) => i.status !== 'PERSONAL');
-    if (hasRules && !window.confirm('Remplacer la liste actuelle (sauf tes éléments perso) par la lecture de ce règlement ?')) return;
+    if (items.some((i) => i.status !== 'PERSONAL')) setPendingRules(file);
+    else void readRules(file);
+  }
+
+  async function readRules(file: File) {
+    setPendingRules(null);
     setReading(true);
     setReadError(null);
     try {
@@ -99,13 +105,21 @@ export function GearCard({ raceName, plan, profile }: Props) {
               {reading ? 'Lecture…' : 'Lire le règlement'}
             </button>
           )}
-          <input ref={fileInput} type="file" accept="image/*,.pdf,application/pdf" hidden onChange={readRules} />
+          <input ref={fileInput} type="file" accept="image/*,.pdf,application/pdf" hidden onChange={chooseRules} />
           {items.length === 0 && (
             <button type="button" className="ghost" onClick={() => update(templateItems())}>Liste type</button>
           )}
         </div>
       </div>
 
+      {pendingRules && (
+        <ConfirmBar
+          message={`Remplacer la liste actuelle (sauf tes éléments perso) par la lecture de ${pendingRules.name} ?`}
+          confirmLabel="Lire et remplacer"
+          onConfirm={() => void readRules(pendingRules)}
+          onCancel={() => setPendingRules(null)}
+        />
+      )}
       {reading && <p className="scan-progress" role="status"><span className="spinner" aria-hidden /> Lecture du règlement… (de 30 s à 2 min)</p>}
       {readError && <p className="field-error" role="alert">{readError}</p>}
       {readNotes.length > 0 && (

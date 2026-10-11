@@ -12,6 +12,7 @@ import {
   type RaceDraft,
 } from '../lib/draft';
 import { formatClock } from '../lib/format';
+import { ConfirmBar } from './ConfirmBar';
 import { aidFor, SERVICE_INFO, SERVICES, sortServices } from '../lib/services';
 
 interface Props {
@@ -40,6 +41,8 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
   const scanInput = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const scan = useRoadbookScan();
+  // Fichier choisi alors que l'éditeur contient déjà une course : on demande avant d'écraser.
+  const [pendingScan, setPendingScan] = useState<File | null>(null);
   const resolved = resolveCutoffs(draft);
   const exported = draftToFile(draft);
 
@@ -78,11 +81,16 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
     URL.revokeObjectURL(url);
   }
 
-  async function scanRoadbook(e: ChangeEvent<HTMLInputElement>) {
+  function chooseScan(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (hasContent(draft) && !window.confirm('Remplacer la saisie actuelle par la lecture de ce roadbook ?')) return;
+    if (hasContent(draft)) setPendingScan(file);
+    else void scanRoadbook(file);
+  }
+
+  async function scanRoadbook(file: File) {
+    setPendingScan(null);
     const extracted = await scan.read(file);
     if (extracted) {
       const { draft: next, warnings } = extractedToDraft(extracted, draft, file.name);
@@ -112,7 +120,7 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
               Lire un roadbook (image / PDF)
             </button>
           )}
-          <input ref={scanInput} type="file" accept="image/*,.pdf,application/pdf" hidden onChange={scanRoadbook} />
+          <input ref={scanInput} type="file" accept="image/*,.pdf,application/pdf" hidden onChange={chooseScan} />
           <button type="button" className="ghost" onClick={() => roadbookInput.current?.click()}
             title="Recharger un roadbook exporté en JSON">Importer</button>
           <button type="button" className="ghost" onClick={exportRoadbook} disabled={!exported}
@@ -123,6 +131,14 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
         </div>
       </div>
       {importError && <p className="field-error">{importError}</p>}
+      {pendingScan && (
+        <ConfirmBar
+          message={`Remplacer « ${draft.name.trim() || 'la saisie actuelle'} » par la lecture de ${pendingScan.name} ?`}
+          confirmLabel="Lire et remplacer"
+          onConfirm={() => void scanRoadbook(pendingScan)}
+          onCancel={() => setPendingScan(null)}
+        />
+      )}
       <ScanPanel scan={scan} onRetryStatus={scan.refreshStatus} />
 
       <div className="editor-fields">

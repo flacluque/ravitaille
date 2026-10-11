@@ -429,3 +429,7 @@ tbody tr:hover { background: var(--surface-2); }
 .results.stale { opacity: 0.35; filter: grayscale(0.6); pointer-events: none; user-select: none; }
 .stale-banner { margin: 0; }
 @media (max-width: 860px) { .results { gap: 12px; } }
+
+.confirm-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px;
+  padding: 10px 14px; margin: 8px 0; border-radius: 8px; background: var(--tight-bg); font-size: 0.9rem; }
+.confirm-actions { display: flex; gap: 8px; }
