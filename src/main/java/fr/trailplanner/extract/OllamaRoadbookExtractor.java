@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import fr.trailplanner.api.JsonSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -22,6 +24,8 @@ import java.util.Base64;
  * gratuit, hors ligne, rien ne sort de la machine.
  */
 public class OllamaRoadbookExtractor implements RoadbookExtractor {
+
+    private static final Logger log = LoggerFactory.getLogger(OllamaRoadbookExtractor.class);
 
     private final ObjectMapper mapper = JsonSupport.mapper();
     private final HttpClient http;
@@ -42,6 +46,8 @@ public class OllamaRoadbookExtractor implements RoadbookExtractor {
     public ExtractedRoadbook extract(RoadbookDocument document) {
         JsonNode response = post("/api/chat", chatRequest(document), timeout);
         String content = response.path("message").path("content").asText("");
+        // Réponse brute du modèle : logging.level.fr.trailplanner.extract=DEBUG pour comprendre une lecture ratée.
+        log.debug("Réponse de {} : {}", model, content);
         try {
             return mapper.readValue(content, ExtractedRoadbook.class);
         } catch (IOException e) {

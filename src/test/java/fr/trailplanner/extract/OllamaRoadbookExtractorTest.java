@@ -53,6 +53,13 @@ class OllamaRoadbookExtractorTest {
         assertEquals(MODEL, sent.path("model").asText());
         assertFalse(sent.path("stream").asBoolean(true));
         assertEquals("object", sent.path("format").path("type").asText());
+        // Tous les champs d'un point sont exigés (null si absent) : sinon le modèle saute le D+ et le D-.
+        JsonNode point = sent.path("format").path("properties").path("checkpoints").path("items");
+        List<String> required = new java.util.ArrayList<>();
+        point.path("required").forEach(f -> required.add(f.asText()));
+        List<String> fields = new java.util.ArrayList<>();
+        point.path("properties").fieldNames().forEachRemaining(fields::add);
+        assertEquals(fields, required);
         assertEquals(32768, sent.path("options").path("num_ctx").asInt());
         JsonNode user = sent.path("messages").get(1);
         assertEquals("user", user.path("role").asText());

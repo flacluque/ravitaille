@@ -24,9 +24,12 @@ public final class RoadbookPrompt {
             commençant à "1" pour le départ.
             - name : le lieu, tel qu'écrit (sans les précisions secondaires en petit).
             - km : la distance depuis le départ.
-            - gainM / lossM : le dénivelé positif / négatif CUMULÉ depuis le départ, en mètres, seulement \
-            s'il est écrit en chiffres pour ce point. Si le roadbook le donne par tronçon, additionne-le et \
-            signale-le dans warnings. Ne l'estime jamais à partir du dessin d'un profil : laisse-le vide.
+            - gainM / lossM : le dénivelé positif / négatif CUMULÉ depuis le départ, en mètres. Dans un \
+            tableau, ce sont les colonnes « D+ » / « D- », « Dénivelé + » / « Dénivelé - », « Dén. pos. » / \
+            « Dén. nég. », ou une icône de montagne avec un + / un - : recopie leur valeur pour CHAQUE \
+            point. Si le roadbook donne le dénivelé par tronçon, additionne-le et signale-le dans warnings. \
+            Mets null seulement quand aucun chiffre de dénivelé n'est écrit pour ce point (par exemple \
+            un roadbook qui ne montre le relief qu'en dessin) : ne lis jamais une valeur sur un dessin.
             - cutoffIn : la barrière horaire (heure limite, "BH", "cut-off") à l'entrée du point, au format \
             "12h30" (heure seulement, sans le jour). cutoffOut : seulement si le roadbook précise une \
             barrière de sortie ("Sortie", "Exit", départ du ravito). Sans précision, une barrière est à \
@@ -48,6 +51,16 @@ public final class RoadbookPrompt {
             l'année sont lisibles ; sinon laisse vide.
             - warnings : quelques phrases courtes, en français, sur ce que le coureur doit vérifier \
             (valeur illisible, incohérence, par exemple une distance totale annoncée différente du tableau).
+
+            Tous les champs sont présents dans la réponse ; null quand l'information n'est pas écrite. \
+            Exemple de forme (valeurs fictives) :
+            {"name": "Trail des Crêtes 2026", "startDate": null, "startTime": "08:00",
+             "checkpoints": [
+              {"code": "1", "name": "Départ Place du Village", "km": 0, "gainM": 0, "lossM": 0,
+               "cutoffIn": null, "cutoffOut": null, "aid": "NONE"},
+              {"code": "2", "name": "Col du Loup", "km": 12.5, "gainM": 640, "lossM": 210,
+               "cutoffIn": "11h30", "cutoffOut": null, "aid": "LIGHT"}],
+             "warnings": []}
             """;
 
     public static final String USER = "Voici le roadbook. Extrais-en les points de passage.";
@@ -79,14 +92,18 @@ public final class RoadbookPrompt {
         return sb.toString();
     }
 
-    /** Schéma de la réponse : la structure d'ExtractedRoadbook. */
+    /**
+     * Schéma de la réponse : la structure d'ExtractedRoadbook. Tous les champs sont obligatoires, avec null
+     * pour une information absente : sous une réponse contrainte, un petit modèle a tendance à sauter les
+     * champs facultatifs (le D+ et le D- disparaissaient ainsi d'un tableau qui les donnait pourtant).
+     */
     public static final String SCHEMA = """
             {
               "type": "object",
               "properties": {
-                "name": { "type": "string" },
-                "startDate": { "type": "string" },
-                "startTime": { "type": "string" },
+                "name": { "type": ["string", "null"] },
+                "startDate": { "type": ["string", "null"] },
+                "startTime": { "type": ["string", "null"] },
                 "checkpoints": {
                   "type": "array",
                   "items": {
@@ -95,18 +112,18 @@ public final class RoadbookPrompt {
                       "code": { "type": "string" },
                       "name": { "type": "string" },
                       "km": { "type": "number" },
-                      "gainM": { "type": "number" },
-                      "lossM": { "type": "number" },
-                      "cutoffIn": { "type": "string" },
-                      "cutoffOut": { "type": "string" },
+                      "gainM": { "type": ["number", "null"] },
+                      "lossM": { "type": ["number", "null"] },
+                      "cutoffIn": { "type": ["string", "null"] },
+                      "cutoffOut": { "type": ["string", "null"] },
                       "aid": { "type": "string", "enum": ["NONE", "LIGHT", "FULL"] }
                     },
-                    "required": ["code", "name", "km", "aid"]
+                    "required": ["code", "name", "km", "gainM", "lossM", "cutoffIn", "cutoffOut", "aid"]
                   }
                 },
                 "warnings": { "type": "array", "items": { "type": "string" } }
               },
-              "required": ["name", "checkpoints", "warnings"]
+              "required": ["name", "startDate", "startTime", "checkpoints", "warnings"]
             }
             """;
 }
