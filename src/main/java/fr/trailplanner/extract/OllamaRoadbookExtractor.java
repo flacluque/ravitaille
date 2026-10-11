@@ -16,7 +16,6 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.Base64;
-import java.util.List;
 
 /**
  * Lecture du roadbook par un modèle de vision servi en local par Ollama (https://ollama.com) :
@@ -24,28 +23,24 @@ import java.util.List;
  */
 public class OllamaRoadbookExtractor implements RoadbookExtractor {
 
-    /**
-     * Contexte du modèle, en tokens. Celui d'Ollama par défaut est trop court : une page de roadbook
-     * occupe à elle seule quelques milliers de tokens, et la réponse serait tronquée.
-     */
-    static final int CONTEXT_TOKENS = 16384;
-
     private final ObjectMapper mapper = JsonSupport.mapper();
     private final HttpClient http;
     private final String baseUrl;
     private final String model;
     private final Duration timeout;
+    private final int contextTokens;
 
     public OllamaRoadbookExtractor(ExtractionProperties.Ollama config) {
         this.baseUrl = config.baseUrl().replaceAll("/+$", "");
         this.model = config.model();
         this.timeout = config.timeout();
+        this.contextTokens = config.contextTokens();
         this.http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     }
 
     @Override
-    public ExtractedRoadbook extract(List<byte[]> pages) {
-        JsonNode response = post("/api/chat", chatRequest(pages), timeout);
+    public ExtractedRoadbook extract(RoadbookDocument document) {
+        JsonNode response = post("/api/chat", chatRequest(document), timeout);
         String content = response.path("message").path("content").asText("");
         try {
             return mapper.readValue(content, ExtractedRoadbook.class);
@@ -55,7 +50,7 @@ public class OllamaRoadbookExtractor implements RoadbookExtractor {
         }
     }
 
-    ObjectNode chatRequest(List<byte[]> pages) {
+    ObjectNode chatRequest(RoadbookDocument document) {
         ObjectNode body = mapper.createObjectNode();
         body.put("model", model);
         body.put("stream", false);
@@ -66,13 +61,13 @@ public class OllamaRoadbookExtractor implements RoadbookExtractor {
         }
         ObjectNode options = body.putObject("options");
         options.put("temperature", 0);
-        options.put("num_ctx", CONTEXT_TOKENS);
+        options.put("num_ctx", contextTokens);
 
         ArrayNode messages = body.putArray("messages");
         messages.addObject().put("role", "system").put("content", RoadbookPrompt.SYSTEM);
-        ObjectNode user = messages.addObject().put("role", "user").put("content", RoadbookPrompt.USER);
+        ObjectNode user = messages.addObject().put("role", "user").put("content", RoadbookPrompt.user(document.texts()));
         ArrayNode images = user.putArray("images");
-        pages.forEach(p -> images.add(Base64.getEncoder().encodeToString(p)));
+        document.images().forEach(p -> images.add(Base64.getEncoder().encodeToString(p)));
         return body;
     }
 

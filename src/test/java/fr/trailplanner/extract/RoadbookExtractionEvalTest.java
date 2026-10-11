@@ -32,7 +32,8 @@ class RoadbookExtractionEvalTest {
     private record Case(String image, String reference) {}
 
     private static final List<Case> CASES = List.of(
-            new Case("/roadbooks/troubadours-2026.jpg", "/samples/troubadours/roadbook.json"));
+            new Case("/roadbooks/troubadours-2026.jpg", "/samples/troubadours/roadbook.json"),
+            new Case("/roadbooks/malene-de-proust-2026.pdf", "/samples/malene-de-proust/roadbook.json"));
 
     @Test
     void comparerLaLectureAuxSaisiesDeReference() throws IOException {
@@ -40,7 +41,7 @@ class RoadbookExtractionEvalTest {
         double minScore = Double.parseDouble(System.getProperty("ollama.minScore", "0"));
         RoadbookExtractionService service = new RoadbookExtractionService(new OllamaRoadbookExtractor(
                 new ExtractionProperties.Ollama(System.getProperty("ollama.url", "http://localhost:11434"), model,
-                        Duration.ofMinutes(10))));
+                        Duration.ofMinutes(10), Integer.getInteger("ollama.contextTokens", 32768))));
 
         int ok = 0, total = 0;
         for (Case c : CASES) {
@@ -62,7 +63,7 @@ class RoadbookExtractionEvalTest {
             System.out.printf(Locale.ROOT, "%n=== %s avec %s : %d/%d champs corrects en %d s ===%n",
                     c.image(), model, score[0], score[1], seconds);
             lines.forEach(System.out::println);
-            actual.warnings().forEach(w -> System.out.println("  (signalé par le modèle) " + w));
+            actual.warnings().forEach(w -> System.out.println("  (remarque) " + w));
         }
         double rate = total == 0 ? 0 : (double) ok / total;
         System.out.printf(Locale.ROOT, "%nScore global : %.0f %%%n", rate * 100);

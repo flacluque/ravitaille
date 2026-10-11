@@ -26,8 +26,14 @@ public class RoadbookExtractionService {
     }
 
     public ExtractedRoadbook extract(byte[] content, String filename) {
-        List<byte[]> pages = RoadbookPages.from(content, filename);
-        return normalize(extractor.extract(pages));
+        RoadbookDocument document = RoadbookPages.from(content, filename);
+        ExtractedRoadbook result = normalize(extractor.extract(document));
+        if (document.notes().isEmpty()) {
+            return result;
+        }
+        List<String> warnings = new ArrayList<>(document.notes());
+        warnings.addAll(result.warnings());
+        return new ExtractedRoadbook(result.name(), result.startDate(), result.startTime(), result.checkpoints(), warnings);
     }
 
     private static final Pattern CLOCK = Pattern.compile("(\\d{1,2})\\s*[h:]\\s*(\\d{2})?", Pattern.CASE_INSENSITIVE);
@@ -38,12 +44,19 @@ public class RoadbookExtractionService {
                 .filter(w -> !w.isBlank()).map(String::trim).toList());
         List<ExtractedRoadbook.Point> points = new ArrayList<>();
         for (ExtractedRoadbook.Point p : raw.checkpoints()) {
+            // Au départ, le dénivelé cumulé est nul par définition, même si le roadbook ne l'écrit pas.
+            boolean start = points.isEmpty() && p.km() != null && p.km() == 0;
             points.add(new ExtractedRoadbook.Point(
-                    trim(p.code()), trim(p.name()), p.km(), p.gainM(), p.lossM(),
+                    trim(p.code()), trim(p.name()), p.km(),
+                    start && p.gainM() == null ? Double.valueOf(0) : p.gainM(),
+                    start && p.lossM() == null ? Double.valueOf(0) : p.lossM(),
                     clock(p.cutoffIn()), clock(p.cutoffOut()), aid(p.aid())));
         }
         if (points.isEmpty()) {
             warnings.add("Aucun point de passage n'a été reconnu : vérifie que le fichier est bien le roadbook.");
+        } else if (points.stream().skip(1).anyMatch(p -> p.gainM() == null)) {
+            warnings.add("Le roadbook ne donne pas le D+ de chaque point : ajoute la trace GPX de la course "
+                    + "(souvent téléchargeable sur son site), le calcul prendra le dénivelé de la trace.");
         }
         String startDate = trim(raw.startDate());
         if (startDate != null && !DATE.matcher(startDate).matches()) {

@@ -23,30 +23,60 @@ class RoadbookPagesTest {
         try (InputStream in = getClass().getResourceAsStream("/roadbooks/troubadours-2026.jpg")) {
             jpg = in.readAllBytes();
         }
-        List<byte[]> pages = RoadbookPages.from(jpg, "troubadours.jpg");
+        RoadbookDocument doc = RoadbookPages.from(jpg, "troubadours.jpg");
 
-        assertEquals(1, pages.size());
-        BufferedImage page = read(pages.get(0));
+        assertEquals(1, doc.images().size());
+        assertEquals(List.of(), doc.texts());
+        BufferedImage page = read(doc.images().get(0));
         assertEquals(1500, page.getWidth());
         assertEquals(1061, page.getHeight());
     }
 
     @Test
     void unePhotoDeTelephoneEstReduite() throws IOException {
-        List<byte[]> pages = RoadbookPages.from(png(new BufferedImage(4032, 3024, BufferedImage.TYPE_INT_ARGB)), "photo.png");
+        RoadbookDocument doc = RoadbookPages.from(png(new BufferedImage(4032, 3024, BufferedImage.TYPE_INT_ARGB)), "photo.png");
 
-        BufferedImage page = read(pages.get(0));
+        BufferedImage page = read(doc.images().get(0));
         assertEquals(RoadbookPages.MAX_SIDE_PX, page.getWidth());
         assertEquals(1500, page.getHeight());
     }
 
     @Test
     void unPdfDonneUneImageParPage() throws IOException {
-        List<byte[]> pages = RoadbookPages.from(pdf(2), "roadbook.pdf");
+        RoadbookDocument doc = RoadbookPages.from(pdf(2), "roadbook.pdf");
 
-        assertEquals(2, pages.size());
-        BufferedImage page = read(pages.get(0));
-        assertTrue(page.getWidth() > 1000, "A4 paysage à 150 dpi : ~1750 px");
+        assertEquals(2, doc.images().size());
+        assertEquals(2, doc.texts().size());
+        assertTrue(doc.notes().isEmpty());
+        BufferedImage page = read(doc.images().get(0));
+        assertEquals(RoadbookPages.MAX_SIDE_PX_MULTIPAGE, page.getWidth(), "A4 paysage à 150 dpi (~1750 px), ramené à 1600");
+    }
+
+    @Test
+    void dansUnLivretOnGardeLesPagesQuiDecriventLeParcours() throws IOException {
+        byte[] malene;
+        try (InputStream in = getClass().getResourceAsStream("/roadbooks/malene-de-proust-2026.pdf")) {
+            malene = in.readAllBytes();
+        }
+        RoadbookDocument doc = RoadbookPages.from(malene, "malene.pdf");
+
+        // Livret de 10 pages : profil (4), vagues de départ (6, 7), temps de passage et barrières (8).
+        assertEquals(4, doc.images().size());
+        assertTrue(doc.texts().get(3).contains("Temps"), doc.texts().get(3));
+        assertTrue(doc.texts().get(3).contains("BH 14h"), doc.texts().get(3));
+        assertTrue(doc.notes().get(0).contains("lu les pages 4, 6, 7 et 8"), doc.notes().get(0));
+    }
+
+    @Test
+    void unLongPdfSansTexteSeLimiteAuxPremieresPages() {
+        assertEquals(List.of(), RoadbookPages.selectPages(List.of("", "", "", "", "", "")));
+        assertEquals(List.of(0, 1, 2), RoadbookPages.selectPages(List.of("", "", "")));
+    }
+
+    @Test
+    void lesHeuresEtLesKmComptentPlusQueLeReste() {
+        assertTrue(RoadbookPages.score("Le Rozier 25,5 km 12h15 BH 14h") > RoadbookPages.score("Départ, arrivée, ravitaillement"));
+        assertEquals(0, RoadbookPages.score("Charte du trailer : respecter la faune et la flore."));
     }
 
     @Test
@@ -56,10 +86,11 @@ class RoadbookPagesTest {
     }
 
     @Test
-    void refuseUnPdfTropLong() throws IOException {
-        byte[] doc = pdf(RoadbookPages.MAX_PAGES + 1);
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> RoadbookPages.from(doc, "reglement.pdf"));
-        assertTrue(e.getMessage().contains("pages"));
+    void unLongPdfScanneEstLuSurSesPremieresPages() throws IOException {
+        RoadbookDocument doc = RoadbookPages.from(pdf(RoadbookPages.MAX_PAGES + 2), "scan.pdf");
+
+        assertEquals(RoadbookPages.MAX_PAGES, doc.images().size());
+        assertTrue(doc.notes().get(0).contains("sans texte"), doc.notes().get(0));
     }
 
     private static byte[] pdf(int pages) throws IOException {

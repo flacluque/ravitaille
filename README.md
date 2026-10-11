@@ -98,7 +98,12 @@ ollama pull qwen2.5vl:7b
 # 3. Relancer l'API : le bouton « Lire un roadbook » de l'éditeur est prêt
 ```
 
-- Images (PNG, JPEG, photo de téléphone) et PDF jusqu'à 4 pages. Compter 30 s à 2 min par roadbook.
+- Images (PNG, JPEG, photo de téléphone) et PDF. Dans un livret de plus de 4 pages (accès, navettes,
+  règlement...), seules les 4 pages qui décrivent le parcours sont lues, repérées grâce à leur texte
+  (heures, km, mots-clés). Quand le PDF contient du texte, il est envoyé au modèle avec les images :
+  les nombres y sont exacts. Compter 30 s à 2 min par roadbook.
+- Beaucoup de roadbooks ne donnent le dénivelé qu'en dessin (profil) : l'IA laisse alors le D+ vide
+  plutôt que de l'inventer, et il faut ajouter la trace GPX de la course.
 - L'IA ne fait que **pré-remplir** l'éditeur : rien n'est calculé sans ta relecture.
 - Changer de modèle : `trailplanner.extraction.ollama.model=...` (après `ollama pull ...`).
 - Désactiver : `trailplanner.extraction.provider=none`.

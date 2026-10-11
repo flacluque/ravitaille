@@ -11,7 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.io.InputStream;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -30,22 +30,39 @@ class RoadbookControllerTest {
 
     @Test
     void litUneImageEtRenvoieLeRoadbookNormalise() throws Exception {
-        when(extractor.extract(anyList())).thenReturn(new ExtractedRoadbook("Raid", null, "9h00", List.of(
-                new ExtractedRoadbook.Point("3", "Molières", 20.0, 772.0, 590.0, "Vend 23 12h30", null, "LIGHT")), List.of()));
+        when(extractor.extract(any(RoadbookDocument.class))).thenReturn(new ExtractedRoadbook("Raid", null, "9h00", List.of(
+                new ExtractedRoadbook.Point("1P", "Départ", 0.0, null, null, null, null, "NONE"),
+                new ExtractedRoadbook.Point("3", "Molières", 20.0, null, null, "Vend 23 12h30", null, "LIGHT")), List.of()));
 
         mvc.perform(multipart("/api/roadbooks/extract").file(image()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.startTime").value("09:00"))
-                .andExpect(jsonPath("$.checkpoints[0].cutoffIn").value("12h30"));
+                .andExpect(jsonPath("$.checkpoints[0].gainM").value(0.0))
+                .andExpect(jsonPath("$.checkpoints[1].cutoffIn").value("12h30"))
+                .andExpect(jsonPath("$.warnings[0]").value(org.hamcrest.Matchers.containsString("trace GPX")));
     }
 
     @Test
     void uneIaIndisponibleRenvoie503AvecLExplication() throws Exception {
-        when(extractor.extract(anyList())).thenThrow(ExtractionException.unavailable("Ollama ne répond pas"));
+        when(extractor.extract(any(RoadbookDocument.class))).thenThrow(ExtractionException.unavailable("Ollama ne répond pas"));
 
         mvc.perform(multipart("/api/roadbooks/extract").file(image()))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.detail").value("Ollama ne répond pas"));
+    }
+
+    @Test
+    void unLongPdfPrevientDesPagesLues() throws Exception {
+        when(extractor.extract(any(RoadbookDocument.class))).thenReturn(new ExtractedRoadbook("Malène", null, null, List.of(), List.of()));
+        byte[] pdf;
+        try (InputStream in = getClass().getResourceAsStream("/roadbooks/malene-de-proust-2026.pdf")) {
+            pdf = in.readAllBytes();
+        }
+
+        mvc.perform(multipart("/api/roadbooks/extract").file(new MockMultipartFile("file", "malene.pdf", "application/pdf", pdf)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.warnings[0]").value("PDF de 10 pages : lu les pages 4, 6, 7 et 8, celles qui décrivent le parcours. "
+                        + "S'il manque des points, envoie seulement les bonnes pages (capture d'écran)."));
     }
 
     @Test

@@ -23,7 +23,7 @@ class OllamaRoadbookExtractorTest {
     @BeforeEach
     void start() throws IOException {
         ollama = new FakeOllama();
-        extractor = new OllamaRoadbookExtractor(new ExtractionProperties.Ollama(ollama.url(), MODEL, Duration.ofSeconds(10)));
+        extractor = new OllamaRoadbookExtractor(new ExtractionProperties.Ollama(ollama.url(), MODEL, Duration.ofSeconds(10), 32768));
     }
 
     @AfterEach
@@ -41,7 +41,8 @@ class OllamaRoadbookExtractorTest {
         ollama.chatBody = mapper.writeValueAsString(mapper.createObjectNode()
                 .put("done", true).set("message", mapper.createObjectNode().put("role", "assistant").put("content", roadbook)));
 
-        ExtractedRoadbook result = extractor.extract(List.of(new byte[]{1, 2, 3}, new byte[]{4}));
+        ExtractedRoadbook result = extractor.extract(new RoadbookDocument(List.of(new byte[]{1, 2, 3}, new byte[]{4}),
+                List.of("Lieu KM Barrière horaire\nLe Rozier 25,5 12h15", ""), List.of()));
 
         assertEquals("Raid des Troubadours 2026", result.name());
         assertEquals(2, result.checkpoints().size());
@@ -52,11 +53,23 @@ class OllamaRoadbookExtractorTest {
         assertEquals(MODEL, sent.path("model").asText());
         assertFalse(sent.path("stream").asBoolean(true));
         assertEquals("object", sent.path("format").path("type").asText());
-        assertEquals(OllamaRoadbookExtractor.CONTEXT_TOKENS, sent.path("options").path("num_ctx").asInt());
+        assertEquals(32768, sent.path("options").path("num_ctx").asInt());
         JsonNode user = sent.path("messages").get(1);
         assertEquals("user", user.path("role").asText());
         assertEquals("AQID", user.path("images").get(0).asText());   // base64 de {1, 2, 3}
         assertEquals(2, user.path("images").size());
+        String content = user.path("content").asText();
+        assertTrue(content.contains("--- Image 1 ---\nLieu KM Barrière horaire\nLe Rozier 25,5 12h15"), content);
+        assertTrue(content.contains("--- Image 2 ---"), content);
+    }
+
+    @Test
+    void sansTexteLeMessageSeLimiteALaConsigne() throws Exception {
+        ollama.chatBody = "{\"message\":{\"content\":\"{\\\"name\\\":\\\"x\\\",\\\"checkpoints\\\":[],\\\"warnings\\\":[]}\"}}";
+        extractor.extract(RoadbookDocument.ofImages(List.of(new byte[]{1})));
+
+        JsonNode user = mapper.readTree(ollama.chatRequests.get(0)).path("messages").get(1);
+        assertEquals(RoadbookPrompt.USER, user.path("content").asText());
     }
 
     @Test
@@ -64,7 +77,7 @@ class OllamaRoadbookExtractorTest {
         ollama.chatStatus = 404;
         ollama.chatBody = "{\"error\":\"model 'qwen2.5vl:7b' not found\"}";
 
-        ExtractionException e = assertThrows(ExtractionException.class, () -> extractor.extract(List.of(new byte[]{1})));
+        ExtractionException e = assertThrows(ExtractionException.class, () -> extractor.extract(RoadbookDocument.ofImages(List.of(new byte[]{1}))));
         assertTrue(e.isUnavailable());
         assertTrue(e.getMessage().contains("ollama pull qwen2.5vl:7b"), e.getMessage());
     }
@@ -74,7 +87,7 @@ class OllamaRoadbookExtractorTest {
         ollama.chatBody = mapper.writeValueAsString(mapper.createObjectNode()
                 .set("message", mapper.createObjectNode().put("content", "Voici le roadbook : ...")));
 
-        ExtractionException e = assertThrows(ExtractionException.class, () -> extractor.extract(List.of(new byte[]{1})));
+        ExtractionException e = assertThrows(ExtractionException.class, () -> extractor.extract(RoadbookDocument.ofImages(List.of(new byte[]{1}))));
         assertFalse(e.isUnavailable());
     }
 
@@ -85,9 +98,9 @@ class OllamaRoadbookExtractorTest {
             closedPort = s.getLocalPort();
         }
         OllamaRoadbookExtractor off = new OllamaRoadbookExtractor(
-                new ExtractionProperties.Ollama("http://127.0.0.1:" + closedPort, MODEL, Duration.ofSeconds(5)));
+                new ExtractionProperties.Ollama("http://127.0.0.1:" + closedPort, MODEL, Duration.ofSeconds(5), 32768));
 
-        ExtractionException e = assertThrows(ExtractionException.class, () -> off.extract(List.of(new byte[]{1})));
+        ExtractionException e = assertThrows(ExtractionException.class, () -> off.extract(RoadbookDocument.ofImages(List.of(new byte[]{1}))));
         assertTrue(e.isUnavailable());
         assertTrue(e.getMessage().contains("lance l'application Ollama"), e.getMessage());
 

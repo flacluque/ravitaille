@@ -46,6 +46,18 @@ class RoadbookExtractionServiceTest {
     }
 
     @Test
+    void sansDPlusAuxPointsOnConseilleLaTraceGpx() {
+        // Roadbook type livret : distances et barrières, mais le dénivelé n'existe que dans le dessin du profil.
+        ExtractedRoadbook clean = RoadbookExtractionService.normalize(new ExtractedRoadbook("Malène", null, "06:40", List.of(
+                new ExtractedRoadbook.Point("1", "Départ La Malène", 0.0, null, null, null, null, "NONE"),
+                new ExtractedRoadbook.Point("2", "La Caxe", 10.0, null, null, null, null, "LIGHT")), List.of()));
+
+        assertEquals(0.0, clean.checkpoints().get(0).gainM(), "D+ nul au départ, même non écrit");
+        assertEquals(1, clean.warnings().size());
+        assertTrue(clean.warnings().get(0).contains("ajoute la trace GPX"), clean.warnings().get(0));
+    }
+
+    @Test
     void previentQuandRienNAEteReconnu() {
         ExtractedRoadbook clean = RoadbookExtractionService.normalize(new ExtractedRoadbook(null, null, null, null, null));
         assertEquals(1, clean.warnings().size());
