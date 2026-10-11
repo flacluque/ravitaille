@@ -41,6 +41,10 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
   quoi consommer (gels, compotes, boisson énergétique selon ton profil) et combien de flasques remplir
   à chaque point d'eau pour tenir jusqu'au suivant. Ce qu'il faut emporter au départ, et récupérer au
   sac de délestage ou auprès de l'assistance. Alerte si les flasques ne suffisent pas.
+- **Matériel** : checklist par course, à cocher en faisant le sac. Elle se remplit en lisant le règlement
+  (image ou PDF, y compris un tableau commun à plusieurs courses), à partir d'une liste type, ou à la
+  main. Elle propose des suggestions selon le plan (frontale si tu passes la nuit dehors) et compare
+  l'eau obligatoire à tes flasques.
 - **Télécharger le PDF** : le plan en A4, prêt à garder sur le téléphone ou à imprimer. Il contient
   les trois scénarios, le profil avec les ravitos, tes références, les heures de passage du scénario
   sélectionné (marges en couleur) et la comparaison des scénarios. Il est généré dans le navigateur,
@@ -114,13 +118,15 @@ ollama pull qwen2.5vl:7b
 - L'IA ne fait que **pré-remplir** l'éditeur : rien n'est calculé sans ta relecture.
 - Changer de modèle : `trailplanner.extraction.ollama.model=...` (après `ollama pull ...`).
 - Désactiver : `trailplanner.extraction.provider=none`.
-- Ajouter une autre IA (cloud...) : une implémentation de `RoadbookExtractor` et une ligne dans
-  `ExtractionConfig` ; ni le front ni le reste du backend ne changent.
+- Ajouter une autre IA (cloud...) : une implémentation de `DocumentReader` et une ligne dans
+  `ExtractionConfig`. Ni le front ni le reste du backend ne changent : la même IA lit les roadbooks
+  et les règlements.
 
-**Mesurer la qualité d'un modèle** sur de vrais roadbooks (comparés à une saisie à la main) :
+**Mesurer la qualité d'un modèle** sur de vrais roadbooks et règlements (comparés à une saisie à la main) :
 
 ```bash
 mvn test -Dtest=RoadbookExtractionEvalTest -Dollama=true -Dollama.model=qwen2.5vl:7b
+mvn test -Dtest=GearExtractionEvalTest -Dollama=true -Dollama.model=qwen2.5vl:7b
 ```
 
 Le test affiche, point par point, les champs mal lus et un score global. Pour ajouter un roadbook de
@@ -174,7 +180,7 @@ fr.trailplanner
 ├── engine    Modèle d'effort, découpage en tronçons, planificateur
 ├── report    Rendu texte imprimable
 ├── api       Spring Boot : contrôleur REST, service, DTO
-└── extract   Lecture des roadbooks par une IA (interface + Ollama), préparation des images / PDF
+└── extract   Lecture de documents par une IA (roadbook, matériel) : interface + Ollama, images / PDF
 
 frontend/src
 ├── api         Types (miroir des records Java), client, copie hors ligne du dernier plan

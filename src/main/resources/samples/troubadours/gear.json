@@ -1,0 +1,25 @@
+{
+  "race": "Raid des Troubadours",
+  "source": "Liste des matériels obligatoires du Grand Raid des Cathares 2026 (tableau commun à 7 courses), colonne Raid des Troubadours",
+  "items": [
+    { "name": "2 lampes frontales avec piles ou batteries de rechange", "status": "MANDATORY", "keywords": ["2", "frontale"] },
+    { "name": "1 couverture de survie", "status": "MANDATORY", "keywords": ["survie"] },
+    { "name": "1 sifflet", "status": "MANDATORY", "keywords": ["sifflet"] },
+    { "name": "1,5 l d'eau", "status": "MANDATORY", "keywords": ["1,5", "eau"] },
+    { "name": "Des réserves alimentaires", "status": "MANDATORY", "keywords": ["aliment"] },
+    { "name": "Une 2ème couche chaude manches longues", "status": "MANDATORY", "keywords": ["couche"] },
+    { "name": "Un vêtement de pluie imperméable et respirant avec capuche (type goretex ou similaire)", "status": "MANDATORY", "keywords": ["pluie"] },
+    { "name": "Un téléphone portable chargé en état de marche", "status": "MANDATORY", "keywords": ["telephone"] },
+    { "name": "1 casquette ou équivalent (tour de cou)", "status": "MANDATORY", "keywords": ["casquette"] },
+    { "name": "1 gobelet personnel (pour la soupe) ou flasque", "status": "MANDATORY", "keywords": ["gobelet"] },
+    { "name": "1 bande élastique adhésive", "status": "MANDATORY", "keywords": ["bande"] },
+    { "name": "1 paire de gants", "status": "MANDATORY", "keywords": ["gants"] },
+    { "name": "1 pièce d'identité (dématérialisée possible)", "status": "MANDATORY", "keywords": ["identite"] },
+    { "name": "1 lumière rouge clignotante (accrochée à l'arrière du sac ou au dos de la lampe frontale)", "status": "MANDATORY", "keywords": ["rouge"] }
+  ],
+  "absent": [
+    { "name": "1 lampe frontale en état de pleine charge (autres courses)", "keywords": ["pleine charge"] },
+    { "name": "1 l d'eau (autres courses)", "keywords": ["1 l d"] },
+    { "name": "0,5 l d'eau (autres courses)", "keywords": ["0,5"] }
+  ]
+}

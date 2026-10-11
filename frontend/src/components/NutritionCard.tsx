@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { RacePlan, Service } from '../api/types';
 import { formatHm } from '../lib/format';
 import {
@@ -24,7 +24,7 @@ export function loadProfile(): NutritionProfile {
   }
 }
 
-function saveProfile(profile: NutritionProfile) {
+export function saveProfile(profile: NutritionProfile) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
   } catch {
@@ -36,16 +36,14 @@ interface Props {
   plan: RacePlan;
   /** Services de chaque point, dans l'ordre du plan. */
   services: Service[][];
+  /** Profil partagé avec la checklist du matériel (eau obligatoire comparée aux flasques). */
+  profile: NutritionProfile;
+  onProfileChange: (profile: NutritionProfile) => void;
 }
 
 /** Plan de nutrition et d'hydratation du scénario affiché. */
-export function NutritionCard({ plan, services }: Props) {
-  const [profile, setProfile] = useState<NutritionProfile>(loadProfile);
+export function NutritionCard({ plan, services, profile, onProfileChange: change }: Props) {
   const nutrition = useMemo(() => computeNutrition(plan, services, profile), [plan, services, profile]);
-  const change = (next: NutritionProfile) => {
-    setProfile(next);
-    saveProfile(next);
-  };
   const names = plan.checkpoints.map((c) => c.name);
 
   return (

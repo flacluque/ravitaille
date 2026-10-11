@@ -1,6 +1,9 @@
 package fr.trailplanner.extract;
 
+import fr.trailplanner.api.JsonSupport;
 import fr.trailplanner.model.Service;
+
+import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -16,25 +19,36 @@ import java.util.regex.Pattern;
 @org.springframework.stereotype.Service   // nom qualifié : Service désigne ici les services d'un ravito
 public class RoadbookExtractionService {
 
-    private final RoadbookExtractor extractor;
+    private final DocumentReader reader;
 
-    public RoadbookExtractionService(RoadbookExtractor extractor) {
-        this.extractor = extractor;
+    public RoadbookExtractionService(DocumentReader reader) {
+        this.reader = reader;
     }
 
-    public RoadbookExtractor.Status status() {
-        return extractor.status();
+    public DocumentReader.Status status() {
+        return reader.status();
     }
 
     public ExtractedRoadbook extract(byte[] content, String filename) {
-        RoadbookDocument document = RoadbookPages.from(content, filename);
-        ExtractedRoadbook result = normalize(extractor.extract(document));
+        PreparedDocument document = DocumentPages.from(content, filename, DocumentPages.ROADBOOK);
+        String json = reader.read(new DocumentReader.Request(RoadbookPrompt.SYSTEM, RoadbookPrompt.user(document.texts()),
+                RoadbookPrompt.SCHEMA, document.images()));
+        ExtractedRoadbook result = normalize(parse(json, ExtractedRoadbook.class));
         if (document.notes().isEmpty()) {
             return result;
         }
         List<String> warnings = new ArrayList<>(document.notes());
         warnings.addAll(result.warnings());
         return new ExtractedRoadbook(result.name(), result.startDate(), result.startTime(), result.checkpoints(), warnings);
+    }
+
+    /** Réponse JSON du modèle → objet ; un JSON valide mais d'une autre forme est une mauvaise réponse. */
+    static <T> T parse(String json, Class<T> type) {
+        try {
+            return JsonSupport.mapper().readValue(json, type);
+        } catch (IOException e) {
+            throw ExtractionException.badAnswer("Réponse du modèle dans un format inattendu. Réessaie, ou essaie un autre modèle.", e);
+        }
     }
 
     private static final Pattern CLOCK = Pattern.compile("(\\d{1,2})\\s*[h:]\\s*(\\d{2})?", Pattern.CASE_INSENSITIVE);

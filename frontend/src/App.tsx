@@ -6,7 +6,9 @@ import { CompareTable } from './components/CompareTable';
 import { CourseMap } from './components/CourseMap';
 import { ElevationProfile } from './components/ElevationProfile';
 import { Legend } from './components/Legend';
-import { NutritionCard } from './components/NutritionCard';
+import { GearCard } from './components/GearCard';
+import { loadProfile, NutritionCard, saveProfile } from './components/NutritionCard';
+import type { NutritionProfile } from './lib/nutrition';
 import { PassageTable } from './components/PassageTable';
 import { RaceEditor } from './components/RaceEditor';
 import { ReferenceForm } from './components/ReferenceForm';
@@ -158,6 +160,13 @@ export function App() {
     [course],
   );
 
+  // Profil nutrition : partagé par la nutrition et la checklist du matériel (eau obligatoire / flasques).
+  const [nutritionProfile, setNutritionProfile] = useState<NutritionProfile>(loadProfile);
+  const changeNutritionProfile = (next: NutritionProfile) => {
+    setNutritionProfile(next);
+    saveProfile(next);
+  };
+
   const [savingPdf, setSavingPdf] = useState(false);
   async function savePdf() {
     if (!course || plans.length === 0) return;
@@ -274,7 +283,11 @@ export function App() {
             <PassageTable plan={plan} markers={course.markers} services={services} onHover={setHoverKm} />
           )}
 
-          {plan && course && <NutritionCard plan={plan} services={services} />}
+          {plan && course && (
+            <NutritionCard plan={plan} services={services} profile={nutritionProfile} onProfileChange={changeNutritionProfile} />
+          )}
+
+          {course && <GearCard raceName={course.race.name} plan={plan} profile={nutritionProfile} />}
 
           {plans.length > 1 && <CompareTable plans={plans} />}
 

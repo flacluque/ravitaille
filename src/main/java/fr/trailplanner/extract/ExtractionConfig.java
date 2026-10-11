@@ -10,10 +10,10 @@ import org.springframework.context.annotation.Configuration;
 public class ExtractionConfig {
 
     @Bean
-    RoadbookExtractor roadbookExtractor(ExtractionProperties props) {
+    DocumentReader documentReader(ExtractionProperties props) {
         return switch (props.provider()) {
-            case NONE -> new DisabledRoadbookExtractor();
-            case OLLAMA -> new OllamaRoadbookExtractor(props.ollama());
+            case NONE -> new DisabledDocumentReader();
+            case OLLAMA -> new OllamaDocumentReader(props.ollama());
         };
     }
 }

@@ -398,3 +398,28 @@ tbody tr:hover { background: var(--surface-2); }
   .nutrition-table .leg-name, .nutrition-table td:nth-child(5), .nutrition-table td:nth-child(6) { grid-column: 1 / -1; }
   .nutrition-table td[data-label]::before { content: attr(data-label); display: block; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 }
+
+/* ---------- Matériel ---------- */
+.gear { display: flex; flex-direction: column; gap: 12px; }
+.gear-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 0; }
+.gear-group h3 { margin: 4px 0 6px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.gear-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.gear-list li { display: grid; grid-template-columns: 1fr 130px 32px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.gear-list label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.gear-list input[type=checkbox] { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+.gear-list li.packed span { color: var(--muted); text-decoration: line-through; }
+.gear-list select, .gear-add input {
+  font: inherit; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); min-width: 0;
+}
+.gear-add { display: flex; gap: 8px; }
+.gear-add input { flex: 1; }
+.gear-water { margin: 0; padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; }
+.gear-water.ok { background: var(--ok-bg); color: var(--ok-fg); }
+.gear-water.ko { background: var(--tight-bg); color: var(--tight-fg); }
+.gear-ideas { display: flex; flex-wrap: wrap; gap: 6px; }
+.gear-ideas .chip { cursor: pointer; }
+@media (max-width: 860px) {
+  .gear-head { flex-direction: column; }
+  .gear-list li { grid-template-columns: 1fr 32px; }
+  .gear-list select { grid-column: 1; grid-row: 2; width: fit-content; margin-left: 28px; font-size: 0.8rem; }
+}

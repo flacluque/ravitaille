@@ -171,3 +171,11 @@ export interface ExtractorStatus {
   ready: boolean;
   message: string | null;
 }
+
+/** Matériel lu dans un règlement (fr.trailplanner.extract.ExtractedGear) : à relire. */
+export interface ExtractedGear {
+  /** Course retenue, utile quand le document en couvre plusieurs. */
+  race: string | null;
+  items: { name: string; status: 'MANDATORY' | 'RECOMMENDED' }[];
+  warnings: string[];
+}

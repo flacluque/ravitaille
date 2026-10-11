@@ -22,15 +22,52 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 /**
- * Prépare un roadbook (image ou PDF) pour une IA de vision : une image JPEG par page retenue, de taille
+ * Prépare un document (image ou PDF) pour une IA de vision : une image JPEG par page retenue, de taille
  * raisonnable, et le texte des pages quand le PDF en contient.
  * <p>
- * Un roadbook en PDF est souvent un livret (accès, navettes, règlement...) dont deux ou trois pages
- * seulement décrivent le parcours. Au-delà de {@value #MAX_PAGES} pages, on garde celles dont le texte
- * ressemble le plus à un roadbook (heures, kilomètres, mots-clés) : un modèle local ne peut pas tout
- * lire d'un coup, et les pages inutiles le distraient.
+ * Un PDF est souvent un livret (accès, navettes, règlement...) dont deux ou trois pages seulement
+ * nous intéressent. Au-delà de {@value #MAX_PAGES} pages, on garde celles dont le texte ressemble le plus
+ * à ce qu'on cherche ({@link Relevance}) : un modèle local ne peut pas tout lire d'un coup, et les pages
+ * inutiles le distraient.
  */
-public final class RoadbookPages {
+public final class DocumentPages {
+
+    /**
+     * Ce qui rend une page intéressante : des motifs pondérés, comptés dans son texte.
+     *
+     * @param subject ce que décrivent les pages retenues, pour prévenir le coureur ("le parcours")
+     */
+    public record Relevance(String subject, List<Weighted> patterns) {
+
+        public record Weighted(Pattern pattern, int weight) {}
+
+        int score(String text) {
+            int score = 0;
+            for (Weighted w : patterns) {
+                Matcher m = w.pattern().matcher(text);
+                while (m.find()) {
+                    score += w.weight();
+                }
+            }
+            return score;
+        }
+    }
+
+    /** Roadbook : les heures pèsent le plus (barrières, temps de passage), puis les km, puis les mots-clés. */
+    public static final Relevance ROADBOOK = new Relevance("le parcours", List.of(
+            new Relevance.Weighted(Pattern.compile("\\b\\d{1,2}\\s?[hH]\\s?\\d{2}\\b|\\bBH\\b"), 3),
+            new Relevance.Weighted(Pattern.compile("\\d+(?:[,.]\\d+)?\\s?km\\b|\\bKM\\b", Pattern.CASE_INSENSITIVE), 2),
+            new Relevance.Weighted(Pattern.compile(
+                    "barri[eè]re|ravito|ravitaillement|temps de passage|d\\+|dénivel|profil|cut.?off|départ|arrivée",
+                    Pattern.CASE_INSENSITIVE), 1)));
+
+    /** Règlement : la liste du matériel obligatoire. */
+    public static final Relevance GEAR = new Relevance("le matériel", List.of(
+            new Relevance.Weighted(Pattern.compile("mat[ée]riel (?:obligatoire|conseill[ée]|recommand[ée])", Pattern.CASE_INSENSITIVE), 5),
+            new Relevance.Weighted(Pattern.compile(
+                    "frontale|couverture de survie|sifflet|gobelet|imperm[ée]able|bande (?:élastique|adhésive)|"
+                    + "réserve (?:d'eau|alimentaire)|téléphone|manches longues|gants|casquette|obligatoire",
+                    Pattern.CASE_INSENSITIVE), 2)));
 
     static final int MAX_PAGES = 4;
     /** Une image seule peut être grande ; plusieurs pages doivent tenir ensemble dans le contexte du modèle. */
@@ -38,14 +75,14 @@ public final class RoadbookPages {
     static final int MAX_SIDE_PX_MULTIPAGE = 1600;
     private static final float PDF_DPI = 150;
 
-    private RoadbookPages() {}
+    private DocumentPages() {}
 
-    public static RoadbookDocument from(byte[] content, String filename) {
+    public static PreparedDocument from(byte[] content, String filename, Relevance relevance) {
         if (content == null || content.length == 0) {
             throw new IllegalArgumentException("Fichier vide");
         }
         if (isPdf(content)) {
-            return fromPdf(content);
+            return fromPdf(content, relevance);
         }
         BufferedImage image;
         try {
@@ -57,14 +94,14 @@ public final class RoadbookPages {
             throw new IllegalArgumentException("Format non reconnu pour « " + filename
                     + " » : envoie une image (PNG, JPEG) ou un PDF.");
         }
-        return RoadbookDocument.ofImages(List.of(encode(downscale(image, MAX_SIDE_PX))));
+        return PreparedDocument.ofImages(List.of(encode(downscale(image, MAX_SIDE_PX))));
     }
 
     private static boolean isPdf(byte[] content) {
         return content.length > 4 && content[0] == '%' && content[1] == 'P' && content[2] == 'D' && content[3] == 'F';
     }
 
-    private static RoadbookDocument fromPdf(byte[] content) {
+    private static PreparedDocument fromPdf(byte[] content, Relevance relevance) {
         try (PDDocument doc = Loader.loadPDF(content)) {
             int count = doc.getNumberOfPages();
             if (count == 0) {
@@ -80,13 +117,13 @@ public final class RoadbookPages {
             }
 
             List<String> notes = new ArrayList<>();
-            List<Integer> pages = selectPages(texts);
+            List<Integer> pages = selectPages(texts, relevance);
             if (count > MAX_PAGES) {
                 notes.add(pages.isEmpty()
                         ? "PDF de " + count + " pages sans texte : seules les " + MAX_PAGES + " premières ont été lues. "
-                          + "Si le tableau des ravitos est plus loin, envoie seulement les bonnes pages (capture d'écran)."
-                        : "PDF de " + count + " pages : lu les pages " + join(pages) + ", celles qui décrivent le parcours. "
-                          + "S'il manque des points, envoie seulement les bonnes pages (capture d'écran).");
+                          + "Si ce que tu cherches est plus loin, envoie seulement les bonnes pages (capture d'écran)."
+                        : "PDF de " + count + " pages : lu les pages " + join(pages) + ", celles qui décrivent "
+                          + relevance.subject() + ". S'il manque quelque chose, envoie seulement les bonnes pages (capture d'écran).");
             }
             if (pages.isEmpty()) {
                 pages = IntStream.range(0, Math.min(count, MAX_PAGES)).boxed().toList();
@@ -100,48 +137,28 @@ public final class RoadbookPages {
                 images.add(encode(downscale(renderer.renderImageWithDPI(i, PDF_DPI, ImageType.RGB), maxSide)));
                 selectedTexts.add(texts.get(i));
             }
-            return new RoadbookDocument(images, selectedTexts, notes);
+            return new PreparedDocument(images, selectedTexts, notes);
         } catch (IOException e) {
             throw new IllegalArgumentException("PDF illisible : " + e.getMessage(), e);
         }
     }
 
-    private static final Pattern CLOCK = Pattern.compile("\\b\\d{1,2}\\s?[hH]\\s?\\d{2}\\b|\\bBH\\b");
-    private static final Pattern KM = Pattern.compile("\\d+(?:[,.]\\d+)?\\s?km\\b|\\bKM\\b", Pattern.CASE_INSENSITIVE);
-    private static final Pattern KEYWORD = Pattern.compile(
-            "barri[eè]re|ravito|ravitaillement|temps de passage|d\\+|dénivel|profil|cut.?off|départ|arrivée",
-            Pattern.CASE_INSENSITIVE);
-
     /**
      * Pages à lire (indices à partir de 0, dans l'ordre du document). Toutes si le PDF est court ;
-     * sinon les {@value #MAX_PAGES} pages les plus « roadbook » d'après leur texte. Liste vide si le PDF
+     * sinon les {@value #MAX_PAGES} pages les plus pertinentes d'après leur texte. Liste vide si le PDF
      * est long et sans texte (scanné) : on ne peut pas choisir.
      */
-    static List<Integer> selectPages(List<String> texts) {
+    static List<Integer> selectPages(List<String> texts, Relevance relevance) {
         if (texts.size() <= MAX_PAGES) {
             return IntStream.range(0, texts.size()).boxed().toList();
         }
-        int[] scores = texts.stream().mapToInt(RoadbookPages::score).toArray();
+        int[] scores = texts.stream().mapToInt(relevance::score).toArray();
         return IntStream.range(0, texts.size()).boxed()
                 .filter(i -> scores[i] > 0)
                 .sorted(Comparator.comparingInt((Integer i) -> scores[i]).reversed())
                 .limit(MAX_PAGES)
                 .sorted()
                 .toList();
-    }
-
-    /** Les heures pèsent le plus (barrières, temps de passage), puis les km, puis les mots-clés. */
-    static int score(String text) {
-        return 3 * count(CLOCK, text) + 2 * count(KM, text) + count(KEYWORD, text);
-    }
-
-    private static int count(Pattern p, String text) {
-        Matcher m = p.matcher(text);
-        int n = 0;
-        while (m.find()) {
-            n++;
-        }
-        return n;
     }
 
     private static String join(List<Integer> pages) {

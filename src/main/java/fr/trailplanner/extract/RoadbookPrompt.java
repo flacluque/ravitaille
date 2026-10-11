@@ -76,19 +76,24 @@ public final class RoadbookPrompt {
     /** Longueur maximale du texte d'une page transmis au modèle (le reste est coupé). */
     static final int MAX_TEXT_PER_PAGE = 3000;
 
-    /**
-     * Message du coureur. Quand le PDF contient du texte, on le joint aux images : les nombres y sont
-     * exacts, et l'image sert à comprendre la mise en page (quelle valeur va dans quelle colonne).
-     */
+    /** Message du coureur, avec le texte des pages quand le PDF en contient. */
     public static String user(List<String> pageTexts) {
+        return USER + pageTexts(pageTexts);
+    }
+
+    /**
+     * Texte des pages, à joindre à la demande quand le PDF en contient : les nombres y sont exacts, et
+     * l'image sert à comprendre la mise en page (quelle valeur va dans quelle colonne). Vide sinon.
+     */
+    static String pageTexts(List<String> pageTexts) {
         if (pageTexts.stream().allMatch(String::isBlank)) {
-            return USER;
+            return "";
         }
-        StringBuilder sb = new StringBuilder(USER).append("""
+        StringBuilder sb = new StringBuilder("""
 
                 Texte extrait du PDF, page par page, dans l'ordre des images. Les nombres y sont exacts, \
                 mais l'alignement des colonnes peut être perdu : appuie-toi sur les images pour savoir à \
-                quel point et à quelle colonne chaque valeur se rapporte.
+                quelle ligne et à quelle colonne chaque valeur se rapporte.
                 """);
         for (int i = 0; i < pageTexts.size(); i++) {
             String text = pageTexts.get(i).strip();

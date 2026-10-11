@@ -39,7 +39,7 @@ class RoadbookExtractionEvalTest {
     void comparerLaLectureAuxSaisiesDeReference() throws IOException {
         String model = System.getProperty("ollama.model", "qwen2.5vl:7b");
         double minScore = Double.parseDouble(System.getProperty("ollama.minScore", "0"));
-        RoadbookExtractionService service = new RoadbookExtractionService(new OllamaRoadbookExtractor(
+        RoadbookExtractionService service = new RoadbookExtractionService(new OllamaDocumentReader(
                 new ExtractionProperties.Ollama(System.getProperty("ollama.url", "http://localhost:11434"), model,
                         Duration.ofMinutes(10), Integer.getInteger("ollama.contextTokens", 32768))));
 

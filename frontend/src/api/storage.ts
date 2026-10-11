@@ -1,4 +1,5 @@
 import { normalizeDraft, type RaceDraft } from '../lib/draft';
+import { plain, type GearItem } from '../lib/gear';
 
 // Ta course reste dans ton navigateur : le roadbook (petit) dans localStorage, la trace GPX
 // (plusieurs Mo, au-delà du quota de localStorage) dans IndexedDB.
@@ -63,5 +64,27 @@ export async function loadGpx(): Promise<File | null> {
     return value instanceof File ? value : value instanceof Blob ? new File([value], 'trace.gpx') : null;
   } catch {
     return null;
+  }
+}
+
+/** Checklist du matériel, une par course (clé : nom de la course). */
+function gearKey(raceName: string): string {
+  return `trail-planner:materiel:${plain(raceName)}`;
+}
+
+export function loadGear(raceName: string): GearItem[] {
+  try {
+    const raw = localStorage.getItem(gearKey(raceName));
+    return raw ? (JSON.parse(raw) as GearItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveGear(raceName: string, items: GearItem[]): void {
+  try {
+    localStorage.setItem(gearKey(raceName), JSON.stringify(items));
+  } catch {
+    // stockage indisponible : la liste vaut pour la session
   }
 }
