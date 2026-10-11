@@ -37,7 +37,10 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
 - **Lire un roadbook (image / PDF)** : une IA lit le roadbook de l'organisation et remplit le
   tableau de « Ma course » ; tu vérifies ligne par ligne, le roadbook d'origine affiché au-dessus.
   Voir « Lecture automatique des roadbooks » plus bas.
-- **Imprimer** : mise en page dédiée (scénarios, profil, tableaux), sans la carte ni le formulaire.
+- **Télécharger le PDF** : le plan en A4, prêt à garder sur le téléphone ou à imprimer. Il contient
+  les trois scénarios, le profil avec les ravitos, tes références, les heures de passage du scénario
+  sélectionné (marges en couleur) et la comparaison des scénarios. Il est généré dans le navigateur,
+  donc ça marche aussi hors ligne.
 - **Hors ligne** : le dernier plan calculé est gardé dans le navigateur, et l'appli est une PWA
   (installable sur le téléphone, fonctionne sans réseau une fois chargée — build de production :
   `npm run build && npm run preview`).
@@ -171,7 +174,7 @@ fr.trailplanner
 
 frontend/src
 ├── api         Types (miroir des records Java), client, copie hors ligne du dernier plan
-├── lib         Formatage (durées ISO, heures), barrières, interpolation, géométrie du profil
+├── lib         Formatage (durées ISO, heures), barrières, interpolation, géométrie du profil, PDF
 └── components  Formulaire, scénarios, carte Leaflet, profil SVG, tableaux
 ```
 

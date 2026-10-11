@@ -21,6 +21,8 @@ export default defineConfig({
       },
       workbox: {
         navigateFallbackDenylist: [/^\/api\//],
+        // Dépendances optionnelles de jsPDF (export HTML), jamais chargées ici : inutile de les garder hors ligne.
+        globIgnores: ['**/html2canvas*', '**/purify*'],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),

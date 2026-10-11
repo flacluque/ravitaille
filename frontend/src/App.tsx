@@ -150,6 +150,18 @@ export function App() {
   const plan = plans[Math.min(scenarioIndex, plans.length - 1)];
   const course = shown?.course;
 
+  const [savingPdf, setSavingPdf] = useState(false);
+  async function savePdf() {
+    if (!course || plans.length === 0) return;
+    setSavingPdf(true);
+    try {
+      const { downloadPlanPdf } = await import('./lib/pdf');
+      await downloadPlanPdf({ course, plans, selected: Math.min(scenarioIndex, plans.length - 1) });
+    } finally {
+      setSavingPdf(false);
+    }
+  }
+
   return (
     <div className="app">
       <header className="topbar">
@@ -166,8 +178,9 @@ export function App() {
             </p>
           </div>
         )}
-        <button type="button" className="ghost no-print" onClick={() => window.print()} disabled={!plan}>
-          Imprimer
+        <button type="button" className="ghost no-print" onClick={() => void savePdf()} disabled={!plan || savingPdf}
+          title="Télécharger le plan de course en PDF (fonctionne aussi hors ligne)">
+          {savingPdf ? 'PDF…' : 'Télécharger le PDF'}
         </button>
       </header>
 
