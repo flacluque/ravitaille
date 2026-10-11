@@ -313,3 +313,16 @@ export function hasContent(draft: RaceDraft): boolean {
     || draft.checkpoints.length > 2
     || draft.checkpoints.some((cp, i) => i > 0 && (cp.km.trim() !== '' || cp.gainM.trim() !== '' || cp.cutoffIn.trim() !== ''));
 }
+
+/**
+ * Empreinte de ce qui détermine le plan d'une course saisie : sert à savoir si le plan affiché
+ * correspond encore à la saisie (les identifiants internes des points n'en font pas partie).
+ */
+export function draftSignature(draft: RaceDraft, gpx: { name: string; size: number } | null): string {
+  const { checkpoints, ...race } = draft;
+  return JSON.stringify({
+    ...race,
+    checkpoints: checkpoints.map(({ id: _id, ...cp }) => cp),
+    gpx: gpx ? `${gpx.name}:${gpx.size}` : null,
+  });
+}

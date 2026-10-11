@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ExtractedRoadbook, RaceDefinition } from '../api/types';
 import {
+  draftSignature,
   draftToFile,
   draftToRace,
   emptyCheckpoint,
@@ -208,5 +209,17 @@ describe('services des ravitos', () => {
     draft.checkpoints[1].services = ['ASSISTANCE', 'WATER'];
     const result = draftToRace(draft, false);
     expect(result.ok && result.race.checkpoints[1].services).toEqual(['WATER', 'ASSISTANCE']);
+  });
+});
+
+describe('empreinte de la saisie (plan à jour ou périmé)', () => {
+  it('ignore les identifiants internes mais suit le contenu et la trace GPX', () => {
+    const draft = troubadours();
+    const memeContenu = { ...draft, checkpoints: draft.checkpoints.map((cp) => ({ ...cp, id: `autre-${cp.id}` })) };
+    expect(draftSignature(memeContenu, null)).toBe(draftSignature(draft, null));
+
+    const modifie = { ...draft, checkpoints: draft.checkpoints.map((cp, i) => (i === 1 ? { ...cp, km: '19' } : cp)) };
+    expect(draftSignature(modifie, null)).not.toBe(draftSignature(draft, null));
+    expect(draftSignature(draft, { name: 'trace.gpx', size: 1000 })).not.toBe(draftSignature(draft, null));
   });
 });

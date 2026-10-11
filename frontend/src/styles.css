@@ -423,3 +423,9 @@ tbody tr:hover { background: var(--surface-2); }
   .gear-list li { grid-template-columns: 1fr 32px; }
   .gear-list select { grid-column: 1; grid-row: 2; width: fit-content; margin-left: 28px; font-size: 0.8rem; }
 }
+
+/* ---------- Plan périmé (saisie modifiée depuis le calcul) ---------- */
+.results { display: flex; flex-direction: column; gap: 20px; }
+.results.stale { opacity: 0.35; filter: grayscale(0.6); pointer-events: none; user-select: none; }
+.stale-banner { margin: 0; }
+@media (max-width: 860px) { .results { gap: 12px; } }

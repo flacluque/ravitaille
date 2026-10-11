@@ -23,6 +23,8 @@ interface Props {
   loading: boolean;
   onSubmit: () => void;
   onCancel: (() => void) | null;
+  /** Un roadbook vient d'être importé ou lu : l'appli recalcule aussitôt le plan s'il est complet. */
+  onLoaded: (draft: RaceDraft) => void;
 }
 
 const AIDS: { value: AidLevel; label: string }[] = [
@@ -32,7 +34,7 @@ const AIDS: { value: AidLevel; label: string }[] = [
 ];
 
 /** Saisie du roadbook (à partir du PDF / de l'image de l'organisation) et choix de la trace GPX. */
-export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading, onSubmit, onCancel }: Props) {
+export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading, onSubmit, onCancel, onLoaded }: Props) {
   const roadbookInput = useRef<HTMLInputElement>(null);
   const gpxInput = useRef<HTMLInputElement>(null);
   const scanInput = useRef<HTMLInputElement>(null);
@@ -57,7 +59,9 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
     e.target.value = '';
     if (!file) return;
     try {
-      onChange(parseRoadbookFile(await file.text()));
+      const imported = parseRoadbookFile(await file.text());
+      onChange(imported);
+      onLoaded(imported);
       setImportError(null);
     } catch (err) {
       setImportError(err instanceof Error ? err.message : String(err));
@@ -84,6 +88,7 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
       const { draft: next, warnings } = extractedToDraft(extracted, draft);
       scan.setWarnings(warnings);
       onChange(next);
+      onLoaded(next);
     }
   }
 
