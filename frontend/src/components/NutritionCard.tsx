@@ -4,11 +4,10 @@ import { formatHm } from '../lib/format';
 import {
   computeNutrition,
   DEFAULT_PROFILE,
-  describeItems,
-  liters,
-  type NutritionPlan,
+  describeActions,
+  describeConsumption,
+  describeTotals,
   type NutritionProfile,
-  type PointActions,
   type Product,
   type ProductKind,
 } from '../lib/nutrition';
@@ -60,7 +59,7 @@ export function NutritionCard({ plan, services, profile, onProfileChange: change
 
       <div className="nutrition-start">
         <strong>Au départ</strong>
-        <span>{actionsText(nutrition.points[0], nutrition, profile, true) || 'rien à préparer'}</span>
+        <span>{describeActions(nutrition.points[0], nutrition, profile, true) || 'rien à préparer'}</span>
       </div>
 
       {nutrition.alerts.length > 0 && (
@@ -83,10 +82,7 @@ export function NutritionCard({ plan, services, profile, onProfileChange: change
             {nutrition.legs.map((leg) => {
               const i = leg.index;
               const isFinish = i === plan.checkpoints.length - 1;
-              const consume = [
-                describeItems(leg.items, profile.products),
-                leg.drinkMl >= 50 && nutrition.drink ? `${Math.round(leg.drinkMl / 50) * 50} ml ${nutrition.drink.name}` : '',
-              ].filter(Boolean).join(' + ');
+              const consume = describeConsumption(leg, nutrition, profile);
               return (
                 <tr key={i}>
                   <td className="leg-name">
@@ -100,7 +96,7 @@ export function NutritionCard({ plan, services, profile, onProfileChange: change
                   <td className="num" data-label="Glucides">{Math.round(leg.carbsG)} g</td>
                   <td className="num" data-label="Eau">{(Math.round(leg.waterMl / 50) * 50).toLocaleString('fr-FR')} ml</td>
                   <td data-label="À consommer">{consume || <span className="muted">-</span>}</td>
-                  <td data-label="Au point d'arrivée">{isFinish ? <span className="muted">arrivée</span> : actionsText(nutrition.points[i], nutrition, profile, false) || <span className="muted">-</span>}</td>
+                  <td data-label="Au point d'arrivée">{isFinish ? <span className="muted">arrivée</span> : describeActions(nutrition.points[i], nutrition, profile, false) || <span className="muted">-</span>}</td>
                 </tr>
               );
             })}
@@ -109,30 +105,10 @@ export function NutritionCard({ plan, services, profile, onProfileChange: change
       </div>
 
       <p className="nutrition-total">
-        <strong>Sur la course :</strong> {Math.round(nutrition.totals.carbsG)} g de glucides, {liters(nutrition.totals.waterMl)} d'eau
-        {' '}→ {[
-          describeItems(nutrition.totals.items, profile.products),
-          nutrition.drink && nutrition.totals.drinkDoses > 0 ? `${nutrition.totals.drinkDoses} doses de ${nutrition.drink.name}` : '',
-        ].filter(Boolean).join(', ') || 'aucun produit'}.
+        <strong>Sur la course :</strong> {describeTotals(nutrition, profile)}.
       </p>
     </div>
   );
-}
-
-/** "Remplir 3 flasques (dont 1 de Meltonic) · Prendre : 4 Gel, 2 Compote, 1 dose de Meltonic". */
-function actionsText(p: PointActions, n: NutritionPlan, profile: NutritionProfile, start: boolean): string {
-  const parts: string[] = [];
-  if (p.fillFlasks > 0) {
-    const flasks = `${p.fillFlasks} flasque${p.fillFlasks > 1 ? 's' : ''}`;
-    const drink = p.fillDrinkFlasks > 0 && n.drink ? ` (dont ${p.fillDrinkFlasks} de ${n.drink.name})` : '';
-    parts.push(`${start ? 'Flasques pleines' : 'Remplir'} : ${flasks}${drink}`);
-  }
-  const take = [
-    describeItems(p.restock, profile.products),
-    p.restockDrinkDoses > 0 && n.drink ? `${p.restockDrinkDoses} dose${p.restockDrinkDoses > 1 ? 's' : ''} de ${n.drink.name}` : '',
-  ].filter(Boolean).join(', ');
-  if (take) parts.push(`${start ? 'Emporter' : 'Récupérer'} : ${take}`);
-  return parts.join(' · ');
 }
 
 const KINDS: { value: ProductKind; label: string }[] = [

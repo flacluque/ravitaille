@@ -217,3 +217,36 @@ export function describeItems(items: Items, products: Product[]): string {
     .map((p) => `${items[p.id]} ${p.name}`)
     .join(', ');
 }
+
+/** Ce qu'il faut consommer sur un tronçon : "2 Gel Décathlon, 1 Compote Baouw + 500 ml Meltonic". */
+export function describeConsumption(leg: LegNutrition, n: NutritionPlan, profile: NutritionProfile): string {
+  return [
+    describeItems(leg.items, profile.products),
+    leg.drinkMl >= 50 && n.drink ? `${Math.round(leg.drinkMl / 50) * 50} ml ${n.drink.name}` : '',
+  ].filter(Boolean).join(' + ');
+}
+
+/** Ce qu'il faut faire à un point : "Remplir : 3 flasques (dont 1 de Meltonic) · Récupérer : 4 Gel Décathlon". */
+export function describeActions(p: PointActions, n: NutritionPlan, profile: NutritionProfile, start: boolean): string {
+  const parts: string[] = [];
+  if (p.fillFlasks > 0) {
+    const flasks = `${p.fillFlasks} flasque${p.fillFlasks > 1 ? 's' : ''}`;
+    const drink = p.fillDrinkFlasks > 0 && n.drink ? ` (dont ${p.fillDrinkFlasks} de ${n.drink.name})` : '';
+    parts.push(`${start ? 'Flasques pleines' : 'Remplir'} : ${flasks}${drink}`);
+  }
+  const take = [
+    describeItems(p.restock, profile.products),
+    p.restockDrinkDoses > 0 && n.drink ? `${p.restockDrinkDoses} dose${p.restockDrinkDoses > 1 ? 's' : ''} de ${n.drink.name}` : '',
+  ].filter(Boolean).join(', ');
+  if (take) parts.push(`${start ? 'Emporter' : 'Récupérer'} : ${take}`);
+  return parts.join(' · ');
+}
+
+/** Bilan de la course : "853 g de glucides, 5,8 L d'eau : 12 Gel Décathlon, 6 Compote Baouw, 7 doses de Meltonic". */
+export function describeTotals(n: NutritionPlan, profile: NutritionProfile): string {
+  const products = [
+    describeItems(n.totals.items, profile.products),
+    n.drink && n.totals.drinkDoses > 0 ? `${n.totals.drinkDoses} doses de ${n.drink.name}` : '',
+  ].filter(Boolean).join(', ') || 'aucun produit';
+  return `${Math.round(n.totals.carbsG)} g de glucides, ${liters(n.totals.waterMl)} d'eau → ${products}`;
+}

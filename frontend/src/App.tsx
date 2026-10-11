@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, fetchCourse, fetchCustomPlans, fetchPlans, loadSnapshot, saveSnapshot, type Snapshot } from './api/client';
-import { loadDraft, loadGpx, saveDraft, saveGpx } from './api/storage';
+import { loadDraft, loadGear, loadGpx, saveDraft, saveGpx } from './api/storage';
 import type { ElevationSource, Reference } from './api/types';
 import { CompareTable } from './components/CompareTable';
 import { CourseMap } from './components/CourseMap';
@@ -173,7 +173,10 @@ export function App() {
     setSavingPdf(true);
     try {
       const { downloadPlanPdf } = await import('./lib/pdf');
-      await downloadPlanPdf({ course, plans, selected: Math.min(scenarioIndex, plans.length - 1) });
+      await downloadPlanPdf({
+        course, plans, selected: Math.min(scenarioIndex, plans.length - 1),
+        services, nutrition: nutritionProfile, gear: loadGear(course.race.name),
+      });
     } finally {
       setSavingPdf(false);
     }
