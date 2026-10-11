@@ -12,6 +12,7 @@ import fr.trailplanner.track.TrackProfile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -74,6 +75,27 @@ public class PlanController {
             }
         }
         return service.plan(request, track);
+    }
+
+    /**
+     * Plans de course et course à dessiner (carte, profil) d'un coup : c'est ce qu'utilise le front
+     * pour une course chargée par le coureur, avec ou sans trace GPX.
+     */
+    @PostMapping(path = "/plans/full", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public PlanView planFull(@RequestPart("request") PlanRequest request,
+                             @RequestPart(value = "gpx", required = false) MultipartFile gpx,
+                             @RequestParam(defaultValue = "0.1") double stepKm) throws IOException {
+        if (request.race() == null) {
+            throw new IllegalArgumentException("La course (race) est obligatoire");
+        }
+        if (gpx == null || gpx.isEmpty()) {
+            return new PlanView(CourseView.of(request.race(), null, null, stepKm), service.plan(request, null));
+        }
+        try (InputStream in = gpx.getInputStream()) {
+            PlanningService.LoadedTrack track = service.loadTrack(in);
+            return new PlanView(CourseView.of(request.race(), track.profile(), track.name(), stepKm),
+                    service.plan(request, track.profile()));
+        }
     }
 
     /** Même chose sans GPX, en JSON pur (le D+ officiel du roadbook suffit). */
@@ -145,5 +167,19 @@ public class PlanController {
     @ExceptionHandler({IllegalArgumentException.class, GpxParser.GpxParseException.class})
     public ProblemDetail badRequest(RuntimeException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    /**
+     * JSON illisible, ou refusé par la validation d'un record (points non triés, référence invalide...) :
+     * Jackson enveloppe alors l'IllegalArgumentException, dont on remonte le message au coureur.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ProblemDetail unreadable(HttpMessageNotReadableException e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof IllegalArgumentException) {
+                return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, t.getMessage());
+            }
+        }
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Requête illisible : vérifie le format du roadbook");
     }
 }

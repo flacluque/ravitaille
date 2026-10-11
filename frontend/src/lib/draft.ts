@@ -1,0 +1,253 @@
+import type { AidLevel, Checkpoint, RaceDefinition } from '../api/types';
+
+/**
+ * Roadbook tel que saisi dans l'éditeur : des champs texte, validés et convertis en RaceDefinition
+ * seulement au moment du calcul.
+ *
+ * Les barrières se saisissent comme sur un roadbook papier ("14h30") : le jour est déduit, c'est la
+ * première fois que cette heure est atteinte après la barrière précédente (ou le départ).
+ * Limite : deux barrières successives à plus de 24 h d'écart ne sont pas représentables.
+ */
+export interface DraftCheckpoint {
+  /** Identifiant stable pour React (le code peut être vide ou modifié pendant la saisie). */
+  id: string;
+  code: string;
+  name: string;
+  km: string;
+  gainM: string;
+  lossM: string;
+  cutoffIn: string;
+  cutoffOut: string;
+  aid: AidLevel;
+}
+
+export interface RaceDraft {
+  name: string;
+  /** "YYYY-MM-DDTHH:mm" (input datetime-local). */
+  start: string;
+  /** Plage frontale, "HH:mm". */
+  nightStart: string;
+  nightEnd: string;
+  checkpoints: DraftCheckpoint[];
+}
+
+export interface NightWindow {
+  nightStart: string;
+  nightEnd: string;
+}
+
+export type DraftResult =
+  | { ok: true; race: RaceDefinition; night: NightWindow }
+  | { ok: false; errors: string[] };
+
+let nextId = 0;
+export function newId(): string {
+  nextId += 1;
+  return `cp-${Date.now().toString(36)}-${nextId}`;
+}
+
+export function emptyCheckpoint(partial: Partial<DraftCheckpoint> = {}): DraftCheckpoint {
+  return { id: newId(), code: '', name: '', km: '', gainM: '', lossM: '', cutoffIn: '', cutoffOut: '', aid: 'LIGHT', ...partial };
+}
+
+export function emptyDraft(): RaceDraft {
+  return {
+    name: '',
+    start: '',
+    nightStart: '19:00',
+    nightEnd: '07:45',
+    checkpoints: [
+      emptyCheckpoint({ code: 'D', name: 'Départ', km: '0', gainM: '0', lossM: '0', aid: 'NONE' }),
+      emptyCheckpoint({ code: 'A', name: 'Arrivée', aid: 'NONE' }),
+    ],
+  };
+}
+
+/** "14h30", "14:30", "14h", "9h05" → minutes depuis minuit ; null si illisible. */
+export function parseClock(text: string): number | null {
+  const m = /^(\d{1,2})\s*(?:h|:)\s*(\d{2})?$/i.exec(text.trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2] ?? 0);
+  return h < 24 && min < 60 ? h * 60 + min : null;
+}
+
+function parseNumber(text: string): number | null {
+  const t = text.trim().replace(',', '.').replace(/\s/g, '');
+  if (t === '') return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+const LOCAL = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/;
+
+/** "2026-10-23T08:00" → minutes UTC "fictives" (temps local de course, sans fuseau). */
+function toMinutes(iso: string): number | null {
+  const m = LOCAL.exec(iso);
+  if (!m) return null;
+  return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) / 60000;
+}
+
+function fromMinutes(minutes: number): string {
+  const d = new Date(minutes * 60000);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:00`;
+}
+
+/** Première occurrence de l'heure `clock` (minutes depuis minuit) à partir de `after` (inclus). */
+function nextOccurrence(after: number, clock: number): number {
+  const dayStart = Math.floor(after / 1440) * 1440;
+  const candidate = dayStart + clock;
+  return candidate >= after ? candidate : candidate + 1440;
+}
+
+/**
+ * Date de chaque barrière, dans l'ordre du parcours. Sert à la conversion et à l'affichage du jour
+ * déduit à côté de la saisie. null quand la saisie est vide ou illisible.
+ */
+export function resolveCutoffs(draft: RaceDraft): { cutoffIn: string | null; cutoffOut: string | null }[] {
+  let previous = toMinutes(draft.start);
+  return draft.checkpoints.map((cp) => {
+    const resolve = (text: string): string | null => {
+      const clock = parseClock(text);
+      if (previous === null || clock === null) return null;
+      previous = nextOccurrence(previous, clock);
+      return fromMinutes(previous);
+    };
+    const cutoffIn = cp.cutoffIn.trim() ? resolve(cp.cutoffIn) : null;
+    const cutoffOut = cp.cutoffOut.trim() ? resolve(cp.cutoffOut) : null;
+    return { cutoffIn, cutoffOut };
+  });
+}
+
+/** Valide la saisie et la convertit pour l'API. `hasTrack` : sans trace GPX, le D+ est obligatoire partout. */
+export function draftToRace(draft: RaceDraft, hasTrack: boolean): DraftResult {
+  const errors: string[] = [];
+  const cps = draft.checkpoints;
+
+  if (!draft.name.trim()) errors.push('Donne un nom à la course.');
+  if (toMinutes(draft.start) === null) errors.push("Indique la date et l'heure de départ.");
+  if (parseClock(draft.nightStart) === null || parseClock(draft.nightEnd) === null) {
+    errors.push('Plage de nuit illisible (format 19h00).');
+  }
+  if (cps.length < 2) errors.push('Il faut au moins un départ et une arrivée.');
+
+  const label = (cp: DraftCheckpoint, i: number) => `« ${cp.name.trim() || cp.code.trim() || `point ${i + 1}`} »`;
+  const codes = cps.map((cp, i) => cp.code.trim() || String(i + 1));
+  const duplicates = codes.filter((c, i) => codes.indexOf(c) !== i);
+  if (duplicates.length) errors.push(`Codes en double : ${[...new Set(duplicates)].join(', ')}.`);
+
+  const resolved = resolveCutoffs(draft);
+  const checkpoints: Checkpoint[] = [];
+  let previousKm = -Infinity;
+  let previousGain = 0;
+  let previousLoss = 0;
+
+  cps.forEach((cp, i) => {
+    const km = parseNumber(cp.km);
+    let gain = parseNumber(cp.gainM);
+    let loss = parseNumber(cp.lossM);
+    if (i === 0) {
+      gain ??= 0;
+      loss ??= 0;
+    }
+
+    if (km === null || Number.isNaN(km)) {
+      errors.push(`Kilométrage manquant pour ${label(cp, i)}.`);
+    } else if (i === 0 && km !== 0) {
+      errors.push('Le départ doit être au km 0.');
+    } else if (km <= previousKm) {
+      errors.push(`Le km de ${label(cp, i)} doit être supérieur à celui du point précédent.`);
+    }
+    if (Number.isNaN(gain)) errors.push(`D+ illisible pour ${label(cp, i)}.`);
+    else if (gain === null && !hasTrack) errors.push(`D+ manquant pour ${label(cp, i)} (obligatoire sans trace GPX).`);
+    else if (gain !== null && gain < previousGain) errors.push(`Le D+ cumulé de ${label(cp, i)} est inférieur au précédent.`);
+    if (Number.isNaN(loss)) errors.push(`D- illisible pour ${label(cp, i)}.`);
+    else if (loss !== null && loss < previousLoss) errors.push(`Le D- cumulé de ${label(cp, i)} est inférieur au précédent.`);
+
+    if (cp.cutoffIn.trim() && parseClock(cp.cutoffIn) === null) errors.push(`Barrière d'entrée illisible pour ${label(cp, i)} (format 14h30).`);
+    if (cp.cutoffOut.trim() && parseClock(cp.cutoffOut) === null) errors.push(`Barrière de sortie illisible pour ${label(cp, i)} (format 14h30).`);
+
+    if (typeof km === 'number' && !Number.isNaN(km)) previousKm = km;
+    if (typeof gain === 'number' && !Number.isNaN(gain)) previousGain = gain;
+    if (typeof loss === 'number' && !Number.isNaN(loss)) previousLoss = loss;
+
+    checkpoints.push({
+      code: codes[i],
+      name: cp.name.trim() || codes[i],
+      km: km ?? 0,
+      gainM: gain === null || Number.isNaN(gain) ? null : gain,
+      lossM: loss === null || Number.isNaN(loss) ? null : loss,
+      cutoffIn: resolved[i].cutoffIn,
+      cutoffOut: resolved[i].cutoffOut,
+      aid: cp.aid,
+    });
+  });
+
+  if (errors.length) return { ok: false, errors };
+  return {
+    ok: true,
+    race: { name: draft.name.trim(), start: fromMinutes(toMinutes(draft.start)!), maxDuration: null, checkpoints },
+    night: { nightStart: formatClockInput(parseClock(draft.nightStart)!), nightEnd: formatClockInput(parseClock(draft.nightEnd)!) },
+  };
+}
+
+/** 870 → "14:30" (format LocalTime attendu par l'API). */
+function formatClockInput(minutes: number): string {
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+}
+
+/** "2026-10-23T14:30:00" → "14h30" (champ de saisie d'une barrière). */
+function clockText(iso: string | null): string {
+  const m = iso ? LOCAL.exec(iso) : null;
+  return m ? `${m[4]}h${m[5]}` : '';
+}
+
+/** Fichier roadbook (format de samples/<id>/roadbook.json, avec "night" en option) → brouillon. */
+export function raceToDraft(race: RaceDefinition, night?: Partial<NightWindow>): RaceDraft {
+  const num = (v: number | null | undefined) => (v === null || v === undefined ? '' : String(v));
+  const hm = (t: string | undefined, fallback: string) => (t ? t.slice(0, 5) : fallback);
+  return {
+    name: race.name ?? '',
+    start: race.start ? race.start.slice(0, 16) : '',
+    nightStart: hm(night?.nightStart, '19:00'),
+    nightEnd: hm(night?.nightEnd, '07:45'),
+    checkpoints: (race.checkpoints ?? []).map((cp) => ({
+      id: newId(),
+      code: cp.code ?? '',
+      name: cp.name ?? '',
+      km: num(cp.km),
+      gainM: num(cp.gainM),
+      lossM: num(cp.lossM),
+      cutoffIn: clockText(cp.cutoffIn),
+      cutoffOut: clockText(cp.cutoffOut),
+      aid: cp.aid ?? 'NONE',
+    })),
+  };
+}
+
+/** Lecture d'un fichier roadbook JSON importé ; message d'erreur lisible si le format ne colle pas. */
+export function parseRoadbookFile(text: string): RaceDraft {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("Ce fichier n'est pas un JSON valide.");
+  }
+  const obj = data as Partial<RaceDefinition> & { night?: Partial<NightWindow>; race?: RaceDefinition };
+  // On accepte aussi une requête de plan complète ({ race, night, ... }), comme requests/plan-bogomiles.json.
+  const race = obj.race ?? (obj as RaceDefinition);
+  if (!Array.isArray(race.checkpoints)) {
+    throw new Error('Format inattendu : il manque la liste "checkpoints".');
+  }
+  return raceToDraft(race, obj.night);
+}
+
+/**
+ * Brouillon → fichier JSON à garder (même format que les exemples embarqués, + la plage de nuit).
+ * null tant que la saisie n'est pas valide.
+ */
+export function draftToFile(draft: RaceDraft): string | null {
+  const result = draftToRace(draft, true);
+  return result.ok ? JSON.stringify({ ...result.race, night: result.night }, null, 2) : null;
+}

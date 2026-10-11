@@ -1,9 +1,10 @@
-import type { CourseView, ElevationSource, RacePlan, Reference } from './types';
+import type { CourseView, ElevationSource, RaceDefinition, RacePlan, Reference } from './types';
+import type { NightWindow } from '../lib/draft';
 
 export class ApiError extends Error {}
 
-async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, init);
   if (!res.ok) {
     // Les erreurs de l'API sont des ProblemDetail : { detail: "..." }
     const body = await res.json().catch(() => null);
@@ -27,11 +28,35 @@ export function fetchPlans(sampleId: string, ref: Reference, source: ElevationSo
 }
 
 /**
+ * Plan d'une course chargée par le coureur : roadbook saisi + trace GPX optionnelle.
+ * Une seule requête, pour n'envoyer la trace (plusieurs Mo) qu'une fois.
+ */
+export function fetchCustomPlans(
+  race: RaceDefinition,
+  night: NightWindow,
+  gpx: File | null,
+  ref: Reference,
+  source: ElevationSource,
+): Promise<{ course: CourseView; plans: RacePlan[] }> {
+  const request = {
+    race,
+    night,
+    elevationSource: source,
+    references: [{ label: 'Référence', distanceKm: ref.km, elevationGainM: ref.gainM, duration: ref.time }],
+  };
+  const form = new FormData();
+  form.append('request', new Blob([JSON.stringify(request)], { type: 'application/json' }));
+  if (gpx) form.append('gpx', gpx);
+  return getJson('/api/plans/full?stepKm=0.1', { method: 'POST', body: form });
+}
+
+/**
  * Dernier plan consulté, gardé dans le navigateur pour le jour J (pas de réseau en montagne).
  * Le service worker garde aussi les réponses de l'API, mais seulement pour la même URL :
  * cette copie-ci survit à un changement de référence.
  */
 export interface Snapshot {
+  /** Identifiant de l'exemple embarqué, ou "custom" pour ta course. */
   sampleId: string;
   reference: Reference;
   source: ElevationSource;

@@ -60,6 +60,60 @@ class PlanControllerTest {
                 .andExpect(jsonPath("$.markers.length()").value(0));
     }
 
+    private static final String REQUEST_SANS_TRACE = """
+            {
+              "race": {
+                "name": "Trail sans trace",
+                "start": "2026-10-23T08:00",
+                "checkpoints": [
+                  { "code": "D", "name": "Départ", "km": 0, "gainM": 0 },
+                  { "code": "R", "name": "Ravito", "km": 20, "gainM": 900, "aid": "LIGHT", "cutoffIn": "2026-10-23T12:30" },
+                  { "code": "A", "name": "Arrivée", "km": 40, "gainM": 1800 }
+                ]
+              },
+              "references": [ { "label": "Réf", "distanceKm": 60, "elevationGainM": 3200, "duration": "PT8H48M" } ],
+              "night": { "nightStart": "19:00", "nightEnd": "07:45" }
+            }
+            """;
+
+    @Test
+    void unPlanCompletSansTraceSAppuieSurLeRoadbook() throws Exception {
+        MockMultipartFile request = new MockMultipartFile("request", "", "application/json", REQUEST_SANS_TRACE.getBytes());
+
+        mvc.perform(multipart("/api/plans/full").file(request))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.course.track").doesNotExist())
+                .andExpect(jsonPath("$.plans.length()").value(3))
+                .andExpect(jsonPath("$.plans[1].elevationSource").value("ROADBOOK"))
+                .andExpect(jsonPath("$.plans[1].checkpoints[1].status").value("OK"));
+    }
+
+    @Test
+    void unPlanCompletAvecTraceRenvoieAussiLaCarte() throws Exception {
+        MockMultipartFile request = new MockMultipartFile("request", "", "application/json",
+                ("{\"race\":" + new String(resource("/samples/bogomiles/roadbook.json"))
+                        + ",\"references\":[{\"label\":\"Réf\",\"distanceKm\":60,\"elevationGainM\":3200,\"duration\":\"PT8H48M\"}]"
+                        + ",\"elevationSource\":\"TRACK\"}").getBytes());
+        MockMultipartFile gpx = new MockMultipartFile("gpx", "trace.gpx", "application/gpx+xml",
+                resource("/samples/bogomiles/trace.gpx"));
+
+        mvc.perform(multipart("/api/plans/full").file(request).file(gpx).param("stepKm", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.course.markers.length()").value(10))
+                .andExpect(jsonPath("$.plans[0].elevationSource").value("TRACK"))
+                .andExpect(jsonPath("$.plans[0].totalDistanceKm", closeTo(101.5, 0.1)));
+    }
+
+    @Test
+    void unRoadbookMalTrieRemonteUnMessageClair() throws Exception {
+        String malTrie = REQUEST_SANS_TRACE.replace("\"km\": 20", "\"km\": 50");
+        MockMultipartFile request = new MockMultipartFile("request", "", "application/json", malTrie.getBytes());
+
+        mvc.perform(multipart("/api/plans/full").file(request))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("triés par kilométrage")));
+    }
+
     @Test
     void unPasDeProfilNulEstRefuse() throws Exception {
         mvc.perform(get("/api/demo/bogomiles/course").param("stepKm", "0"))

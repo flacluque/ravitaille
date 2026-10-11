@@ -1,19 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { fetchCourse, fetchPlans, loadSnapshot, saveSnapshot, type Snapshot } from './api/client';
+import { ApiError, fetchCourse, fetchCustomPlans, fetchPlans, loadSnapshot, saveSnapshot, type Snapshot } from './api/client';
+import { loadDraft, loadGpx, saveDraft, saveGpx } from './api/storage';
 import type { ElevationSource, Reference } from './api/types';
 import { CompareTable } from './components/CompareTable';
 import { CourseMap } from './components/CourseMap';
 import { ElevationProfile } from './components/ElevationProfile';
 import { PassageTable } from './components/PassageTable';
+import { RaceEditor } from './components/RaceEditor';
 import { ReferenceForm } from './components/ReferenceForm';
 import { ScenarioCards } from './components/ScenarioCards';
+import { draftToRace, emptyDraft, type RaceDraft } from './lib/draft';
 import { formatClock, formatKm, formatMeters } from './lib/format';
 
-// Seule course embarquée pour l'instant (src/main/resources/samples/bogomiles).
+// Course d'exemple embarquée (src/main/resources/samples/bogomiles).
 const SAMPLE_ID = 'bogomiles';
+const CUSTOM_ID = 'custom';
 const DEFAULT_REFERENCE: Reference = { km: 60, gainM: 3200, time: 'PT8H48M' };
 
-type Status = { kind: 'loading' } | { kind: 'ready' } | { kind: 'offline'; error: string } | { kind: 'error'; error: string };
+type Mode = 'demo' | 'custom';
+
+type Status =
+  | { kind: 'loading' }
+  | { kind: 'ready' }
+  /** Pas de réseau ou API arrêtée. */
+  | { kind: 'unreachable'; error: string }
+  /** L'API a répondu mais refuse le calcul (roadbook incohérent...). */
+  | { kind: 'rejected'; error: string };
 
 export function App() {
   const initial = useMemo(loadSnapshot, []);
@@ -21,34 +33,121 @@ export function App() {
   const [status, setStatus] = useState<Status>({ kind: 'loading' });
   const [scenarioIndex, setScenarioIndex] = useState(1); // Réaliste
   const [hoverKm, setHoverKm] = useState<number | null>(null);
+
+  const [mode, setMode] = useState<Mode>(initial?.sampleId === CUSTOM_ID ? 'custom' : 'demo');
+  const [draft, setDraft] = useState<RaceDraft>(() => loadDraft() ?? emptyDraft());
+  const [gpx, setGpx] = useState<File | null>(null);
+  const [draftErrors, setDraftErrors] = useState<string[]>([]);
+  const [editorOpen, setEditorOpen] = useState(false);
+
+  // Dernière référence demandée : l'éditeur de course relance le calcul avec elle.
+  const [reference, setReference] = useState<Reference>(initial?.reference ?? DEFAULT_REFERENCE);
+  const [source, setSource] = useState<ElevationSource>(initial?.source ?? 'AUTO');
   const hasData = useRef(initial !== null);
 
-  const compute = useCallback(async (reference: Reference, source: ElevationSource) => {
+  const run = useCallback(async (sampleId: string, load: () => Promise<Pick<Snapshot, 'course' | 'plans'>>,
+    ref: Reference, src: ElevationSource) => {
     setStatus({ kind: 'loading' });
     try {
-      const [course, plans] = await Promise.all([
-        fetchCourse(SAMPLE_ID),
-        fetchPlans(SAMPLE_ID, reference, source),
-      ]);
-      const snapshot: Snapshot = { sampleId: SAMPLE_ID, reference, source, course, plans, savedAt: new Date().toISOString() };
+      const { course, plans } = await load();
+      const snapshot: Snapshot = { sampleId, reference: ref, source: src, course, plans, savedAt: new Date().toISOString() };
       setData(snapshot);
       saveSnapshot(snapshot);
       hasData.current = true;
       setStatus({ kind: 'ready' });
+      return true;
     } catch (e) {
       const error = e instanceof Error ? e.message : String(e);
-      // Pas de réseau mais un plan déjà calculé : on l'affiche, avec un bandeau.
-      setStatus(hasData.current ? { kind: 'offline', error } : { kind: 'error', error });
+      setStatus(e instanceof ApiError ? { kind: 'rejected', error } : { kind: 'unreachable', error });
+      return false;
     }
   }, []);
 
-  useEffect(() => {
-    void compute(initial?.reference ?? DEFAULT_REFERENCE, initial?.source ?? 'AUTO');
-  }, [compute, initial]);
+  const computeDemo = useCallback((ref: Reference, src: ElevationSource) =>
+    run(SAMPLE_ID, async () => {
+      const [course, plans] = await Promise.all([fetchCourse(SAMPLE_ID), fetchPlans(SAMPLE_ID, ref, src)]);
+      return { course, plans };
+    }, ref, src), [run]);
 
-  const plans = data?.plans ?? [];
+  const computeCustom = useCallback(async (ref: Reference, src: ElevationSource, d: RaceDraft, file: File | null) => {
+    const result = draftToRace(d, file !== null);
+    if (!result.ok) {
+      setDraftErrors(result.errors);
+      setEditorOpen(true);
+      return false;
+    }
+    setDraftErrors([]);
+    return run(CUSTOM_ID, () => fetchCustomPlans(result.race, result.night, file, ref, src), ref, src);
+  }, [run]);
+
+  const compute = (ref: Reference, src: ElevationSource) => {
+    setReference(ref);
+    setSource(src);
+    return mode === 'demo' ? computeDemo(ref, src) : computeCustom(ref, src, draft, gpx);
+  };
+
+  // Seul un calcul lancé depuis l'éditeur le referme : un calcul encore en cours au moment où
+  // le coureur rouvre l'éditeur ne doit pas le lui fermer sous les doigts.
+  async function submitEditor() {
+    if (await computeCustom(reference, source, draft, gpx)) setEditorOpen(false);
+  }
+
+  // Premier chargement : on recalcule ce qui était affiché la dernière fois (la trace GPX est relue
+  // depuis IndexedDB). Hors ligne, le dernier plan reste affiché.
+  useEffect(() => {
+    const ref = initial?.reference ?? DEFAULT_REFERENCE;
+    const src = initial?.source ?? 'AUTO';
+    if (initial?.sampleId === CUSTOM_ID) {
+      void loadGpx().then((file) => {
+        setGpx(file);
+        void computeCustom(ref, src, loadDraft() ?? emptyDraft(), file);
+      });
+    } else {
+      void computeDemo(ref, src);
+    }
+  }, [initial, computeDemo, computeCustom]);
+
+  function switchMode(next: Mode) {
+    if (next === mode) return;
+    setMode(next);
+    setScenarioIndex(1);
+    if (next === 'demo') {
+      setEditorOpen(false);
+      void computeDemo(reference, source);
+    } else {
+      // Course déjà saisie : on calcule tout de suite ; sinon, place à la saisie (sans erreurs d'emblée).
+      void loadGpx().then((file) => {
+        setGpx(file);
+        if (draftToRace(draft, file !== null).ok) void computeCustom(reference, source, draft, file);
+        else setEditorOpen(true);
+      });
+    }
+  }
+
+  // Une fois des erreurs affichées, elles suivent la saisie : chaque correction en fait disparaître une.
+  function revalidate(d: RaceDraft, file: File | null) {
+    if (draftErrors.length === 0) return;
+    const result = draftToRace(d, file !== null);
+    setDraftErrors(result.ok ? [] : result.errors);
+  }
+
+  function changeDraft(next: RaceDraft) {
+    setDraft(next);
+    saveDraft(next);
+    revalidate(next, gpx);
+  }
+
+  function changeGpx(file: File | null) {
+    setGpx(file);
+    void saveGpx(file);
+    revalidate(draft, file);
+  }
+
+  // En mode "ma course", on n'affiche pas le plan de l'exemple (et inversement).
+  const shown = data && (data.sampleId === CUSTOM_ID) === (mode === 'custom') ? data : null;
+  const plans = shown?.plans ?? [];
   const plan = plans[Math.min(scenarioIndex, plans.length - 1)];
-  const course = data?.course;
+  const course = shown?.course;
 
   return (
     <div className="app">
@@ -71,30 +170,63 @@ export function App() {
         </button>
       </header>
 
-      {status.kind === 'offline' && (
+      {status.kind === 'unreachable' && hasData.current && (
         <div className="banner warn no-print" role="status">
           Hors ligne : affichage du dernier plan calculé
           {data && <> (le {new Date(data.savedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })})</>}.
         </div>
       )}
-      {status.kind === 'error' && (
+      {status.kind === 'unreachable' && !hasData.current && (
         <div className="banner error" role="alert">
           Impossible de joindre l'API : {status.error}. Vérifie que <code>mvn spring-boot:run</code> tourne.
         </div>
       )}
+      {status.kind === 'rejected' && (
+        <div className="banner error" role="alert">Calcul impossible : {status.error}</div>
+      )}
 
       <main className="layout">
         <aside className="side no-print">
+          <div className="card mode-switch" role="radiogroup" aria-label="Course">
+            <button type="button" role="radio" aria-checked={mode === 'demo'} className={mode === 'demo' ? 'active' : ''}
+              onClick={() => switchMode('demo')}>
+              Exemple
+            </button>
+            <button type="button" role="radio" aria-checked={mode === 'custom'} className={mode === 'custom' ? 'active' : ''}
+              onClick={() => switchMode('custom')}>
+              Ma course
+            </button>
+          </div>
           <ReferenceForm
-            initialReference={data?.reference ?? DEFAULT_REFERENCE}
-            initialSource={data?.source ?? 'AUTO'}
+            initialReference={reference}
+            initialSource={source}
             loading={status.kind === 'loading'}
-            onSubmit={compute}
+            onSubmit={(ref, src) => void compute(ref, src)}
           />
           {plan && <SourceNote source={plan.elevationSource} hasTrack={!!course?.track} />}
         </aside>
 
         <section className="content">
+          {mode === 'custom' && (editorOpen || !shown) ? (
+            <RaceEditor
+              draft={draft}
+              onChange={changeDraft}
+              gpx={gpx}
+              onGpxChange={changeGpx}
+              errors={draftErrors}
+              loading={status.kind === 'loading'}
+              onSubmit={() => void submitEditor()}
+              onCancel={shown ? () => setEditorOpen(false) : null}
+            />
+          ) : mode === 'custom' && (
+            <div className="editor-summary no-print">
+              <span className="muted small">
+                {gpx ? `Trace : ${gpx.name}` : 'Sans trace GPX : calcul sur le D+ du roadbook.'}
+              </span>
+              <button type="button" className="ghost" onClick={() => setEditorOpen(true)}>Modifier ma course</button>
+            </div>
+          )}
+
           {plans.length > 0 && (
             <ScenarioCards plans={plans} selected={scenarioIndex} onSelect={setScenarioIndex} />
           )}
@@ -120,7 +252,7 @@ export function App() {
 
           {plans.length > 1 && <CompareTable plans={plans} />}
 
-          {status.kind === 'loading' && !data && <p className="muted">Calcul en cours…</p>}
+          {status.kind === 'loading' && !shown && mode === 'demo' && <p className="muted">Calcul en cours…</p>}
         </section>
       </main>
     </div>

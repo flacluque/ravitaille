@@ -29,6 +29,11 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
   l'heure de passage estimée (interpolée entre deux ravitos).
 - **Trois scénarios** : clique sur une carte pour afficher son tableau détaillé ; le tableau de
   comparaison les met côte à côte.
+- **Ma course** : saisis le roadbook de ta course (un point par ravito : km, D+ cumulé, type de
+  ravito, barrières « 14h30 » dont le jour est déduit tout seul), ou importe-le en JSON (même format
+  que `src/main/resources/samples/bogomiles/roadbook.json`). La trace GPX est **facultative** : sans
+  elle, pas de carte ni de profil, et le calcul se fait sur le D+ du roadbook. Ta course et ta trace
+  restent dans ton navigateur ; « Exporter » télécharge le roadbook pour le garder.
 - **Imprimer** : mise en page dédiée (scénarios, profil, tableaux), sans la carte ni le formulaire.
 - **Hors ligne** : le dernier plan calculé est gardé dans le navigateur, et l'appli est une PWA
   (installable sur le téléphone, fonctionne sans réseau une fois chargée — build de production :
@@ -64,6 +69,10 @@ curl -F "gpx=@ma-trace.gpx" http://localhost:8080/api/tracks/analyze
 # Course à dessiner (carte, profil, ravitos) à partir de ton roadbook et de ta trace
 curl -F "race=@mon-roadbook.json;type=application/json" -F "gpx=@ma-trace.gpx" \
      http://localhost:8080/api/courses
+
+# Plans + course à dessiner en une requête (ce qu'utilise le front pour « Ma course »)
+curl -F "request=@requests/plan-bogomiles.json;type=application/json" -F "gpx=@ma-trace.gpx" \
+     http://localhost:8080/api/plans/full
 
 # Plan de course : roadbook + références en JSON, trace GPX optionnelle
 curl -F "request=@requests/plan-bogomiles.json;type=application/json" \
@@ -127,7 +136,7 @@ et pourra être réutilisé tel quel (CLI, appli mobile via une API, batch de ca
 
 - [x] **v0.1** : GPX, roadbook, heures de passage, barrières, 3 scénarios, nuit
 - [x] **v0.1-front** : React + TypeScript, carte Leaflet, profil altimétrique, tableau imprimable, PWA hors ligne
-- [ ] **v0.1-import** : charger son propre roadbook et sa trace GPX depuis le front (l'API `/api/courses` est prête)
+- [x] **v0.1-import** : saisir / importer son roadbook, trace GPX facultative
 - [ ] **v0.2** : plan nutrition / hydratation par tronçon, checklist matériel obligatoire
 - [ ] **v0.3** : import de l'historique (Strava/Garmin) et calibration par tranche de pente (montée/descente)
 - [ ] **v0.4** : mode assistance (crew) : où et quand retrouver le coureur

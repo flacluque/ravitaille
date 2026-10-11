@@ -218,3 +218,63 @@ tbody tr:hover { background: var(--surface-2); }
   table { font-size: 0.8rem; }
   .code { min-width: 0; padding: 1px 4px; }
 }
+
+/* ---------- Choix de la course ---------- */
+.mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; }
+.mode-switch button { background: transparent; color: var(--muted); }
+.mode-switch button.active { background: var(--accent); color: var(--accent-contrast); }
+
+.editor-summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 8px 12px; border: 1px dashed var(--border); border-radius: var(--radius);
+}
+
+/* ---------- Éditeur de roadbook ---------- */
+.editor { display: flex; flex-direction: column; gap: 14px; }
+.editor-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.editor-head p { margin: 4px 0 0; }
+.editor-actions { display: flex; gap: 8px; }
+.editor input, .editor select {
+  font: inherit; width: 100%; min-width: 0; padding: 7px 8px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+}
+.editor input:disabled { opacity: 0.45; }
+.editor input::placeholder, .form input::placeholder { color: var(--muted); opacity: 0.55; font-style: italic; }
+.editor label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 500; }
+.editor-fields { display: flex; flex-wrap: wrap; gap: 10px; }
+.editor-fields .grow { flex: 1 1 220px; }
+.editor-fields .narrow { width: 90px; }
+
+.gpx-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 12px; background: var(--surface-2); border-radius: 8px; }
+.gpx-label { font-weight: 600; font-size: 0.9rem; }
+.gpx-file { font-size: 0.9rem; }
+.small-btn { padding: 5px 10px; font-size: 0.85rem; }
+
+.cp-grid { display: flex; flex-direction: column; gap: 6px; }
+.cp-row {
+  display: grid;
+  grid-template-columns: 64px minmax(140px, 1fr) 72px 84px 84px 118px 96px 96px 32px;
+  gap: 6px;
+  align-items: start;
+}
+.cp-header { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
+.cp-cell { font-weight: 400 !important; }
+.cp-cell small { font-size: 0.72rem; padding-left: 2px; }
+.cp-cell-label { display: none; }
+.icon-btn { padding: 6px 0; width: 32px; color: var(--muted); }
+.add-btn { align-self: flex-start; }
+.editor-errors { margin: 0; padding: 10px 14px 10px 32px; background: var(--missed-bg); border-radius: 8px; color: var(--missed-fg); }
+.editor-footer { display: flex; justify-content: flex-end; gap: 8px; }
+
+@media (max-width: 1100px) {
+  /* Chaque point devient une fiche : saisie confortable au doigt. */
+  .cp-header { display: none; }
+  .cp-row {
+    position: relative;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 10px 46px 10px 10px; border: 1px solid var(--border); border-radius: 8px;
+  }
+  .cp-row .cp-name { grid-column: span 2; }
+  .cp-remove { position: absolute; top: 8px; right: 8px; }
+  .cp-cell-label { display: block; font-size: 0.72rem; color: var(--muted); }
+}
