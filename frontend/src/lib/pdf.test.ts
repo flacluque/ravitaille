@@ -44,6 +44,28 @@ describe('plan de course en PDF', () => {
     expect(text).not.toContain('Mat\\351riel');
   });
 
+  it('ajoute la préparation Strava quand le plan en tient compte', async () => {
+    const weeks = Array.from({ length: 16 }, (_, i) => ({
+      start: `2026-${String(6 + Math.floor(i / 4)).padStart(2, '0')}-${String(1 + (i % 4) * 7).padStart(2, '0')}`,
+      effortKm: 30 + i * 2, km: 25 + i, gainM: 600, sessions: 3,
+    }));
+    const training = {
+      active: true, elasticity: 0.1, personalRaces: 0, lowSpecificity: true,
+      target: { start: '2026-07-01', end: '2026-10-13', complete: true, weeklyEffortKm: 52, weeklyKm: 40, weeklyGainM: 1200,
+        longestEffortKm: 45, sessions: 48, activeWeeks: 11 },
+      weeks, notes: ['Ta plus longue sortie (45 km-effort) fait 37 % de l\'effort de la course.'],
+    };
+    const withTraining = plans.map((p) => ({
+      ...p, training,
+      references: p.references.map((r, i) => ({ ...r, formFactor: i === 0 ? 0.969 : 1, weeklyEffortKm: i === 0 ? 40 : null })),
+    }));
+    const doc = await buildPlanPdf({ course, plans: withTraining, selected: 1 });
+    const text = new TextDecoder('latin1').decode(doc.output('arraybuffer'));
+    for (const expected of ['Ta préparation', '52 km-effort par semaine', 'moyenne 52', 'Temps corrig', '+30 %', '-3,1 %', 'plus longue sortie']) {
+      expect(text).toContain(expected);
+    }
+  });
+
   it('nomme le fichier d\'après la course', () => {
     expect(pdfFilename('Raid des Troubadours 2026')).toBe('plan-raid-des-troubadours-2026.pdf');
     expect(pdfFilename('La Malène de Proust')).toBe('plan-la-malene-de-proust.pdf');

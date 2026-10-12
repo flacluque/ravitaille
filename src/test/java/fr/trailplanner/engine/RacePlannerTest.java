@@ -184,4 +184,48 @@ class RacePlannerTest {
         assertTrue(plan.checkpoints().get(2).legNightDuration().compareTo(plan.checkpoints().get(1).legNightDuration()) > 0);
         assertEquals(0, plan.checkpoints().get(0).legNightDuration().toSeconds());
     }
+
+    @Test
+    void lEntrainementCorrigeLaReferenceEtSAfficheDansLePlan() {
+        java.time.LocalDate refDate = java.time.LocalDate.of(2026, 4, 12);
+        java.time.LocalDate today = START.toLocalDate().minusDays(11);
+        List<fr.trailplanner.model.TrainingSession> sessions = new java.util.ArrayList<>(
+                TrainingHistoryTest.regular(refDate.minusDays(7), 12, 4, 10, 0));          // 40 / semaine
+        sessions.addAll(TrainingHistoryTest.regular(today.plusDays(1), 12, 4, 11, 0));    // 44 / semaine
+        sessions.add(new fr.trailplanner.model.TrainingSession(today.minusWeeks(2), 40, 1000, "TrailRun"));
+        TrainingHistory history = new TrainingHistory(java.time.LocalDate.of(2025, 9, 1), sessions);
+        List<ReferencePerformance> refs = List.of(new ReferencePerformance("Cathares", 60, 3200,
+                Duration.ofHours(8).plusMinutes(48), refDate, ReferencePerformance.Kind.RACE));
+
+        RacePlan without = planner.plan(courseDeReference(null), null, refs, SANS_ARRET, null, ElevationSource.ROADBOOK);
+        RacePlan with = planner.plan(courseDeReference(null), null, refs, SANS_ARRET, null, ElevationSource.ROADBOOK,
+                history, today);
+
+        double weekly = with.training().target().weeklyEffortKm();
+        double factor = Math.pow(40 / weekly, 0.10);
+        assertEquals(528 * factor, with.totalDuration().toSeconds() / 60.0, 1);
+        assertNull(without.training());
+        assertTrue(with.training().active());
+        assertEquals(factor, with.references().get(0).formFactor(), 0.001);
+        assertEquals(40.0, with.references().get(0).weeklyEffortKm());
+        assertEquals(1.0, without.references().get(0).formFactor());
+        assertNull(without.references().get(0).weeklyEffortKm());
+    }
+
+    @Test
+    void sortieLongueTropCourteLeScenarioPrudentRalentit() {
+        java.time.LocalDate today = START.toLocalDate().minusDays(11);
+        TrainingHistory history = new TrainingHistory(java.time.LocalDate.of(2025, 9, 1),
+                TrainingHistoryTest.regular(today.plusDays(1), 12, 4, 10, 0));
+        List<ReferencePerformance> refs = List.of(new ReferencePerformance("Cathares", 60, 3200,
+                Duration.ofHours(8).plusMinutes(48), null, ReferencePerformance.Kind.RACE));
+
+        RacePlan prudent = planner.plan(courseDeReference(null), null, refs, Scenario.PRUDENT, null,
+                ElevationSource.ROADBOOK, history, today);
+        RacePlan sans = planner.plan(courseDeReference(null), null, refs, Scenario.PRUDENT, null, ElevationSource.ROADBOOK);
+
+        assertTrue(prudent.training().lowSpecificity());
+        assertEquals(sans.totalDuration().toSeconds() * 1.02, prudent.totalDuration().toSeconds(), 60);
+        assertEquals("Prudent", prudent.scenario().name());
+    }
 }

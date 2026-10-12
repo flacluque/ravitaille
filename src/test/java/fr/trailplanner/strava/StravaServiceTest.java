@@ -220,4 +220,34 @@ class StravaServiceTest {
                 {"id": %d, "name": "Footing", "sport_type": "Run", "start_date_local": "%sT18:00:00Z",
                  "distance": 10000, "total_elevation_gain": 100, "elapsed_time": 3600, "moving_time": 3500}""".formatted(id, date);
     }
+
+    @Test
+    void fournitLHistoriqueDEntrainementAvecOuSansRandonnees() {
+        store.save(new StravaToken("acces-1", "r", NOW.getEpochSecond() + 3600, null));
+        fake.pages = List.of("""
+                [{"id": 1, "name": "Trail", "sport_type": "TrailRun", "start_date_local": "2026-09-01T07:00:00Z",
+                  "distance": 20000, "total_elevation_gain": 1000, "elapsed_time": 9000, "moving_time": 8000},
+                 {"id": 2, "name": "Rando", "sport_type": "Hike", "start_date_local": "2026-09-02T07:00:00Z",
+                  "distance": 12000, "total_elevation_gain": 900, "elapsed_time": 14000, "moving_time": 12000},
+                 {"id": 3, "name": "Vélo", "sport_type": "Ride", "start_date_local": "2026-09-03T07:00:00Z",
+                  "distance": 60000, "total_elevation_gain": 900, "elapsed_time": 9000, "moving_time": 8000}]""");
+
+        var withHikes = service.history(LocalDate.of(2026, 1, 1), true).orElseThrow();
+        var runsOnly = service.history(LocalDate.of(2026, 1, 1), false).orElseThrow();
+
+        assertEquals(List.of("Hike", "TrailRun"), withHikes.sessions().stream().map(s -> s.sport()).toList());
+        assertEquals(30.0, withHikes.sessions().get(1).effortKm());
+        assertEquals(1, runsOnly.sessions().size());
+        assertEquals(LocalDate.of(2026, 1, 1), runsOnly.since());
+        assertEquals(1, fake.requests.size(), "la seconde lecture vient du cache");
+
+        service.history(LocalDate.of(2025, 1, 1), false);
+        assertEquals(2, fake.requests.size(), "plus ancien que le cache : nouvelle lecture");
+    }
+
+    @Test
+    void pasDHistoriqueSansCompteConnecte() {
+        assertTrue(service.history(LocalDate.of(2026, 1, 1), true).isEmpty());
+        assertTrue(fake.requests.isEmpty());
+    }
 }

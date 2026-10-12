@@ -110,6 +110,52 @@ export interface RacePlan {
   checkpoints: CheckpointEta[];
   warnings: string[];
   references: ReferenceInsight[];
+  /** Préparation du coureur (historique Strava), null sans historique. */
+  training?: TrainingSummary | null;
+}
+
+/** Bloc de préparation : les 12 semaines avant la semaine de course (fr.trailplanner.engine.TrainingHistory.PrepBlock). */
+export interface PrepBlock {
+  start: string;
+  /** Fin exclue. */
+  end: string;
+  complete: boolean;
+  weeklyEffortKm: number;
+  weeklyKm: number;
+  weeklyGainM: number;
+  longestEffortKm: number;
+  sessions: number;
+  /** Semaines avec au moins 2 sorties. */
+  activeWeeks: number;
+}
+
+export interface TrainingWeek {
+  /** Lundi… ou le jour de début de la semaine, "2026-07-20". */
+  start: string;
+  effortKm: number;
+  km: number;
+  gainM: number;
+  sessions: number;
+}
+
+/** Ce que le plan retient de la préparation (fr.trailplanner.engine.TrainingSummary). */
+export interface TrainingSummary {
+  /** La forme est prise en compte dans le plan. */
+  active: boolean;
+  target: PrepBlock;
+  weeks: TrainingWeek[];
+  /** Sensibilité du temps au volume : 0,10 = +10 % de volume, −1 % de temps. */
+  elasticity: number;
+  /** Courses ayant servi à ajuster la sensibilité (0 = valeur par défaut). */
+  personalRaces: number;
+  lowSpecificity: boolean;
+  notes: string[];
+}
+
+/** Tenir compte de l'entraînement Strava dans le calcul. */
+export interface TrainingOptions {
+  strava: boolean;
+  includeHikes: boolean;
 }
 
 export type ReferenceKind = 'RACE' | 'TRAINING';
@@ -140,6 +186,10 @@ export interface ReferenceInsight {
   distanceFactor: number;
   predictedFinish: string;
   predictedDuration: string;
+  /** Correction de forme appliquée à son temps (1 = aucune). */
+  formFactor?: number;
+  /** Volume de sa préparation (km-effort par semaine), null s'il n'est pas connu. */
+  weeklyEffortKm?: number | null;
 }
 
 /** Roadbook lu par l'IA (fr.trailplanner.extract.ExtractedRoadbook) : à relire avant tout calcul. */

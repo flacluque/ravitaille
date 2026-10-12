@@ -1,4 +1,5 @@
 import type { jsPDF } from 'jspdf';
+import type { UserOptions } from 'jspdf-autotable';
 import type { CourseView, CutoffStatus, RacePlan, Service } from '../api/types';
 import { ACCENT_COLOR, STATUS_COLORS, TRACK_COLOR } from './colors';
 import { durationMinutes, formatClock, formatDuration, formatHm, formatKm, formatPace } from './format';
@@ -96,6 +97,9 @@ export async function buildPlanPdf({ course, plans, selected, services, nutritio
       columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right', fontStyle: 'bold' } },
     });
   }
+
+  // --- Préparation (historique Strava) ---
+  if (plan.training) y = training(doc, plan, y, table);
 
   // --- Heures de passage du scénario détaillé ---
   y = table(`Heures de passage · scénario ${plan.scenario.name.toLowerCase()}`, y, {
@@ -256,6 +260,84 @@ export async function buildPlanPdf({ course, plans, selected, services, nutritio
 }
 
 // ---------------------------------------------------------------------------------------------
+
+/** Ta préparation : chiffres clés, volume par semaine en barres, correction de chaque référence, alertes. */
+function training(doc: jsPDF, plan: RacePlan, y: number,
+  table: (title: string, startY: number, options: UserOptions) => number): number {
+  const t = plan.training!;
+  const b = t.target;
+  let top = ensureSpace(doc, y + 7, 52);
+  top = sectionTitle(doc, 'Ta préparation (Strava)', top) + 2;
+  doc.setFontSize(8.5);
+  doc.setTextColor(...TEXT);
+  if (t.active) {
+    const share = plan.totalEffortKm > 0 ? ` (${Math.round((100 * b.longestEffortKm) / plan.totalEffortKm)} % de la course)` : '';
+    const line = `12 semaines : ${Math.round(b.weeklyEffortKm)} km-effort par semaine (${formatKm(b.weeklyKm)} km, `
+      + `${Math.round(b.weeklyGainM)} m D+), plus longue sortie ${Math.round(b.longestEffortKm)} km-effort${share}, `
+      + `${b.activeWeeks} semaines sur 12 avec au moins 2 sorties.`;
+    for (const l of doc.splitTextToSize(pdfText(line), CONTENT_W) as string[]) {
+      doc.text(l, M, top + 2);
+      top += 4;
+    }
+  }
+  // Barres : volume des 16 dernières semaines, le bloc en couleur, sa moyenne en pointillé.
+  if (t.weeks.length > 0) {
+    const chartH = 22;
+    const base = top + 4 + chartH;
+    const max = Math.max(...t.weeks.map((w) => w.effortKm), b.weeklyEffortKm, 10);
+    const slot = CONTENT_W / t.weeks.length;
+    t.weeks.forEach((w, i) => {
+      const h = (w.effortKm / max) * chartH;
+      doc.setFillColor(...rgb(ACCENT_COLOR));
+      if (w.start < b.start) doc.setFillColor(190, 205, 196);
+      if (h > 0) doc.rect(M + i * slot + 0.6, base - h, slot - 1.2, h, 'F');
+      if (i % 4 === 0) {
+        doc.setFontSize(6.5);
+        doc.setTextColor(...MUTED);
+        const [, mm, dd] = w.start.split('-');
+        doc.text(`${dd}/${mm}`, M + i * slot + slot / 2, base + 3.2, { align: 'center' });
+      }
+    });
+    doc.setDrawColor(...MUTED);
+    doc.setLineWidth(0.2);
+    doc.line(M, base, M + CONTENT_W, base);
+    if (t.active) {
+      const ay = base - (b.weeklyEffortKm / max) * chartH;
+      doc.setDrawColor(...TEXT);
+      doc.setLineDashPattern([1, 1], 0);
+      doc.line(M, ay, M + CONTENT_W, ay);
+      doc.setLineDashPattern([], 0);
+      doc.setFontSize(6.5);
+      doc.setTextColor(...TEXT);
+      doc.text(`moyenne ${Math.round(b.weeklyEffortKm)}`, M + CONTENT_W, ay - 1, { align: 'right' });
+    }
+    top = base + 5;
+  }
+  const refs = plan.references.filter((r) => r.weeklyEffortKm != null);
+  if (t.active && refs.length > 0) {
+    top = table('', top - 5, {
+      head: [['Référence', 'Sa préparation', 'Écart de volume', 'Temps corrigé']],
+      body: refs.map((r) => {
+        const pct = Math.round((b.weeklyEffortKm / r.weeklyEffortKm! - 1) * 100);
+        const f = ((r.formFactor ?? 1) - 1) * 100;
+        return [pdfText(r.label), `${Math.round(r.weeklyEffortKm!)} km-effort / sem.`, `${pct >= 0 ? '+' : '-'}${Math.abs(pct)} %`,
+          `${f > 0 ? '+' : f < 0 ? '-' : ''}${Math.abs(f).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`];
+      }),
+      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right', fontStyle: 'bold' } },
+      didParseCell: (data) => {
+        if (data.section === 'head' && data.column.index >= 1) data.cell.styles.halign = 'right';
+      },
+    }) + 2;
+  }
+  doc.setFontSize(8);
+  doc.setTextColor(...MUTED);
+  for (const l of t.notes.flatMap((n) => doc.splitTextToSize(pdfText(n), CONTENT_W) as string[])) {
+    top = ensureSpace(doc, top + 1, 4);
+    doc.text(l, M, top + 2);
+    top += 3.6;
+  }
+  return top;
+}
 
 function header(doc: jsPDF, course: CourseView, plan: RacePlan): number {
   doc.setFillColor(...rgb(ACCENT_COLOR));

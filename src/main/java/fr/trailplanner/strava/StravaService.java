@@ -1,6 +1,9 @@
 package fr.trailplanner.strava;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import fr.trailplanner.engine.TrainingHistory;
+import fr.trailplanner.engine.TrainingSource;
+import fr.trailplanner.model.TrainingSession;
 import org.springframework.http.HttpStatus;
 
 import java.security.SecureRandom;
@@ -18,11 +21,15 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-/** Connexion du compte Strava et import des sorties de course à pied et de trail. */
-public class StravaService {
+/** Connexion du compte Strava, import des sorties comme références, et historique d'entraînement. */
+public class StravaService implements TrainingSource {
 
     /** Sports gardés : « Course à pied » et « Trail ». */
     static final Set<String> RUNNING = Set.of("Run", "TrailRun");
+    /** Avec la randonnée, en option pour le volume d'entraînement (reconnaissances, sorties avec D+). */
+    static final Set<String> RUNNING_AND_HIKING = Set.of("Run", "TrailRun", "Hike");
+    /** Un calcul de plan relit l'historique : on le garde un moment pour ménager le quota de Strava. */
+    static final Duration CACHE_TTL = Duration.ofMinutes(10);
     /** Type de sortie « Course » pour une activité de course à pied. */
     static final int RACE_WORKOUT = 1;
     static final int PER_PAGE = 200;
@@ -40,6 +47,9 @@ public class StravaService {
     private final SecureRandom random = new SecureRandom();
     /** Connexions en cours : state → adresse de l'appli à laquelle revenir. */
     private final Map<String, String> pending = new LinkedHashMap<>();
+    /** Dernières activités lues (tous sports gardés), depuis {@code since}, lues à {@code at}. */
+    private record Cached(LocalDate since, java.time.Instant at, List<StravaActivity> activities) {}
+    private Cached cache;
 
     public StravaService(StravaProperties props, StravaClient client, StravaTokenStore store, Clock clock) {
         this.props = props;
@@ -103,6 +113,32 @@ public class StravaService {
 
     /** Sorties de course à pied et de trail depuis {@code since}, les plus récentes d'abord. */
     public List<StravaActivity> activities(LocalDate since) {
+        return fetch(since, RUNNING);
+    }
+
+    /** Historique d'entraînement, si Strava est configuré et connecté ; sinon vide. */
+    @Override
+    public Optional<TrainingHistory> history(LocalDate since, boolean includeHikes) {
+        if (!props.configured() || store.load().isEmpty()) {
+            return Optional.empty();
+        }
+        List<StravaActivity> all;
+        synchronized (this) {
+            java.time.Instant now = clock.instant();
+            if (cache == null || cache.since().isAfter(since) || cache.at().plus(CACHE_TTL).isBefore(now)) {
+                cache = new Cached(since, now, fetch(since, RUNNING_AND_HIKING));
+            }
+            all = cache.activities();
+        }
+        List<TrainingSession> sessions = all.stream()
+                .filter(a -> !a.date().isBefore(since))
+                .filter(a -> includeHikes || RUNNING.contains(a.sportType()))
+                .map(a -> new TrainingSession(a.date(), a.distanceKm(), a.elevationGainM(), a.sportType()))
+                .toList();
+        return Optional.of(new TrainingHistory(since, sessions));
+    }
+
+    private List<StravaActivity> fetch(LocalDate since, Set<String> sports) {
         String access = accessToken();
         long after = since.atStartOfDay(ZoneOffset.UTC).toEpochSecond();
         List<StravaActivity> result = new ArrayList<>();
@@ -110,7 +146,7 @@ public class StravaService {
             int current = page;
             JsonNode items = call(() -> client.activities(access, after, current, PER_PAGE));
             for (JsonNode item : items) {
-                toActivity(item).ifPresent(result::add);
+                toActivity(item, sports).ifPresent(result::add);
             }
             if (items.size() < PER_PAGE) {
                 break;
@@ -122,6 +158,9 @@ public class StravaService {
 
     /** Révoque l'accès chez Strava (au mieux) et oublie les jetons. */
     public void disconnect() {
+        synchronized (this) {
+            cache = null;
+        }
         Optional<StravaToken> token = store.load();
         store.delete();
         token.ifPresent(t -> {
@@ -133,9 +172,9 @@ public class StravaService {
         });
     }
 
-    static Optional<StravaActivity> toActivity(JsonNode a) {
+    static Optional<StravaActivity> toActivity(JsonNode a, Set<String> sports) {
         String sport = a.path("sport_type").asText(a.path("type").asText(""));
-        if (!RUNNING.contains(sport)) {
+        if (!sports.contains(sport)) {
             return Optional.empty();
         }
         String start = a.path("start_date_local").asText("");

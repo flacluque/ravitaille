@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, fetchCourse, fetchCustomPlans, fetchPlans, loadSnapshot, saveSnapshot, type Snapshot } from './api/client';
-import { loadDraft, loadGear, loadGpx, saveDraft, saveGpx } from './api/storage';
+import { loadDraft, loadGear, loadGpx, loadTrainingOptions, saveDraft, saveGpx, saveTrainingOptions } from './api/storage';
 import type { ElevationSource, Reference } from './api/types';
 import { CompareTable } from './components/CompareTable';
 import { CourseMap } from './components/CourseMap';
@@ -13,6 +13,7 @@ import { PassageTable } from './components/PassageTable';
 import { RaceEditor } from './components/RaceEditor';
 import { ReferenceForm } from './components/ReferenceForm';
 import { ReferenceInsights } from './components/ReferenceInsights';
+import { TrainingCard } from './components/TrainingCard';
 import { ScenarioCards } from './components/ScenarioCards';
 import { draftSignature, draftToRace, emptyDraft, type RaceDraft } from './lib/draft';
 import { formatClock, formatKm, formatMeters } from './lib/format';
@@ -52,6 +53,9 @@ export function App() {
   const [references, setReferences] = useState<Reference[]>(initial?.references.length ? initial.references : DEFAULT_REFERENCES);
   const [source, setSource] = useState<ElevationSource>(initial?.source ?? 'AUTO');
   const hasData = useRef(initial !== null);
+  // Tenir compte de l'entraînement Strava : lu au moment de chaque calcul.
+  const [training, setTraining] = useState(loadTrainingOptions);
+  const trainingRef = useRef(training);
 
   const run = useCallback(async (sampleId: string, load: () => Promise<Pick<Snapshot, 'course' | 'plans'>>,
     refs: Reference[], src: ElevationSource) => {
@@ -73,7 +77,7 @@ export function App() {
 
   const computeDemo = useCallback((refs: Reference[], src: ElevationSource) =>
     run(SAMPLE_ID, async () => {
-      const [course, plans] = await Promise.all([fetchCourse(SAMPLE_ID), fetchPlans(SAMPLE_ID, refs, src)]);
+      const [course, plans] = await Promise.all([fetchCourse(SAMPLE_ID), fetchPlans(SAMPLE_ID, refs, src, trainingRef.current)]);
       return { course, plans };
     }, refs, src), [run]);
 
@@ -85,10 +89,17 @@ export function App() {
       return false;
     }
     setDraftErrors([]);
-    const ok = await run(CUSTOM_ID, () => fetchCustomPlans(result.race, result.night, file, refs, src), refs, src);
+    const ok = await run(CUSTOM_ID, () => fetchCustomPlans(result.race, result.night, file, refs, src, trainingRef.current), refs, src);
     if (ok) setComputedSignature(draftSignature(d, file));
     return ok;
   }, [run]);
+
+  function changeTraining(next: typeof training) {
+    setTraining(next);
+    trainingRef.current = next;
+    saveTrainingOptions(next);
+    void compute(references, source);
+  }
 
   const compute = (refs: Reference[], src: ElevationSource) => {
     setReferences(refs);
@@ -267,6 +278,8 @@ export function App() {
             loading={status.kind === 'loading'}
             onSubmit={(refs, src) => void compute(refs, src)}
             target={plan && !otherRace ? { km: plan.totalDistanceKm, gainM: plan.totalGainM } : null}
+            training={training}
+            onTrainingChange={changeTraining}
           />
           {plan && <SourceNote source={plan.elevationSource} hasTrack={!!course?.track} />}
         </aside>
@@ -311,6 +324,8 @@ export function App() {
           )}
 
           {plan && <ReferenceInsights plan={plan} />}
+
+          {plan?.training && <TrainingCard plan={plan} />}
 
           {plan?.warnings.length ? (
             <ul className="warnings">

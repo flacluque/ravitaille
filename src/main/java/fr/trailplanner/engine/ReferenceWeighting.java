@@ -15,7 +15,10 @@ import java.util.List;
  * <ul>
  *   <li><b>Récence</b> : le poids est divisé par deux tous les {@value #HALF_LIFE_DAYS} jours écoulés
  *       entre la référence et la course. Une course d'il y a un an compte quatre fois moins qu'une
- *       course de la veille. Sans date, pas de pénalité.</li>
+ *       course de la veille. Sans date, pas de pénalité. Quand l'historique d'entraînement mesure la forme
+ *       (voir {@link TrainingForm}), la demi-vie passe à {@value #HALF_LIFE_DAYS_WITH_FORM} jours.</li>
+ *   <li><b>Forme</b> : le temps de la référence est corrigé selon l'écart de volume entre sa préparation
+ *       et celle de la course ({@link TrainingForm}).</li>
  *   <li><b>Distance</b> : extrapoler d'un 20 km vers un 100 km est moins fiable que d'un 80 km. Le poids
  *       vaut 1 / (1 + |ln(effort course / effort référence)|) : ×0,6 pour un effort deux fois plus court
  *       ou plus long, ×0,4 pour un effort cinq fois plus court.</li>
@@ -28,6 +31,8 @@ import java.util.List;
 public final class ReferenceWeighting {
 
     static final double HALF_LIFE_DAYS = 180;
+    /** Quand la forme est mesurée (historique Strava), l'ancienneté n'a plus à la deviner : demi-vie plus longue. */
+    static final double HALF_LIFE_DAYS_WITH_FORM = 365;
     static final double TRAINING_TIME_FACTOR = 0.90;
     static final double TRAINING_WEIGHT = 0.6;
 
@@ -41,42 +46,58 @@ public final class ReferenceWeighting {
      * @param weight          poids normalisé (somme = 1 sur toutes les références)
      * @param recencyFactor   part du poids due à l'ancienneté (1 = récente ou sans date)
      * @param distanceFactor  part du poids due à l'écart de distance avec la course (1 = même effort)
+     * @param formFactor      correction de forme appliquée au temps (1 = aucune, voir {@link TrainingForm})
      */
     public record Weighted(ReferencePerformance reference, double effortKm, double raceMinutes, double weight,
-                           double recencyFactor, double distanceFactor) {}
+                           double recencyFactor, double distanceFactor, double formFactor) {}
 
     /**
      * @param targetEffortKm effort de la course à planifier ; NaN pour ignorer l'écart de distance
      * @param raceDate       date de la course ; null pour ignorer l'ancienneté
      */
     public static List<Weighted> weigh(List<ReferencePerformance> references, double targetEffortKm, LocalDate raceDate) {
+        return weigh(references, targetEffortKm, raceDate, null, HALF_LIFE_DAYS);
+    }
+
+    /**
+     * @param formFactors  correction de forme de chaque référence (même ordre), null pour aucune
+     * @param halfLifeDays demi-vie de l'ancienneté
+     */
+    public static List<Weighted> weigh(List<ReferencePerformance> references, double targetEffortKm, LocalDate raceDate,
+                                       List<Double> formFactors, double halfLifeDays) {
         if (references == null || references.isEmpty()) {
             throw new IllegalArgumentException("Au moins une performance de référence est nécessaire");
         }
         List<Weighted> raw = new ArrayList<>();
         double total = 0;
-        for (ReferencePerformance ref : references) {
+        for (int i = 0; i < references.size(); i++) {
+            ReferencePerformance ref = references.get(i);
+            double form = formFactors == null ? 1 : formFactors.get(i);
             double effort = EffortModel.effortKm(ref.distanceKm(), ref.elevationGainM());
             boolean training = ref.kind() == ReferencePerformance.Kind.TRAINING;
-            double minutes = ref.duration().toSeconds() / 60.0 * (training ? TRAINING_TIME_FACTOR : 1);
-            double recency = recency(ref.date(), raceDate);
+            double minutes = ref.duration().toSeconds() / 60.0 * (training ? TRAINING_TIME_FACTOR : 1) * form;
+            double recency = recency(ref.date(), raceDate, halfLifeDays);
             double distance = Double.isNaN(targetEffortKm) ? 1 : 1 / (1 + Math.abs(Math.log(targetEffortKm / effort)));
             double weight = recency * distance * (training ? TRAINING_WEIGHT : 1);
             total += weight;
-            raw.add(new Weighted(ref, effort, minutes, weight, recency, distance));
+            raw.add(new Weighted(ref, effort, minutes, weight, recency, distance, form));
         }
         double sum = total;
         return raw.stream()
                 .map(w -> new Weighted(w.reference(), w.effortKm(), w.raceMinutes(), w.weight() / sum,
-                        w.recencyFactor(), w.distanceFactor()))
+                        w.recencyFactor(), w.distanceFactor(), w.formFactor()))
                 .toList();
     }
 
     static double recency(LocalDate date, LocalDate raceDate) {
+        return recency(date, raceDate, HALF_LIFE_DAYS);
+    }
+
+    static double recency(LocalDate date, LocalDate raceDate, double halfLifeDays) {
         if (date == null || raceDate == null) {
             return 1;
         }
         long days = Math.max(0, ChronoUnit.DAYS.between(date, raceDate));
-        return Math.pow(0.5, days / HALF_LIFE_DAYS);
+        return Math.pow(0.5, days / halfLifeDays);
     }
 }

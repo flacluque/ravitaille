@@ -1,5 +1,17 @@
 package fr.trailplanner.api;
 
+import fr.trailplanner.engine.TrainingHistory;
+import fr.trailplanner.engine.TrainingSource;
+import fr.trailplanner.model.ReferencePerformance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.ArrayList;
+
 import fr.trailplanner.engine.RacePlan;
 import fr.trailplanner.engine.RacePlanner;
 import fr.trailplanner.gpx.GpxParser;
@@ -17,9 +29,28 @@ import java.util.List;
 @Service
 public class PlanningService {
 
+    private static final Logger log = LoggerFactory.getLogger(PlanningService.class);
+
     private final GpxParser parser = new GpxParser();
     private final TrackAnalyzer analyzer = new TrackAnalyzer();
     private final RacePlanner planner = new RacePlanner();
+    private final TrainingSource training;
+    private final Clock clock;
+
+    /** Sans historique d'entraînement (tests, exemples). */
+    public PlanningService() {
+        this((TrainingSource) null, Clock.systemDefaultZone());
+    }
+
+    @Autowired
+    public PlanningService(ObjectProvider<TrainingSource> training) {
+        this(training.getIfAvailable(), Clock.systemDefaultZone());
+    }
+
+    PlanningService(TrainingSource training, Clock clock) {
+        this.training = training;
+        this.clock = clock;
+    }
 
     public record LoadedTrack(String name, TrackProfile profile) {}
 
@@ -32,10 +63,50 @@ public class PlanningService {
         if (request.race() == null) {
             throw new IllegalArgumentException("La course (race) est obligatoire");
         }
+        LocalDate today = LocalDate.now(clock);
+        List<String> warnings = new ArrayList<>();
+        TrainingHistory history = history(request, today, warnings);
         return request.scenariosOrDefault().stream()
                 .map(s -> planner.plan(request.race(), track, request.references(), s,
-                        request.night(), request.elevationSource()))
+                        request.night(), request.elevationSource(), history, today))
+                .map(p -> warnings.isEmpty() ? p : withWarnings(p, warnings))
                 .toList();
+    }
+
+    /**
+     * Historique d'entraînement couvrant le bloc de préparation de la course et de chaque référence.
+     * Si Strava ne répond pas, le plan se fait sans, avec un avertissement.
+     */
+    private TrainingHistory history(PlanRequest request, LocalDate today, List<String> warnings) {
+        PlanRequest.TrainingOptions options = request.training();
+        if (options == null || !options.strava() || training == null
+                || request.references() == null || request.references().isEmpty()) {
+            return null;
+        }
+        LocalDate raceDate = request.race().start().toLocalDate();
+        LocalDate oldest = raceDate.isBefore(today) ? raceDate : today;
+        for (ReferencePerformance ref : request.references()) {
+            if (ref.date() != null && ref.date().isBefore(oldest)) {
+                oldest = ref.date();
+            }
+        }
+        // Début du bloc de la plus ancienne date : semaine de course + 12 semaines.
+        LocalDate since = oldest.minusDays(7).minusWeeks(12);
+        try {
+            return training.history(since, options.includeHikes()).orElse(null);
+        } catch (RuntimeException e) {
+            log.warn("Historique d'entraînement indisponible : {}", e.getMessage());
+            warnings.add("Historique Strava indisponible (" + e.getMessage() + ") : ta forme n'est pas prise en compte.");
+            return null;
+        }
+    }
+
+    private static RacePlan withWarnings(RacePlan p, List<String> extra) {
+        List<String> all = new ArrayList<>(extra);
+        all.addAll(p.warnings());
+        return new RacePlan(p.raceName(), p.scenario(), p.elevationSource(), p.totalDistanceKm(), p.totalGainM(),
+                p.totalEffortKm(), p.start(), p.finish(), p.totalDuration(), p.totalStops(), p.nightDuration(),
+                p.checkpoints(), List.copyOf(all), p.references(), p.training());
     }
 
     /** Charge une course d'exemple embarquée (src/main/resources/samples/&lt;id&gt;/). */

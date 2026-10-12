@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import type { ElevationSource, Reference, ReferenceKind } from '../api/types';
+import { fetchStravaStatus } from '../api/client';
+import type { ElevationSource, Reference, ReferenceKind, TrainingOptions } from '../api/types';
 import { durationMinutes, formatHm, parseHmInput } from '../lib/format';
 import type { Target } from '../lib/strava';
 import { StravaImport } from './StravaImport';
@@ -12,6 +13,9 @@ interface Props {
   onSubmit: (references: Reference[], source: ElevationSource) => void;
   /** Distance et D+ de la course préparée, pour repérer les sorties Strava qui lui ressemblent. */
   target: Target | null;
+  /** Tenir compte de l'entraînement Strava (proposé quand le compte est connecté). */
+  training: TrainingOptions;
+  onTrainingChange: (options: TrainingOptions) => void;
 }
 
 const SOURCES: { value: ElevationSource; label: string }[] = [
@@ -57,13 +61,19 @@ function parseRow(row: Row): { ref: Reference | null; errors: Partial<Record<'km
   return { ref: { label: row.label.trim(), date: row.date || null, kind: row.kind, km, gainM: gain, time: time! }, errors };
 }
 
-export function ReferenceForm({ initialReferences, initialSource, loading, onSubmit, target }: Props) {
+export function ReferenceForm({ initialReferences, initialSource, loading, onSubmit, target, training, onTrainingChange }: Props) {
   const [rows, setRows] = useState<Row[]>(() => initialReferences.map(toRow));
   const [source, setSource] = useState<ElevationSource>(initialSource);
   // Retour de la page d'autorisation de Strava (?strava=…) : on rouvre l'import là où on l'avait laissé,
   // puis on retire le paramètre de l'adresse (un rechargement ne doit pas rouvrir l'import).
   const [stravaResult, setStravaResult] = useState(() => new URLSearchParams(window.location.search).get('strava'));
   const [stravaOpen, setStravaOpen] = useState(stravaResult !== null);
+  // Compte Strava connecté : on propose de tenir compte de l'entraînement.
+  const [stravaConnected, setStravaConnected] = useState(false);
+  useEffect(() => {
+    if (stravaOpen) return;
+    fetchStravaStatus().then((s) => setStravaConnected(s.connected)).catch(() => setStravaConnected(false));
+  }, [stravaOpen]);
   useEffect(() => {
     if (stravaResult === null) return;
     const url = new URL(window.location.href);
@@ -153,6 +163,22 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
           <StravaLogo /> Importer depuis Strava
         </button>
       </div>
+      {stravaConnected && (
+        <div className="training-options">
+          <label className="check">
+            <input type="checkbox" checked={training.strava}
+              onChange={(e) => onTrainingChange({ ...training, strava: e.target.checked })} />
+            Tenir compte de mon entraînement Strava
+          </label>
+          {training.strava && (
+            <label className="check sub">
+              <input type="checkbox" checked={training.includeHikes}
+                onChange={(e) => onTrainingChange({ ...training, includeHikes: e.target.checked })} />
+              Compter les randonnées dans le volume
+            </label>
+          )}
+        </div>
+      )}
       {stravaOpen && (
         <StravaImport
           existing={parsed.flatMap((p) => (p.ref ? [p.ref] : []))}

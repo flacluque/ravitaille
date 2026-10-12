@@ -12,6 +12,8 @@ import java.time.LocalDateTime;
  *
  * @param weight          poids normalisé dans le plan (0 à 1)
  * @param predictedFinish arrivée prédite avec cette seule référence, dans le même scénario
+ * @param formFactor      correction de forme appliquée à son temps (1 = aucune)
+ * @param weeklyEffortKm  volume de sa préparation (km-effort par semaine), null s'il n'est pas connu
  */
 public record ReferenceInsight(
         String label,
@@ -24,5 +26,7 @@ public record ReferenceInsight(
         double recencyFactor,
         double distanceFactor,
         LocalDateTime predictedFinish,
-        Duration predictedDuration) {
+        Duration predictedDuration,
+        double formFactor,
+        Double weeklyEffortKm) {
 }

@@ -40,6 +40,9 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
 - **Importer depuis Strava** : dans « Tes références », choisis tes courses et sorties de course à
   pied ou de trail ; distance, D+, date et temps écoulé (arrêts compris) sont repris tels quels. Les
   sorties les plus proches de ta course sont signalées. Voir « Import des activités Strava » plus bas.
+- **Ta préparation** : avec Strava connecté, le calcul tient compte de ton entraînement. La carte
+  montre ton volume semaine par semaine, ta plus longue sortie et ta régularité, et de combien le
+  temps de chaque référence est corrigé selon l'écart avec ta préparation actuelle.
 - **Nutrition et hydratation** : pour chaque tronçon, glucides et eau à prévoir (moins d'eau la nuit),
   quoi consommer (gels, compotes, boisson énergétique selon ton profil) et combien de flasques remplir
   à chaque point d'eau pour tenir jusqu'au suivant. Ce qu'il faut emporter au départ, et récupérer au
@@ -182,9 +185,21 @@ Strava demande une **application API**, gratuite, à créer une fois avec ton co
      poids ×0,6 (la conversion reste approximative).
 
    Le plan indique aussi l'arrivée prédite par chaque référence seule, et son poids.
-4. **Simulation pas à pas** (tous les 0,05 km-effort) : on applique la forme du jour, le facteur
+4. **Forme d'entraînement** (avec Strava, option « Tenir compte de mon entraînement Strava ») : on
+   compare le **bloc de préparation** de chaque référence à celui de ta course, soit les 12 semaines
+   avant la semaine de course (jusqu'à aujourd'hui pour une course à venir), en km-effort par semaine,
+   randonnées comprises si tu le choisis. Le temps de la référence est multiplié par
+   `(volume référence / volume course)^0,10`, dans la limite de ±8 % (Tanda 2011 : +10 % de volume
+   ≈ −1 % de temps au niveau amateur). À partir de 3 courses dont on connaît la préparation, cet
+   exposant est ajusté sur tes propres résultats. La demi-vie de la récence passe alors à 1 an, et :
+   - si ta plus longue sortie fait moins de 40 % de l'effort de la course, le scénario prudent
+     compte 2 % de plus ;
+   - si ton volume des 4 dernières semaines (hors affûtage) s'effondre, l'appli te prévient.
+
+   Le détail, avec les études sur lesquelles il s'appuie : [docs/v0.3-forme.md](docs/v0.3-forme.md).
+5. **Simulation pas à pas** (tous les 0,05 km-effort) : on applique la forme du jour, le facteur
    de nuit si l'horloge est dans la plage frontale, puis les arrêts aux ravitos.
-5. **Barrières horaires** : entrée et/ou sortie de ravito. Statut `OK` (> 1 h de marge), `TIGHT`
+6. **Barrières horaires** : entrée et/ou sortie de ravito. Statut `OK` (> 1 h de marge), `TIGHT`
    (< 1 h), `MISSED` (dépassée).
 
 | Scénario  | Forme du jour | Exposant fatigue | Facteur nuit | Arrêt ravito | Arrêt base de vie |
@@ -237,5 +252,6 @@ et pourra être réutilisé tel quel (CLI, appli mobile via une API, batch de ca
   obligatoire (lue dans le règlement), le tout dans le PDF (voir [docs/v0.2-conception.md](docs/v0.2-conception.md))
 - [ ] **v0.2-météo** (option) : prévision Open-Meteo pour ajuster l'hydratation et le matériel
 - [ ] **v0.3** : import des activités Strava comme références (voir [docs/v0.3-conception.md](docs/v0.3-conception.md)) ;
+  forme d'entraînement (volume des 12 semaines de préparation) dans la prédiction ([docs/v0.3-forme.md](docs/v0.3-forme.md)) ;
   plus tard, calibration par tranche de pente (montée/descente) à partir des flux d'activité
 - [ ] **v0.4** : mode assistance (crew) : où et quand retrouver le coureur

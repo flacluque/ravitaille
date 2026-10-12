@@ -1,6 +1,6 @@
 import type {
   CourseView, ElevationSource, ExtractedGear, ExtractedRoadbook, ExtractorStatus, RaceDefinition, RacePlan, Reference,
-  StravaActivity, StravaStatus,
+  StravaActivity, StravaStatus, TrainingOptions,
 } from './types';
 import type { NightWindow } from '../lib/draft';
 
@@ -32,11 +32,12 @@ function toApi(refs: Reference[]) {
   }));
 }
 
-export function fetchPlans(sampleId: string, refs: Reference[], source: ElevationSource): Promise<RacePlan[]> {
+export function fetchPlans(sampleId: string, refs: Reference[], source: ElevationSource,
+  training: TrainingOptions | null = null): Promise<RacePlan[]> {
   return getJson(`/api/demo/${encodeURIComponent(sampleId)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ references: toApi(refs), elevationSource: source }),
+    body: JSON.stringify({ references: toApi(refs), elevationSource: source, training }),
   });
 }
 
@@ -50,12 +51,14 @@ export function fetchCustomPlans(
   gpx: File | null,
   refs: Reference[],
   source: ElevationSource,
+  training: TrainingOptions | null = null,
 ): Promise<{ course: CourseView; plans: RacePlan[] }> {
   const request = {
     race,
     night,
     elevationSource: source,
     references: toApi(refs),
+    training,
   };
   const form = new FormData();
   form.append('request', new Blob([JSON.stringify(request)], { type: 'application/json' }));
