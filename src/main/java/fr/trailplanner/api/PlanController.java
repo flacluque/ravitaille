@@ -126,11 +126,13 @@ public class PlanController {
     @PostMapping(path = "/demo/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public List<RacePlan> demoPlans(@PathVariable String id, @RequestBody DemoRequest body) {
         PlanningService.Sample sample = service.loadSample(id);
-        PlanRequest request = new PlanRequest(sample.race(), body.references(), DEMO_NIGHT, body.elevationSource(), null);
+        PlanRequest request = new PlanRequest(sample.race(), body.references(), DEMO_NIGHT, body.elevationSource(), null,
+                body.training());
         return service.plan(request, sample.track() == null ? null : sample.track().profile());
     }
 
-    public record DemoRequest(List<ReferencePerformance> references, ElevationSource elevationSource) {}
+    public record DemoRequest(List<ReferencePerformance> references, ElevationSource elevationSource,
+                              PlanRequest.TrainingOptions training) {}
 
     /** Version texte imprimable de la démo. */
     @GetMapping(path = "/demo/{id}/report", produces = MediaType.TEXT_PLAIN_VALUE)

@@ -1,3 +1,5 @@
+[hidden] { display: none !important; }
+
 :root {
   --bg: #f6f4ef;
   --surface: #ffffff;
@@ -433,3 +435,120 @@ tbody tr:hover { background: var(--surface-2); }
 .confirm-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px;
   padding: 10px 14px; margin: 8px 0; border-radius: 8px; background: var(--tight-bg); font-size: 0.9rem; }
 .confirm-actions { display: flex; gap: 8px; }
+
+/* Import Strava */
+.modal-backdrop { position: fixed; inset: 0; z-index: 2000; background: rgb(0 0 0 / 0.45); display: flex;
+  align-items: flex-start; justify-content: center; padding: 5vh 16px; overflow-y: auto; }
+.modal { background: var(--surface); color: var(--text); border-radius: 12px; width: min(760px, 100%); padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 10px; box-shadow: 0 12px 40px rgb(0 0 0 / 0.3); }
+.modal-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.modal-head h2 { margin: 0; }
+.modal-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; flex-wrap: wrap;
+  position: sticky; bottom: -16px; background: var(--surface); padding: 8px 0 0; }
+.strava-msg { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--tight-bg); }
+.strava-msg.ok { background: var(--ok-bg); }
+.strava-setup ol { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.strava-setup pre { margin: 6px 0 0; padding: 8px; border-radius: 6px; background: var(--surface-2); overflow-x: auto; font-size: 0.85rem; }
+.strava-connect { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.strava-account { margin: 0; }
+.strava-filters { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: end; }
+.strava-filters label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 500; }
+.strava-filters label.check { flex-direction: row; align-items: center; gap: 6px; font-weight: 400; }
+.strava-filters input[type='number'] { width: 90px; }
+.strava-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.strava-list li { display: grid; grid-template-columns: 1fr auto auto; gap: 6px 12px; align-items: center;
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+.strava-list li.selected { border-color: var(--strava); }
+.strava-list li.already { opacity: 0.6; }
+.strava-pick { display: flex; gap: 8px; align-items: flex-start; min-width: 0; cursor: pointer; }
+.strava-pick input { margin-top: 3px; }
+.strava-name { display: flex; flex-direction: column; min-width: 0; }
+.strava-name strong { overflow-wrap: anywhere; }
+.strava-figures { display: flex; gap: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 0.9rem; }
+.strava-tag { display: inline-block; white-space: nowrap; margin-left: 6px; padding: 1px 6px; border-radius: 10px; background: var(--accent); color: var(--accent-contrast); font-size: 0.75rem; }
+.strava-tag.muted-tag { background: var(--border); color: var(--text); }
+@media (max-width: 640px) {
+  .strava-list li { grid-template-columns: 1fr; }
+  .strava-figures { padding-left: 24px; }
+  .strava-list li select { margin-left: 24px; justify-self: start; }
+}
+.ref-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Strava : couleurs du bouton « Connect with Strava » (orange Strava, texte blanc), reconnaissable au premier coup d'œil. */
+:root { --strava: #fc4c02; --strava-hover: #e34402; }
+.strava-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--strava); color: #fff;
+  border: 1px solid var(--strava); font-weight: 600; }
+.strava-btn:hover:not(:disabled) { background: var(--strava-hover); border-color: var(--strava-hover); }
+.strava-btn:focus-visible { outline: 2px solid var(--strava); outline-offset: 2px; }
+.strava-logo { flex: none; }
+.strava-head h2 { display: flex; align-items: center; gap: 8px; }
+.strava-mark { display: inline-flex; padding: 5px; border-radius: 6px; background: var(--strava); color: #fff; }
+.strava-powered { margin: 4px 0 0; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--strava);
+  font-weight: 600; justify-content: flex-end; }
+.modal input, .modal select { font: inherit; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface-2); color: var(--text); }
+.modal input[type='checkbox'] { padding: 0; width: auto; }
+.training-options { display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; }
+.form .training-options label.check { flex-direction: row; align-items: center; gap: 8px; font-weight: 400; }
+.form .training-options input[type='checkbox'] { width: auto; padding: 0; accent-color: var(--strava); }
+.training-options .sub { padding-left: 24px; }
+
+/* Ta préparation (Strava) */
+.training .card-head h2 { display: flex; align-items: center; gap: 8px; }
+.strava-mark.small { padding: 4px; border-radius: 5px; }
+.training-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 8px 0 12px; }
+.stat { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); min-width: 0; }
+.stat.warn { background: var(--tight-bg); }
+.stat-label { font-size: 0.8rem; color: var(--muted); }
+.stat-value { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat-value small { font-size: 0.75rem; font-weight: 500; color: var(--muted); }
+.training-chart { margin: 0 0 10px; }
+.weeks-chart { width: 100%; height: auto; display: block; }
+.weeks-chart .grid { stroke: var(--border); stroke-width: 1; }
+.weeks-chart .baseline { stroke: var(--muted); stroke-width: 1; }
+.weeks-chart .axis { fill: var(--muted); font-size: 11px; }
+.weeks-chart .axis.strong { fill: var(--text); font-weight: 600; }
+.weeks-chart .bar { fill: var(--accent); }
+.weeks-chart .bar.before { fill: var(--accent); opacity: 0.35; }
+.weeks-chart .bar.hover { fill: var(--strava); opacity: 1; }
+.weeks-chart .hit { fill: transparent; }
+.weeks-chart g:focus { outline: none; }
+.weeks-chart g:focus-visible .hit { stroke: var(--strava); stroke-width: 2; }
+.weeks-chart .avg line { stroke: var(--text); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.training-chart figcaption { min-height: 1.4em; }
+.training-refs { margin-bottom: 8px; }
+.training-notes { margin: 6px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
+.training-method { margin: 4px 0 0; }
+@media (max-width: 640px) {
+  .training-stats { grid-template-columns: 1fr; }
+}
+.form .training-options .prep-weeks { flex-direction: row; align-items: center; gap: 8px; font-weight: 400; flex-wrap: wrap; }
+.form .training-options .prep-weeks select { width: auto; padding: 4px 8px; }
+
+/* Onglets et page « Comment ça marche » */
+.tabs { display: flex; gap: 4px; padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.tabs a { padding: 10px 14px; color: var(--muted); text-decoration: none; font-weight: 600; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.tabs a[aria-current='page'] { color: var(--text); border-bottom-color: var(--accent); }
+.tabs a:hover { color: var(--text); }
+.algo { max-width: 820px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 18px; line-height: 1.55; }
+.algo h1 { margin: 0 0 6px; }
+.algo h2 { margin: 0 0 8px; font-size: 1.15rem; }
+.algo section { scroll-margin-top: 12px; }
+.algo-toc { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.9rem; margin-top: 8px; }
+.algo .formula { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--surface-2); padding: 8px 12px;
+  border-radius: 6px; overflow-x: auto; margin: 8px 0; }
+.algo .cite { font-size: 0.8em; vertical-align: super; text-decoration: none; margin-left: 2px; }
+.algo-mine dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
+.algo-mine dt { color: var(--muted); }
+.algo-mine dd { margin: 0; min-width: 0; }
+.algo-mine ul { margin: 0; padding-left: 18px; }
+.algo-sources li { margin-bottom: 6px; overflow-wrap: anywhere; }
+.algo-sources li:target { background: var(--tight-bg); border-radius: 4px; }
+@media (max-width: 640px) {
+  .tabs { padding: 0 8px; }
+  .algo { padding: 16px; }
+  .algo-mine dl { grid-template-columns: 1fr; gap: 2px; }
+  .algo-mine dd { margin-bottom: 8px; }
+}
+.algo a { color: var(--accent); }
+.algo-toc a { text-decoration: none; }
+.algo-toc a:hover { text-decoration: underline; }

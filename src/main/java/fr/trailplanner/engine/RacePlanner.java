@@ -9,6 +9,7 @@ import fr.trailplanner.model.Scenario;
 import fr.trailplanner.track.TrackProfile;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,31 +32,64 @@ public class RacePlanner {
                          Scenario scenario,
                          NightWindow night,
                          ElevationSource requestedSource) {
+        return plan(race, track, references, scenario, night, requestedSource, null, null, TrainingHistory.BLOCK_WEEKS);
+    }
+
+    /**
+     * @param history historique d'entraînement (Strava) pour corriger la forme ; null pour s'en passer
+     * @param today   date du jour, pour savoir où en est la préparation
+     * @param weeks   durée des blocs de préparation (10 à 16 semaines)
+     */
+    public RacePlan plan(RaceDefinition race,
+                         TrackProfile track,
+                         List<ReferencePerformance> references,
+                         Scenario scenario,
+                         NightWindow night,
+                         ElevationSource requestedSource,
+                         TrainingHistory history,
+                         LocalDate today,
+                         int weeks) {
 
         ElevationSource source = CourseBuilder.resolve(requestedSource, race, track);
         List<Leg> legs = CourseBuilder.legs(race, track, source);
         double raceEffort = legs.stream().mapToDouble(Leg::effortKm).sum();
-        List<ReferenceWeighting.Weighted> weighted =
-                ReferenceWeighting.weigh(references, raceEffort, race.start().toLocalDate());
+        LocalDate raceDate = race.start().toLocalDate();
+
+        TrainingForm.Analysis form = history == null || references == null || references.isEmpty() ? null
+                : TrainingForm.analyze(history, references, raceDate, today, raceEffort,
+                        Scenario.REALISTE.fatigueExponent(), weeks);
+        boolean useForm = form != null && form.active();
+        List<ReferenceWeighting.Weighted> weighted = useForm
+                ? ReferenceWeighting.weigh(references, raceEffort, raceDate, form.factors(), ReferenceWeighting.HALF_LIFE_DAYS_WITH_FORM)
+                : ReferenceWeighting.weigh(references, raceEffort, raceDate);
+        // Sortie longue trop courte pour la distance : le scénario prudent en tient compte.
+        if (useForm && form.lowSpecificity() && scenario.equals(Scenario.PRUDENT)) {
+            scenario = new Scenario(scenario.name(), scenario.paceFactor() * TrainingForm.LOW_SPECIFICITY_PENALTY,
+                    scenario.fatigueExponent(), scenario.nightFactor(), scenario.lightStopMinutes(), scenario.fullStopMinutes());
+        }
 
         RacePlan plan = simulate(race, legs, source, EffortModel.calibrateWeighted(weighted, scenario.fatigueExponent()),
                 scenario, night, List.of());
 
         // Ce que prédit chaque référence seule : même course, même scénario, poids 100 %.
         List<ReferenceInsight> insights = new ArrayList<>();
-        for (ReferenceWeighting.Weighted w : weighted) {
+        for (int i = 0; i < weighted.size(); i++) {
+            ReferenceWeighting.Weighted w = weighted.get(i);
             ReferenceWeighting.Weighted alone = new ReferenceWeighting.Weighted(w.reference(), w.effortKm(),
-                    w.raceMinutes(), 1, w.recencyFactor(), w.distanceFactor());
+                    w.raceMinutes(), 1, w.recencyFactor(), w.distanceFactor(), w.formFactor());
+            TrainingHistory.PrepBlock block = form == null ? null : form.referenceBlocks().get(i);
+            Double weekly = block != null && block.usable() ? block.weeklyEffortKm() : null;
             RacePlan solo = simulate(race, legs, source,
                     EffortModel.calibrateWeighted(List.of(alone), scenario.fatigueExponent()), scenario, night, List.of());
             ReferencePerformance ref = w.reference();
             insights.add(new ReferenceInsight(ref.label(), ref.date(), ref.kind(), ref.distanceKm(), ref.elevationGainM(),
                     ref.duration(), round3(w.weight()), round3(w.recencyFactor()), round3(w.distanceFactor()),
-                    solo.finish(), solo.totalDuration()));
+                    solo.finish(), solo.totalDuration(), round3(w.formFactor()), weekly));
         }
         return new RacePlan(plan.raceName(), plan.scenario(), plan.elevationSource(), plan.totalDistanceKm(),
                 plan.totalGainM(), plan.totalEffortKm(), plan.start(), plan.finish(), plan.totalDuration(),
-                plan.totalStops(), plan.nightDuration(), plan.checkpoints(), plan.warnings(), List.copyOf(insights));
+                plan.totalStops(), plan.nightDuration(), plan.checkpoints(), plan.warnings(), List.copyOf(insights),
+                form == null ? null : TrainingSummary.of(form));
     }
 
     private RacePlan simulate(RaceDefinition race, List<Leg> legs, ElevationSource source, EffortModel model,
@@ -140,7 +174,7 @@ public class RacePlanner {
         return new RacePlan(race.name(), scenario, source, round1(cumulativeKm), Math.round(cumulativeGain),
                 round1(totalEffort), race.start(), finish, total,
                 Duration.ofSeconds((long) stopSeconds), Duration.ofSeconds((long) nightSeconds),
-                List.copyOf(etas), List.copyOf(warnings), insights);
+                List.copyOf(etas), List.copyOf(warnings), insights, null);
     }
 
     /** Raccourci : les trois scénarios par défaut. */

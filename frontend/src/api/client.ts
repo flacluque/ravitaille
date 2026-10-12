@@ -1,4 +1,7 @@
-import type { CourseView, ElevationSource, ExtractedGear, ExtractedRoadbook, ExtractorStatus, RaceDefinition, RacePlan, Reference } from './types';
+import type {
+  CourseView, ElevationSource, ExtractedGear, ExtractedRoadbook, ExtractorStatus, RaceDefinition, RacePlan, Reference,
+  StravaActivity, StravaStatus, TrainingOptions,
+} from './types';
 import type { NightWindow } from '../lib/draft';
 
 export class ApiError extends Error {}
@@ -29,11 +32,12 @@ function toApi(refs: Reference[]) {
   }));
 }
 
-export function fetchPlans(sampleId: string, refs: Reference[], source: ElevationSource): Promise<RacePlan[]> {
+export function fetchPlans(sampleId: string, refs: Reference[], source: ElevationSource,
+  training: TrainingOptions | null = null): Promise<RacePlan[]> {
   return getJson(`/api/demo/${encodeURIComponent(sampleId)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ references: toApi(refs), elevationSource: source }),
+    body: JSON.stringify({ references: toApi(refs), elevationSource: source, training }),
   });
 }
 
@@ -47,12 +51,14 @@ export function fetchCustomPlans(
   gpx: File | null,
   refs: Reference[],
   source: ElevationSource,
+  training: TrainingOptions | null = null,
 ): Promise<{ course: CourseView; plans: RacePlan[] }> {
   const request = {
     race,
     night,
     elevationSource: source,
     references: toApi(refs),
+    training,
   };
   const form = new FormData();
   form.append('request', new Blob([JSON.stringify(request)], { type: 'application/json' }));
@@ -62,6 +68,25 @@ export function fetchCustomPlans(
 
 export function fetchExtractorStatus(): Promise<ExtractorStatus> {
   return getJson('/api/roadbooks/extractor');
+}
+
+export function fetchStravaStatus(): Promise<StravaStatus> {
+  return getJson('/api/strava/status');
+}
+
+/** Page à ouvrir pour connecter Strava : l'API renvoie vers Strava, qui revient ensuite sur l'appli. */
+export function stravaConnectUrl(): string {
+  return `/api/strava/authorize?origin=${encodeURIComponent(window.location.origin)}`;
+}
+
+/** Sorties de course à pied et de trail depuis une date ("2024-10-12"). */
+export function fetchStravaActivities(after: string): Promise<StravaActivity[]> {
+  return getJson(`/api/strava/activities?after=${encodeURIComponent(after)}`);
+}
+
+export async function disconnectStrava(): Promise<void> {
+  const res = await fetch('/api/strava/connection', { method: 'DELETE' });
+  if (!res.ok) throw new ApiError(`Erreur ${res.status} à la déconnexion de Strava`);
 }
 
 /** Lecture du roadbook (image ou PDF) par l'IA configurée côté serveur. Compter 30 s à 2 min en local. */

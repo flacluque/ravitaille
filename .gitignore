@@ -7,3 +7,6 @@ node_modules/
 frontend/dist/
 frontend/dev-dist/
 *.tsbuildinfo
+
+# Secrets locaux (identifiants Strava…)
+config/

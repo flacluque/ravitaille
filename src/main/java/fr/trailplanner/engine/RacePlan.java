@@ -10,6 +10,7 @@ import java.util.List;
  * Plan de course complet pour un scénario.
  *
  * @param references ce que prédit chaque référence seule, et son poids dans ce plan
+ * @param training   préparation du coureur (historique Strava), null sans historique
  */
 public record RacePlan(
         String raceName,
@@ -25,5 +26,6 @@ public record RacePlan(
         Duration nightDuration,
         List<CheckpointEta> checkpoints,
         List<String> warnings,
-        List<ReferenceInsight> references) {
+        List<ReferenceInsight> references,
+        TrainingSummary training) {
 }

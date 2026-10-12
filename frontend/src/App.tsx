@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, fetchCourse, fetchCustomPlans, fetchPlans, loadSnapshot, saveSnapshot, type Snapshot } from './api/client';
-import { loadDraft, loadGear, loadGpx, saveDraft, saveGpx } from './api/storage';
+import { loadDraft, loadGear, loadGpx, loadTrainingOptions, saveDraft, saveGpx, saveTrainingOptions } from './api/storage';
 import type { ElevationSource, Reference } from './api/types';
 import { CompareTable } from './components/CompareTable';
 import { CourseMap } from './components/CourseMap';
@@ -13,6 +13,8 @@ import { PassageTable } from './components/PassageTable';
 import { RaceEditor } from './components/RaceEditor';
 import { ReferenceForm } from './components/ReferenceForm';
 import { ReferenceInsights } from './components/ReferenceInsights';
+import { TrainingCard } from './components/TrainingCard';
+import { AlgorithmPage } from './components/AlgorithmPage';
 import { ScenarioCards } from './components/ScenarioCards';
 import { draftSignature, draftToRace, emptyDraft, type RaceDraft } from './lib/draft';
 import { formatClock, formatKm, formatMeters } from './lib/format';
@@ -52,6 +54,24 @@ export function App() {
   const [references, setReferences] = useState<Reference[]>(initial?.references.length ? initial.references : DEFAULT_REFERENCES);
   const [source, setSource] = useState<ElevationSource>(initial?.source ?? 'AUTO');
   const hasData = useRef(initial !== null);
+  // Onglet affiché : le plan, ou « Comment ça marche » (#algorithme, pour pouvoir partager le lien).
+  const [tab, setTab] = useState<'plan' | 'algo'>(() => (window.location.hash.startsWith('#algo') ? 'algo' : 'plan'));
+  useEffect(() => {
+    const onHash = () => {
+      if (window.location.hash.startsWith('#algo')) setTab('algo');
+      else if (window.location.hash === '' || window.location.hash === '#plan') setTab('plan');
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  useEffect(() => {
+    // La carte Leaflet recalcule sa taille quand elle réapparaît.
+    if (tab === 'plan') window.dispatchEvent(new Event('resize'));
+    window.scrollTo(0, 0);
+  }, [tab]);
+  // Tenir compte de l'entraînement Strava : lu au moment de chaque calcul.
+  const [training, setTraining] = useState(loadTrainingOptions);
+  const trainingRef = useRef(training);
 
   const run = useCallback(async (sampleId: string, load: () => Promise<Pick<Snapshot, 'course' | 'plans'>>,
     refs: Reference[], src: ElevationSource) => {
@@ -73,7 +93,7 @@ export function App() {
 
   const computeDemo = useCallback((refs: Reference[], src: ElevationSource) =>
     run(SAMPLE_ID, async () => {
-      const [course, plans] = await Promise.all([fetchCourse(SAMPLE_ID), fetchPlans(SAMPLE_ID, refs, src)]);
+      const [course, plans] = await Promise.all([fetchCourse(SAMPLE_ID), fetchPlans(SAMPLE_ID, refs, src, trainingRef.current)]);
       return { course, plans };
     }, refs, src), [run]);
 
@@ -85,10 +105,17 @@ export function App() {
       return false;
     }
     setDraftErrors([]);
-    const ok = await run(CUSTOM_ID, () => fetchCustomPlans(result.race, result.night, file, refs, src), refs, src);
+    const ok = await run(CUSTOM_ID, () => fetchCustomPlans(result.race, result.night, file, refs, src, trainingRef.current), refs, src);
     if (ok) setComputedSignature(draftSignature(d, file));
     return ok;
   }, [run]);
+
+  function changeTraining(next: typeof training) {
+    setTraining(next);
+    trainingRef.current = next;
+    saveTrainingOptions(next);
+    void compute(references, source);
+  }
 
   const compute = (refs: Reference[], src: ElevationSource) => {
     setReferences(refs);
@@ -234,6 +261,11 @@ export function App() {
         </button>
       </header>
 
+      <nav className="tabs no-print" aria-label="Pages">
+        <a href="#plan" aria-current={tab === 'plan' ? 'page' : undefined}>Mon plan</a>
+        <a href="#algorithme" aria-current={tab === 'algo' ? 'page' : undefined}>Comment ça marche</a>
+      </nav>
+
       {status.kind === 'unreachable' && hasData.current && (
         <div className="banner warn no-print" role="status">
           Hors ligne : affichage du dernier plan calculé
@@ -249,7 +281,9 @@ export function App() {
         <div className="banner error" role="alert">Calcul impossible : {status.error}</div>
       )}
 
-      <main className="layout">
+      {tab === 'algo' && <AlgorithmPage plan={plan} />}
+
+      <main className="layout" hidden={tab !== 'plan'}>
         <aside className="side no-print">
           <div className="card mode-switch" role="radiogroup" aria-label="Course">
             <button type="button" role="radio" aria-checked={mode === 'demo'} className={mode === 'demo' ? 'active' : ''}
@@ -266,6 +300,9 @@ export function App() {
             initialSource={source}
             loading={status.kind === 'loading'}
             onSubmit={(refs, src) => void compute(refs, src)}
+            target={plan && !otherRace ? { km: plan.totalDistanceKm, gainM: plan.totalGainM } : null}
+            training={training}
+            onTrainingChange={changeTraining}
           />
           {plan && <SourceNote source={plan.elevationSource} hasTrack={!!course?.track} />}
         </aside>
@@ -311,6 +348,8 @@ export function App() {
 
           {plan && <ReferenceInsights plan={plan} />}
 
+          {plan?.training && <TrainingCard plan={plan} />}
+
           {plan?.warnings.length ? (
             <ul className="warnings">
               {plan.warnings.map((w) => <li key={w}>{w}</li>)}
@@ -342,7 +381,7 @@ export function App() {
           {status.kind === 'loading' && !shown && mode === 'demo' && <p className="muted">Calcul en cours…</p>}
         </section>
       </main>
-      <Legend />
+      {tab === 'plan' && <Legend />}
     </div>
   );
 }

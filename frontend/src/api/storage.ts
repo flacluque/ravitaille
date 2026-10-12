@@ -1,5 +1,6 @@
 import { normalizeDraft, type RaceDraft } from '../lib/draft';
 import { plain, type GearItem } from '../lib/gear';
+import type { TrainingOptions } from './types';
 
 // Ta course reste dans ton navigateur : le roadbook (petit) dans localStorage, la trace GPX
 // (plusieurs Mo, au-delà du quota de localStorage) dans IndexedDB.
@@ -86,5 +87,31 @@ export function saveGear(raceName: string, items: GearItem[]): void {
     localStorage.setItem(gearKey(raceName), JSON.stringify(items));
   } catch {
     // stockage indisponible : la liste vaut pour la session
+  }
+}
+
+const TRAINING_KEY = 'trail-planner:entrainement';
+/** Par défaut : l'entraînement Strava compte (s'il est connecté), randonnées comprises. */
+export const DEFAULT_TRAINING: TrainingOptions = { strava: true, includeHikes: true, weeks: 12 };
+export const MIN_PREP_WEEKS = 10;
+export const MAX_PREP_WEEKS = 16;
+
+export function loadTrainingOptions(): TrainingOptions {
+  try {
+    const raw = localStorage.getItem(TRAINING_KEY);
+    if (!raw) return DEFAULT_TRAINING;
+    const saved = { ...DEFAULT_TRAINING, ...(JSON.parse(raw) as Partial<TrainingOptions>) };
+    const weeks = Math.round(Number(saved.weeks));
+    return { ...saved, weeks: weeks >= MIN_PREP_WEEKS && weeks <= MAX_PREP_WEEKS ? weeks : DEFAULT_TRAINING.weeks };
+  } catch {
+    return DEFAULT_TRAINING;
+  }
+}
+
+export function saveTrainingOptions(options: TrainingOptions): void {
+  try {
+    localStorage.setItem(TRAINING_KEY, JSON.stringify(options));
+  } catch {
+    // stockage indisponible : l'option vaut pour la session
   }
 }

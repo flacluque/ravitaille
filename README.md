@@ -37,6 +37,12 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
 - **Lire un roadbook (image / PDF)** : une IA lit le roadbook de l'organisation et remplit le
   tableau de « Ma course » ; tu vérifies ligne par ligne, le roadbook d'origine affiché au-dessus.
   Voir « Lecture automatique des roadbooks » plus bas.
+- **Importer depuis Strava** : dans « Tes références », choisis tes courses et sorties de course à
+  pied ou de trail ; distance, D+, date et temps écoulé (arrêts compris) sont repris tels quels. Les
+  sorties les plus proches de ta course sont signalées. Voir « Import des activités Strava » plus bas.
+- **Ta préparation** : avec Strava connecté, le calcul tient compte de ton entraînement. La carte
+  montre ton volume semaine par semaine, ta plus longue sortie et ta régularité, et de combien le
+  temps de chaque référence est corrigé selon l'écart avec ta préparation actuelle.
 - **Nutrition et hydratation** : pour chaque tronçon, glucides et eau à prévoir (moins d'eau la nuit),
   quoi consommer (gels, compotes, boisson énergétique selon ton profil) et combien de flasques remplir
   à chaque point d'eau pour tenir jusqu'au suivant. Ce qu'il faut emporter au départ, et récupérer au
@@ -45,6 +51,9 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
   (image ou PDF, y compris un tableau commun à plusieurs courses), à partir d'une liste type, ou à la
   main. Elle propose des suggestions selon le plan (frontale si tu passes la nuit dehors) et compare
   l'eau obligatoire à tes flasques.
+- **Comment ça marche** : un onglet explique le calcul pas à pas (kilomètre-effort, loi de Riegel,
+  pondération des références, forme d'entraînement, simulation, nutrition), avec les chiffres de ton
+  plan et les sources des études utilisées. Lien direct : `#algorithme`.
 - **Télécharger le PDF** : le plan en A4, prêt à garder sur le téléphone ou à imprimer. Il contient
   les trois scénarios, le profil avec les ravitos, tes références, les heures de passage du scénario
   sélectionné (services de chaque ravito, marges en couleur), la nutrition et l'hydratation par
@@ -134,6 +143,36 @@ Le test affiche, point par point, les champs mal lus et un score global. Pour aj
 test : l'image dans `src/test/resources/roadbooks/`, la saisie de référence dans
 `src/main/resources/samples/<course>/roadbook.json`, et une ligne dans `RoadbookExtractionEvalTest`.
 
+## Import des activités Strava
+
+Strava demande une **application API**, gratuite, à créer une fois avec ton compte :
+
+1. Sur https://www.strava.com/settings/api, crée une application :
+   - nom : `Trail Planner` (au choix), catégorie : `Training` ;
+   - site web : `http://localhost` ;
+   - **domaine de rappel (Authorization Callback Domain) : `localhost`**.
+2. Note l'**identifiant client** (Client ID) et le **secret client** (Client Secret).
+3. À la racine du projet, crée le fichier `config/application.properties` (le dossier `config/` est
+   ignoré par git, le secret ne part donc pas sur GitHub) :
+   ```properties
+   trailplanner.strava.client-id=12345
+   trailplanner.strava.client-secret=le-secret-client
+   ```
+   Ou, au choix, les variables d'environnement `TRAILPLANNER_STRAVA_CLIENT_ID` et
+   `TRAILPLANNER_STRAVA_CLIENT_SECRET`.
+4. Redémarre l'API, puis dans l'appli : « Importer depuis Strava » → « Connecter mon compte Strava ».
+   Strava demande ton accord ; laisse cochée la lecture des activités (y compris privées).
+
+- Les jetons de connexion sont gardés dans `~/.trail-planner/strava.json`, lisible par toi seul ; l'API
+  les renouvelle toute seule. « Se déconnecter » révoque l'accès chez Strava et efface le fichier.
+- Seules les sorties **Course à pied** et **Trail** sont proposées. Celles dont le type de sortie est
+  « Course » dans Strava sont pré-réglées en course, les autres en entraînement (modifiable).
+- Une nouvelle application Strava ne peut connecter que le compte de son créateur : c'est fait pour
+  un usage personnel.
+- Strava affiche `"field":"client_id","code":"invalid"` : l'identifiant ne correspond à aucune
+  application. `client-id` doit être le **Client ID**, un nombre (pas le secret ni un jeton d'accès),
+  recopié depuis https://www.strava.com/settings/api ; redémarre l'API après chaque modification.
+
 ## Le modèle de calcul
 
 1. **Kilomètre-effort** (convention ITRA) : `E = distance (km) + D+ (m) / 100`.
@@ -149,9 +188,22 @@ test : l'image dans `src/test/resources/roadbooks/`, la saisie de référence da
      poids ×0,6 (la conversion reste approximative).
 
    Le plan indique aussi l'arrivée prédite par chaque référence seule, et son poids.
-4. **Simulation pas à pas** (tous les 0,05 km-effort) : on applique la forme du jour, le facteur
+4. **Forme d'entraînement** (avec Strava, option « Tenir compte de mon entraînement Strava ») : on
+   compare le **bloc de préparation** de chaque référence à celui de ta course, soit les semaines
+   avant la semaine de course (jusqu'à aujourd'hui pour une course à venir), en km-effort par semaine,
+   randonnées comprises si tu le choisis. La durée du bloc se règle de 10 à 16 semaines (12 par
+   défaut, « Ma préparation dure ») ; la même durée sert pour la course et les références. Le temps de la référence est multiplié par
+   `(volume référence / volume course)^0,10`, dans la limite de ±8 % (Tanda 2011 : +10 % de volume
+   ≈ −1 % de temps au niveau amateur). À partir de 3 courses dont on connaît la préparation, cet
+   exposant est ajusté sur tes propres résultats. La demi-vie de la récence passe alors à 1 an, et :
+   - si ta plus longue sortie fait moins de 40 % de l'effort de la course, le scénario prudent
+     compte 2 % de plus ;
+   - si ton volume des 4 dernières semaines (hors affûtage) s'effondre, l'appli te prévient.
+
+   Le détail, avec les études sur lesquelles il s'appuie : [docs/v0.3-forme.md](docs/v0.3-forme.md).
+5. **Simulation pas à pas** (tous les 0,05 km-effort) : on applique la forme du jour, le facteur
    de nuit si l'horloge est dans la plage frontale, puis les arrêts aux ravitos.
-5. **Barrières horaires** : entrée et/ou sortie de ravito. Statut `OK` (> 1 h de marge), `TIGHT`
+6. **Barrières horaires** : entrée et/ou sortie de ravito. Statut `OK` (> 1 h de marge), `TIGHT`
    (< 1 h), `MISSED` (dépassée).
 
 | Scénario  | Forme du jour | Exposant fatigue | Facteur nuit | Arrêt ravito | Arrêt base de vie |
@@ -181,7 +233,8 @@ fr.trailplanner
 ├── engine    Modèle d'effort, découpage en tronçons, planificateur
 ├── report    Rendu texte imprimable
 ├── api       Spring Boot : contrôleur REST, service, DTO
-└── extract   Lecture de documents par une IA (roadbook, matériel) : interface + Ollama, images / PDF
+├── extract   Lecture de documents par une IA (roadbook, matériel) : interface + Ollama, images / PDF
+└── strava    Connexion OAuth à Strava, jetons, import des sorties comme références
 
 frontend/src
 ├── api         Types (miroir des records Java), client, copie hors ligne du dernier plan
@@ -202,5 +255,8 @@ et pourra être réutilisé tel quel (CLI, appli mobile via une API, batch de ca
 - [x] **v0.2** : services des ravitos, nutrition / hydratation par tronçon, checklist du matériel
   obligatoire (lue dans le règlement), le tout dans le PDF (voir [docs/v0.2-conception.md](docs/v0.2-conception.md))
 - [ ] **v0.2-météo** (option) : prévision Open-Meteo pour ajuster l'hydratation et le matériel
-- [ ] **v0.3** : import de l'historique (Strava/Garmin) et calibration par tranche de pente (montée/descente)
+- [x] **v0.3** : import des activités Strava comme références (voir [docs/v0.3-conception.md](docs/v0.3-conception.md)),
+  forme d'entraînement (volume des 10 à 16 semaines de préparation) dans la prédiction
+  ([docs/v0.3-forme.md](docs/v0.3-forme.md)), onglet « Comment ça marche » avec les sources
+- [ ] Plus tard : calibration par tranche de pente (montée/descente) à partir des flux d'activité Strava
 - [ ] **v0.4** : mode assistance (crew) : où et quand retrouver le coureur

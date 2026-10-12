@@ -25,7 +25,8 @@ export default defineConfig({
         globIgnores: ['**/html2canvas*', '**/purify*'],
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            // Strava : jamais de cache (connexion, jetons, activités toujours à jour).
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/strava/'),
             handler: 'NetworkFirst',
             options: { cacheName: 'api', networkTimeoutSeconds: 5, expiration: { maxEntries: 50 } },
           },
