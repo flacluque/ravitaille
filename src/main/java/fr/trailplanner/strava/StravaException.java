@@ -20,10 +20,10 @@ public class StravaException extends RuntimeException {
         return status;
     }
 
-    static StravaException notConfigured() {
-        return new StravaException(HttpStatus.SERVICE_UNAVAILABLE,
-                "Strava n'est pas configuré : crée une application sur strava.com/settings/api, puis renseigne "
-                        + "trailplanner.strava.client-id et client-secret (voir le README) et redémarre l'API.");
+    static StravaException notConfigured(String problem) {
+        return new StravaException(HttpStatus.SERVICE_UNAVAILABLE, problem
+                + " Crée une application sur strava.com/settings/api, renseigne trailplanner.strava.client-id et "
+                + "client-secret dans config/application.properties (voir le README), puis redémarre l'API.");
     }
 
     static StravaException notConnected() {

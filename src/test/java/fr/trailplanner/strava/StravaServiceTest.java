@@ -49,11 +49,31 @@ class StravaServiceTest {
         StravaProperties none = new StravaProperties("", "", fake.url(), dir.resolve("x.json").toString());
         StravaService off = new StravaService(none, new StravaClient(none), new StravaTokenStore(none.tokenPath()), Clock.systemUTC());
 
-        assertEquals(new StravaStatus(false, false, null), off.status());
+        assertEquals(new StravaStatus(false, false, null, "Strava n'est pas configuré."), off.status());
         StravaException e = assertThrows(StravaException.class, () -> off.authorize("http://localhost:5173"));
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, e.status());
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE,
                 assertThrows(StravaException.class, () -> off.activities(LocalDate.of(2025, 1, 1))).status());
+    }
+
+    @Test
+    void nettoieEtVerifieLIdentifiantDeLApplication() {
+        StravaProperties copied = new StravaProperties(" 123456   ", "\"secret\" ", fake.url(), "");
+        assertTrue(copied.configured());
+        assertEquals("123456", copied.clientId());
+        assertEquals("secret", copied.clientSecret());
+        String url = new StravaClient(copied).authorizeUrl("http://localhost:5173/api/strava/callback", "s");
+        assertTrue(url.matches(".*[?&]client_id=123456(&.*|$)"), url);
+
+        StravaProperties wrong = new StravaProperties("a1b2c3d4e5f6", "secret", fake.url(), "");
+        assertFalse(wrong.configured());
+        assertTrue(wrong.problem().contains("Client ID"), wrong.problem());
+        StravaService service = new StravaService(wrong, new StravaClient(wrong), store, Clock.systemUTC());
+        assertEquals(wrong.problem(), service.status().problem());
+        StravaException e = assertThrows(StravaException.class, () -> service.authorize("http://localhost:5173"));
+        assertTrue(e.getMessage().startsWith(wrong.problem()));
+
+        assertTrue(new StravaProperties("123456", "", fake.url(), "").problem().contains("client-secret"));
     }
 
     @Test

@@ -163,6 +163,9 @@ Strava demande une **application API**, gratuite, à créer une fois avec ton co
   « Course » dans Strava sont pré-réglées en course, les autres en entraînement (modifiable).
 - Une nouvelle application Strava ne peut connecter que le compte de son créateur : c'est fait pour
   un usage personnel.
+- Strava affiche `"field":"client_id","code":"invalid"` : l'identifiant ne correspond à aucune
+  application. `client-id` doit être le **Client ID**, un nombre (pas le secret ni un jeton d'accès),
+  recopié depuis https://www.strava.com/settings/api ; redémarre l'API après chaque modification.
 
 ## Le modèle de calcul
 

@@ -186,6 +186,8 @@ export interface StravaStatus {
   configured: boolean;
   connected: boolean;
   athlete: string | null;
+  /** Ce qui cloche dans la configuration (identifiant invalide…), null si rien. */
+  problem: string | null;
 }
 
 /** Sortie de course à pied ou de trail (fr.trailplanner.strava.StravaActivity). */

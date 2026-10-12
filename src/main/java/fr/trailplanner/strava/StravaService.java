@@ -50,13 +50,14 @@ public class StravaService {
 
     public StravaStatus status() {
         Optional<StravaToken> token = props.configured() ? store.load() : Optional.empty();
-        return new StravaStatus(props.configured(), token.isPresent(), token.map(StravaToken::athlete).orElse(null));
+        String problem = props.configured() ? null : props.problem();
+        return new StravaStatus(props.configured(), token.isPresent(), token.map(StravaToken::athlete).orElse(null), problem);
     }
 
     /** Adresse de la page d'autorisation de Strava ; {@code origin} est l'adresse de l'appli (ex. http://localhost:5173). */
     public String authorize(String origin) {
         if (!props.configured()) {
-            throw StravaException.notConfigured();
+            throw StravaException.notConfigured(props.problem());
         }
         String base = origin == null ? "" : origin.replaceAll("/+$", "");
         if (!LOCAL_ORIGIN.matcher(base).matches()) {
@@ -156,7 +157,7 @@ public class StravaService {
 
     private String accessToken() {
         if (!props.configured()) {
-            throw StravaException.notConfigured();
+            throw StravaException.notConfigured(props.problem());
         }
         StravaToken token = store.load().orElseThrow(StravaException::notConnected);
         if (token.expiresSoon(clock.instant())) {

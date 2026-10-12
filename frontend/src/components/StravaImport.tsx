@@ -106,13 +106,17 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
 
         {status && !status.configured && (
           <div className="strava-setup">
+            {status.problem && status.problem !== "Strava n'est pas configuré." && (
+              <p className="field-error" role="alert">{status.problem}</p>
+            )}
             <p>L'import Strava demande une <strong>application API Strava</strong>, gratuite, à créer une fois :</p>
             <ol>
               <li>Sur <a href="https://www.strava.com/settings/api" target="_blank" rel="noreferrer">strava.com/settings/api</a>,
                 crée une application : nom « Trail Planner », site web <code>http://localhost</code>,
                 domaine de rappel <code>localhost</code>.</li>
-              <li>À la racine du projet, crée le fichier <code>config/application.properties</code> (ignoré par git) :
-                <pre>{'trailplanner.strava.client-id=<identifiant>\ntrailplanner.strava.client-secret=<secret>'}</pre></li>
+              <li>À la racine du projet, crée le fichier <code>config/application.properties</code> (ignoré par git),
+                avec le <strong>Client ID</strong> (un nombre) et le <strong>Client Secret</strong> de cette page :
+                <pre>{'trailplanner.strava.client-id=123456\ntrailplanner.strava.client-secret=<secret>'}</pre></li>
               <li>Redémarre l'API, puis <button type="button" className="link-btn" onClick={refreshStatus}>revérifie</button>.</li>
             </ol>
           </div>
