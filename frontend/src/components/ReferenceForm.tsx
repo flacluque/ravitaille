@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { fetchStravaStatus } from '../api/client';
 import { MAX_PREP_WEEKS, MIN_PREP_WEEKS } from '../api/storage';
 import type { ElevationSource, Reference, ReferenceKind, TrainingOptions } from '../api/types';
-import { durationMinutes, formatHm, parseHmInput } from '../lib/format';
+import { durationMinutes, formatHm, formatKm, parseHmInput } from '../lib/format';
 import type { Target } from '../lib/strava';
 import { StravaImport } from './StravaImport';
 import { StravaLogo } from './StravaLogo';
@@ -68,6 +68,9 @@ function parseRow(row: Row): { ref: Reference | null; errors: Partial<Record<'km
 export function ReferenceForm({ initialReferences, initialSource, loading, onSubmit, target, training, onTrainingChange }: Props) {
   const [rows, setRows] = useState<Row[]>(() => initialReferences.map(toRow));
   const [source, setSource] = useState<ElevationSource>(initialSource);
+  // Repliées en un résumé une fois le plan calculé : on les rouvre pour les modifier.
+  const [expanded, setExpanded] = useState(() => initialReferences.length === 0 || initialReferences.some((r) => !(r.km > 0)));
+  const [advanced, setAdvanced] = useState(false);
   // Retour de la page d'autorisation de Strava (?strava=…) : on rouvre l'import là où on l'avait laissé,
   // puis on retire le paramètre de l'adresse (un rechargement ne doit pas rouvrir l'import).
   const [stravaResult, setStravaResult] = useState(() => new URLSearchParams(window.location.search).get('strava'));
@@ -97,17 +100,45 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
     setStravaOpen(false);
     setStravaResult(null);
     const all = next.map(parseRow);
-    if (all.every((p) => p.ref !== null)) onSubmit(all.map((p) => p.ref!), source);
+    if (all.every((p) => p.ref !== null)) {
+      onSubmit(all.map((p) => p.ref!), source);
+      setExpanded(false);
+    } else {
+      setExpanded(true);
+    }
   }
 
   function submit(e: FormEvent) {
     e.preventDefault();
-    if (valid) onSubmit(parsed.map((p) => p.ref!), source);
+    if (valid) {
+      onSubmit(parsed.map((p) => p.ref!), source);
+      setExpanded(false);
+    }
   }
 
   return (
     <form className="card form" onSubmit={submit} noValidate>
-      <h2>Tes références</h2>
+      <div className="form-head">
+        <h2>Tes références</h2>
+        {valid && (
+          <button type="button" className="link-btn" onClick={() => setExpanded((e) => !e)} aria-expanded={expanded}>
+            {expanded ? 'Fermer' : 'Modifier'}
+          </button>
+        )}
+      </div>
+
+      {!expanded && (
+        <ul className="ref-summary">
+          {parsed.map((p, i) => p.ref && (
+            <li key={rows[i].id}>
+              <span>{p.ref.label.trim() || `Référence ${i + 1}`}</span>
+              <span className="muted">{formatKm(p.ref.km)} km · {formatHm(durationMinutes(p.ref.time))}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {expanded && <>
       <p className="muted small">
         Des courses ou sorties chronométrées, temps arrêts compris. Les plus récentes et les plus proches
         de ta course comptent davantage.
@@ -167,6 +198,15 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
           <StravaLogo /> Importer depuis Strava
         </button>
       </div>
+      <p className="muted small">
+        Entraînement : sortie rarement courue à fond, comptée comme une course 10 % plus rapide, avec un poids réduit.
+      </p>
+
+      <button type="button" className="link-btn advanced-toggle" onClick={() => setAdvanced((a) => !a)} aria-expanded={advanced}>
+        {advanced ? 'Masquer les options avancées' : 'Options avancées'}
+      </button>
+      {advanced && (
+      <div className="advanced-options">
       {stravaConnected && (
         <div className="training-options">
           <label className="check">
@@ -191,6 +231,27 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
           )}
         </div>
       )}
+      <label>
+        <span>Dénivelé de la course</span>
+        <select value={source} onChange={(e) => setSource(e.target.value as ElevationSource)}>
+          {SOURCES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+      </label>
+      </div>
+      )}
+
+      <button type="submit" disabled={!valid || loading}>
+        {loading ? 'Calcul…' : 'Calculer mon plan'}
+      </button>
+      </>}
+
+      {stravaConnected && (
+        <p className="strava-status muted small">
+          <span className="strava-dot" aria-hidden />
+          Strava connecté · préparation {training.strava ? 'prise en compte' : 'non prise en compte'}
+        </p>
+      )}
+
       {stravaOpen && (
         <StravaImport
           existing={parsed.flatMap((p) => (p.ref ? [p.ref] : []))}
@@ -200,20 +261,6 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
           connectionResult={stravaResult}
         />
       )}
-      <p className="muted small">
-        Entraînement : sortie rarement courue à fond, comptée comme une course 10 % plus rapide, avec un poids réduit.
-      </p>
-
-      <label>
-        <span>Dénivelé de la course</span>
-        <select value={source} onChange={(e) => setSource(e.target.value as ElevationSource)}>
-          {SOURCES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-        </select>
-      </label>
-
-      <button type="submit" disabled={!valid || loading}>
-        {loading ? 'Calcul…' : 'Calculer mon plan'}
-      </button>
     </form>
   );
 }
