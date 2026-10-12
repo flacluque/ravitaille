@@ -269,5 +269,7 @@ et pourra être réutilisé tel quel (CLI, appli mobile via une API, batch de ca
 - [x] **v0.3** : import des activités Strava comme références (voir [docs/v0.3-conception.md](docs/v0.3-conception.md)),
   forme d'entraînement (volume des 10 à 16 semaines de préparation) dans la prédiction
   ([docs/v0.3-forme.md](docs/v0.3-forme.md)), onglet « Comment ça marche » avec les sources
+- [x] **v0.4** : appli allégée : cinq onglets par thème (Mon plan, Ravitos, Sac, Analyse, Comment ça marche),
+  références repliées, PDF résumé d'une page
 - [ ] Plus tard : calibration par tranche de pente (montée/descente) à partir des flux d'activité Strava
-- [ ] **v0.4** : mode assistance (crew) : où et quand retrouver le coureur
+- [ ] **v0.5** : mode assistance (crew) : où et quand retrouver le coureur

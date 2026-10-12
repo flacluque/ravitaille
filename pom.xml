@@ -13,7 +13,7 @@
 
     <groupId>fr.trailplanner</groupId>
     <artifactId>trail-planner</artifactId>
-    <version>0.3.0-SNAPSHOT</version>
+    <version>0.4.0-SNAPSHOT</version>
     <name>trail-planner</name>
     <description>Planificateur de course trail : heures de passage, ravitos, barrières horaires</description>
 
