@@ -255,7 +255,8 @@ et pourra être réutilisé tel quel (CLI, appli mobile via une API, batch de ca
 - [x] **v0.2** : services des ravitos, nutrition / hydratation par tronçon, checklist du matériel
   obligatoire (lue dans le règlement), le tout dans le PDF (voir [docs/v0.2-conception.md](docs/v0.2-conception.md))
 - [ ] **v0.2-météo** (option) : prévision Open-Meteo pour ajuster l'hydratation et le matériel
-- [ ] **v0.3** : import des activités Strava comme références (voir [docs/v0.3-conception.md](docs/v0.3-conception.md)) ;
-  forme d'entraînement (volume des 12 semaines de préparation) dans la prédiction ([docs/v0.3-forme.md](docs/v0.3-forme.md)) ;
-  plus tard, calibration par tranche de pente (montée/descente) à partir des flux d'activité
+- [x] **v0.3** : import des activités Strava comme références (voir [docs/v0.3-conception.md](docs/v0.3-conception.md)),
+  forme d'entraînement (volume des 10 à 16 semaines de préparation) dans la prédiction
+  ([docs/v0.3-forme.md](docs/v0.3-forme.md)), onglet « Comment ça marche » avec les sources
+- [ ] Plus tard : calibration par tranche de pente (montée/descente) à partir des flux d'activité Strava
 - [ ] **v0.4** : mode assistance (crew) : où et quand retrouver le coureur
