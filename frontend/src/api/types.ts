@@ -179,3 +179,27 @@ export interface ExtractedGear {
   items: { name: string; status: 'MANDATORY' | 'RECOMMENDED' }[];
   warnings: string[];
 }
+
+/** État de la connexion à Strava (fr.trailplanner.strava.StravaStatus). */
+export interface StravaStatus {
+  /** Application Strava renseignée dans l'API. */
+  configured: boolean;
+  connected: boolean;
+  athlete: string | null;
+}
+
+/** Sortie de course à pied ou de trail (fr.trailplanner.strava.StravaActivity). */
+export interface StravaActivity {
+  id: number;
+  name: string;
+  /** "2026-04-12" */
+  date: string;
+  sportType: 'Run' | 'TrailRun' | string;
+  distanceKm: number;
+  elevationGainM: number;
+  /** Durée ISO-8601, arrêts compris. */
+  elapsedTime: string;
+  movingTime: string;
+  /** Marquée « Course » dans le type de sortie de Strava. */
+  race: boolean;
+}

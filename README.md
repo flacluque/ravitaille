@@ -37,6 +37,9 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
 - **Lire un roadbook (image / PDF)** : une IA lit le roadbook de l'organisation et remplit le
   tableau de « Ma course » ; tu vérifies ligne par ligne, le roadbook d'origine affiché au-dessus.
   Voir « Lecture automatique des roadbooks » plus bas.
+- **Importer depuis Strava** : dans « Tes références », choisis tes courses et sorties de course à
+  pied ou de trail ; distance, D+, date et temps écoulé (arrêts compris) sont repris tels quels. Les
+  sorties les plus proches de ta course sont signalées. Voir « Import des activités Strava » plus bas.
 - **Nutrition et hydratation** : pour chaque tronçon, glucides et eau à prévoir (moins d'eau la nuit),
   quoi consommer (gels, compotes, boisson énergétique selon ton profil) et combien de flasques remplir
   à chaque point d'eau pour tenir jusqu'au suivant. Ce qu'il faut emporter au départ, et récupérer au
@@ -134,6 +137,33 @@ Le test affiche, point par point, les champs mal lus et un score global. Pour aj
 test : l'image dans `src/test/resources/roadbooks/`, la saisie de référence dans
 `src/main/resources/samples/<course>/roadbook.json`, et une ligne dans `RoadbookExtractionEvalTest`.
 
+## Import des activités Strava
+
+Strava demande une **application API**, gratuite, à créer une fois avec ton compte :
+
+1. Sur https://www.strava.com/settings/api, crée une application :
+   - nom : `Trail Planner` (au choix), catégorie : `Training` ;
+   - site web : `http://localhost` ;
+   - **domaine de rappel (Authorization Callback Domain) : `localhost`**.
+2. Note l'**identifiant client** (Client ID) et le **secret client** (Client Secret).
+3. À la racine du projet, crée le fichier `config/application.properties` (le dossier `config/` est
+   ignoré par git, le secret ne part donc pas sur GitHub) :
+   ```properties
+   trailplanner.strava.client-id=12345
+   trailplanner.strava.client-secret=le-secret-client
+   ```
+   Ou, au choix, les variables d'environnement `TRAILPLANNER_STRAVA_CLIENT_ID` et
+   `TRAILPLANNER_STRAVA_CLIENT_SECRET`.
+4. Redémarre l'API, puis dans l'appli : « Importer depuis Strava » → « Connecter mon compte Strava ».
+   Strava demande ton accord ; laisse cochée la lecture des activités (y compris privées).
+
+- Les jetons de connexion sont gardés dans `~/.trail-planner/strava.json`, lisible par toi seul ; l'API
+  les renouvelle toute seule. « Se déconnecter » révoque l'accès chez Strava et efface le fichier.
+- Seules les sorties **Course à pied** et **Trail** sont proposées. Celles dont le type de sortie est
+  « Course » dans Strava sont pré-réglées en course, les autres en entraînement (modifiable).
+- Une nouvelle application Strava ne peut connecter que le compte de son créateur : c'est fait pour
+  un usage personnel.
+
 ## Le modèle de calcul
 
 1. **Kilomètre-effort** (convention ITRA) : `E = distance (km) + D+ (m) / 100`.
@@ -181,7 +211,8 @@ fr.trailplanner
 ├── engine    Modèle d'effort, découpage en tronçons, planificateur
 ├── report    Rendu texte imprimable
 ├── api       Spring Boot : contrôleur REST, service, DTO
-└── extract   Lecture de documents par une IA (roadbook, matériel) : interface + Ollama, images / PDF
+├── extract   Lecture de documents par une IA (roadbook, matériel) : interface + Ollama, images / PDF
+└── strava    Connexion OAuth à Strava, jetons, import des sorties comme références
 
 frontend/src
 ├── api         Types (miroir des records Java), client, copie hors ligne du dernier plan
@@ -202,5 +233,6 @@ et pourra être réutilisé tel quel (CLI, appli mobile via une API, batch de ca
 - [x] **v0.2** : services des ravitos, nutrition / hydratation par tronçon, checklist du matériel
   obligatoire (lue dans le règlement), le tout dans le PDF (voir [docs/v0.2-conception.md](docs/v0.2-conception.md))
 - [ ] **v0.2-météo** (option) : prévision Open-Meteo pour ajuster l'hydratation et le matériel
-- [ ] **v0.3** : import de l'historique (Strava/Garmin) et calibration par tranche de pente (montée/descente)
+- [ ] **v0.3** : import des activités Strava comme références (voir [docs/v0.3-conception.md](docs/v0.3-conception.md)) ;
+  plus tard, calibration par tranche de pente (montée/descente) à partir des flux d'activité
 - [ ] **v0.4** : mode assistance (crew) : où et quand retrouver le coureur

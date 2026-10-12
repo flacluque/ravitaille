@@ -1,12 +1,16 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import type { ElevationSource, Reference, ReferenceKind } from '../api/types';
 import { durationMinutes, formatHm, parseHmInput } from '../lib/format';
+import type { Target } from '../lib/strava';
+import { StravaImport } from './StravaImport';
 
 interface Props {
   initialReferences: Reference[];
   initialSource: ElevationSource;
   loading: boolean;
   onSubmit: (references: Reference[], source: ElevationSource) => void;
+  /** Distance et D+ de la course préparée, pour repérer les sorties Strava qui lui ressemblent. */
+  target: Target | null;
 }
 
 const SOURCES: { value: ElevationSource; label: string }[] = [
@@ -36,6 +40,7 @@ const toRow = (r: Reference): Row => ({
   gain: String(r.gainM),
   time: formatHm(durationMinutes(r.time)),
 });
+const isBlank = (r: Row) => !r.label.trim() && !r.km.trim() && !r.gain.trim() && !r.time.trim();
 const emptyRow = (): Row => ({ id: nextRowId++, label: '', date: '', kind: 'RACE', km: '', gain: '', time: '' });
 
 /** Ligne → référence pour l'API ; liste d'erreurs si la saisie est incomplète. */
@@ -51,14 +56,34 @@ function parseRow(row: Row): { ref: Reference | null; errors: Partial<Record<'km
   return { ref: { label: row.label.trim(), date: row.date || null, kind: row.kind, km, gainM: gain, time: time! }, errors };
 }
 
-export function ReferenceForm({ initialReferences, initialSource, loading, onSubmit }: Props) {
+export function ReferenceForm({ initialReferences, initialSource, loading, onSubmit, target }: Props) {
   const [rows, setRows] = useState<Row[]>(() => initialReferences.map(toRow));
   const [source, setSource] = useState<ElevationSource>(initialSource);
+  // Retour de la page d'autorisation de Strava (?strava=…) : on rouvre l'import là où on l'avait laissé,
+  // puis on retire le paramètre de l'adresse (un rechargement ne doit pas rouvrir l'import).
+  const [stravaResult, setStravaResult] = useState(() => new URLSearchParams(window.location.search).get('strava'));
+  const [stravaOpen, setStravaOpen] = useState(stravaResult !== null);
+  useEffect(() => {
+    if (stravaResult === null) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('strava');
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+  }, [stravaResult]);
 
   const parsed = rows.map(parseRow);
   const valid = parsed.every((p) => p.ref !== null);
 
   const update = (id: number, patch: Partial<Row>) => setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+
+  // Les sorties importées s'ajoutent aux références (à la place d'une ligne vide), et le plan est recalculé.
+  function addImported(refs: Reference[]) {
+    const next = [...rows.filter((r) => !isBlank(r)), ...refs.map(toRow)];
+    setRows(next);
+    setStravaOpen(false);
+    setStravaResult(null);
+    const all = next.map(parseRow);
+    if (all.every((p) => p.ref !== null)) onSubmit(all.map((p) => p.ref!), source);
+  }
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -119,9 +144,23 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
         );
       })}
 
-      <button type="button" className="ghost add-btn" onClick={() => setRows((rs) => [...rs, emptyRow()])}>
-        + Ajouter une référence
-      </button>
+      <div className="ref-actions">
+        <button type="button" className="ghost" onClick={() => setRows((rs) => [...rs, emptyRow()])}>
+          + Ajouter une référence
+        </button>
+        <button type="button" className="ghost strava-btn" onClick={() => setStravaOpen(true)}>
+          Importer depuis Strava
+        </button>
+      </div>
+      {stravaOpen && (
+        <StravaImport
+          existing={parsed.flatMap((p) => (p.ref ? [p.ref] : []))}
+          target={target}
+          onAdd={addImported}
+          onClose={() => { setStravaOpen(false); setStravaResult(null); }}
+          connectionResult={stravaResult}
+        />
+      )}
       <p className="muted small">
         Entraînement : sortie rarement courue à fond, comptée comme une course 10 % plus rapide, avec un poids réduit.
       </p>

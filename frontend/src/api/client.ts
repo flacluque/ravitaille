@@ -1,4 +1,7 @@
-import type { CourseView, ElevationSource, ExtractedGear, ExtractedRoadbook, ExtractorStatus, RaceDefinition, RacePlan, Reference } from './types';
+import type {
+  CourseView, ElevationSource, ExtractedGear, ExtractedRoadbook, ExtractorStatus, RaceDefinition, RacePlan, Reference,
+  StravaActivity, StravaStatus,
+} from './types';
 import type { NightWindow } from '../lib/draft';
 
 export class ApiError extends Error {}
@@ -62,6 +65,25 @@ export function fetchCustomPlans(
 
 export function fetchExtractorStatus(): Promise<ExtractorStatus> {
   return getJson('/api/roadbooks/extractor');
+}
+
+export function fetchStravaStatus(): Promise<StravaStatus> {
+  return getJson('/api/strava/status');
+}
+
+/** Page à ouvrir pour connecter Strava : l'API renvoie vers Strava, qui revient ensuite sur l'appli. */
+export function stravaConnectUrl(): string {
+  return `/api/strava/authorize?origin=${encodeURIComponent(window.location.origin)}`;
+}
+
+/** Sorties de course à pied et de trail depuis une date ("2024-10-12"). */
+export function fetchStravaActivities(after: string): Promise<StravaActivity[]> {
+  return getJson(`/api/strava/activities?after=${encodeURIComponent(after)}`);
+}
+
+export async function disconnectStrava(): Promise<void> {
+  const res = await fetch('/api/strava/connection', { method: 'DELETE' });
+  if (!res.ok) throw new ApiError(`Erreur ${res.status} à la déconnexion de Strava`);
 }
 
 /** Lecture du roadbook (image ou PDF) par l'IA configurée côté serveur. Compter 30 s à 2 min en local. */

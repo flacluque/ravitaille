@@ -266,6 +266,7 @@ export function App() {
             initialSource={source}
             loading={status.kind === 'loading'}
             onSubmit={(refs, src) => void compute(refs, src)}
+            target={plan && !otherRace ? { km: plan.totalDistanceKm, gainM: plan.totalGainM } : null}
           />
           {plan && <SourceNote source={plan.elevationSource} hasTrack={!!course?.track} />}
         </aside>

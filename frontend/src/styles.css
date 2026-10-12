@@ -433,3 +433,45 @@ tbody tr:hover { background: var(--surface-2); }
 .confirm-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px;
   padding: 10px 14px; margin: 8px 0; border-radius: 8px; background: var(--tight-bg); font-size: 0.9rem; }
 .confirm-actions { display: flex; gap: 8px; }
+
+/* Import Strava */
+.modal-backdrop { position: fixed; inset: 0; z-index: 2000; background: rgb(0 0 0 / 0.45); display: flex;
+  align-items: flex-start; justify-content: center; padding: 5vh 16px; overflow-y: auto; }
+.modal { background: var(--surface); color: var(--text); border-radius: 12px; width: min(760px, 100%); padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 10px; box-shadow: 0 12px 40px rgb(0 0 0 / 0.3); }
+.modal-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.modal-head h2 { margin: 0; }
+.modal-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; flex-wrap: wrap;
+  position: sticky; bottom: -16px; background: var(--surface); padding: 8px 0 0; }
+.strava-msg { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--tight-bg); }
+.strava-msg.ok { background: var(--ok-bg); }
+.strava-setup ol { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.strava-setup pre { margin: 6px 0 0; padding: 8px; border-radius: 6px; background: var(--surface-2); overflow-x: auto; font-size: 0.85rem; }
+.strava-connect { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.strava-account { margin: 0; }
+.strava-filters { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: end; }
+.strava-filters label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 500; }
+.strava-filters label.check { flex-direction: row; align-items: center; gap: 6px; font-weight: 400; }
+.strava-filters input[type='number'] { width: 90px; }
+.strava-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.strava-list li { display: grid; grid-template-columns: 1fr auto auto; gap: 6px 12px; align-items: center;
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+.strava-list li.selected { border-color: var(--accent); }
+.strava-list li.already { opacity: 0.6; }
+.strava-pick { display: flex; gap: 8px; align-items: flex-start; min-width: 0; cursor: pointer; }
+.strava-pick input { margin-top: 3px; }
+.strava-name { display: flex; flex-direction: column; min-width: 0; }
+.strava-name strong { overflow-wrap: anywhere; }
+.strava-figures { display: flex; gap: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 0.9rem; }
+.strava-tag { display: inline-block; white-space: nowrap; margin-left: 6px; padding: 1px 6px; border-radius: 10px; background: var(--accent); color: var(--accent-contrast); font-size: 0.75rem; }
+.strava-tag.muted-tag { background: var(--border); color: var(--text); }
+@media (max-width: 640px) {
+  .strava-list li { grid-template-columns: 1fr; }
+  .strava-figures { padding-left: 24px; }
+  .strava-list li select { margin-left: 24px; justify-self: start; }
+}
+.ref-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.strava-btn { color: var(--track); border-color: currentColor; }
+.modal input, .modal select { font: inherit; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface-2); color: var(--text); }
+.modal input[type='checkbox'] { padding: 0; width: auto; }
