@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, fetchCourse, fetchCustomPlans, fetchPlans, loadSnapshot, saveSnapshot, type Snapshot } from './api/client';
-import { loadDraft, loadGpx, saveDraft, saveGpx } from './api/storage';
+import { loadDraft, loadGear, loadGpx, saveDraft, saveGpx } from './api/storage';
 import type { ElevationSource, Reference } from './api/types';
 import { CompareTable } from './components/CompareTable';
 import { CourseMap } from './components/CourseMap';
 import { ElevationProfile } from './components/ElevationProfile';
+import { Legend } from './components/Legend';
+import { GearCard } from './components/GearCard';
+import { loadProfile, NutritionCard, saveProfile } from './components/NutritionCard';
+import type { NutritionProfile } from './lib/nutrition';
 import { PassageTable } from './components/PassageTable';
 import { RaceEditor } from './components/RaceEditor';
 import { ReferenceForm } from './components/ReferenceForm';
 import { ReferenceInsights } from './components/ReferenceInsights';
 import { ScenarioCards } from './components/ScenarioCards';
-import { draftToRace, emptyDraft, type RaceDraft } from './lib/draft';
+import { draftSignature, draftToRace, emptyDraft, type RaceDraft } from './lib/draft';
 import { formatClock, formatKm, formatMeters } from './lib/format';
+import { defaultServices } from './lib/services';
 
 // Course d'exemple embarquée (src/main/resources/samples/bogomiles).
 const SAMPLE_ID = 'bogomiles';
@@ -40,6 +45,8 @@ export function App() {
   const [gpx, setGpx] = useState<File | null>(null);
   const [draftErrors, setDraftErrors] = useState<string[]>([]);
   const [editorOpen, setEditorOpen] = useState(false);
+  // Saisie qui a donné le plan affiché : s'il ne correspond plus à la saisie, il est périmé.
+  const [computedSignature, setComputedSignature] = useState<string | null>(null);
 
   // Dernière référence demandée : l'éditeur de course relance le calcul avec elle.
   const [references, setReferences] = useState<Reference[]>(initial?.references.length ? initial.references : DEFAULT_REFERENCES);
@@ -78,7 +85,9 @@ export function App() {
       return false;
     }
     setDraftErrors([]);
-    return run(CUSTOM_ID, () => fetchCustomPlans(result.race, result.night, file, refs, src), refs, src);
+    const ok = await run(CUSTOM_ID, () => fetchCustomPlans(result.race, result.night, file, refs, src), refs, src);
+    if (ok) setComputedSignature(draftSignature(d, file));
+    return ok;
   }, [run]);
 
   const compute = (refs: Reference[], src: ElevationSource) => {
@@ -91,6 +100,21 @@ export function App() {
   // le coureur rouvre l'éditeur ne doit pas le lui fermer sous les doigts.
   async function submitEditor() {
     if (await computeCustom(references, source, draft, gpx)) setEditorOpen(false);
+  }
+
+  // Roadbook importé ou lu par l'IA : on recalcule aussitôt. La trace GPX d'une autre course ne
+  // correspond plus, on la retire. Si la saisie est incomplète, on montre ce qui manque.
+  async function loadedRoadbook(d: RaceDraft) {
+    let file = gpx;
+    const previous = data?.sampleId === CUSTOM_ID ? data.course.race.name : draft.name.trim();
+    if (file && previous && d.name.trim() && d.name.trim() !== previous) {
+      file = null;
+      setGpx(null);
+      void saveGpx(null);
+    }
+    if (!(await computeCustom(references, source, d, file))) {
+      requestAnimationFrame(() => document.querySelector('.editor-errors')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    }
   }
 
   // Premier chargement : on recalcule ce qui était affiché la dernière fois (la trace GPX est relue
@@ -149,6 +173,24 @@ export function App() {
   const plans = shown?.plans ?? [];
   const plan = plans[Math.min(scenarioIndex, plans.length - 1)];
   const course = shown?.course;
+  const stale = mode === 'custom' && shown !== null && computedSignature !== null
+    && computedSignature !== draftSignature(draft, gpx);
+  // Saisie d'une autre course (nouveau roadbook pas encore calculable) : l'ancien plan n'a plus
+  // rien à faire à l'écran, même grisé.
+  const otherRace = stale && !!course && draft.name.trim() !== course.race.name;
+  const draftName = draft.name.trim() || 'Ta nouvelle course';
+  // Services de chaque point (déduits du type d'arrêt pour un plan gardé par une ancienne version).
+  const services = useMemo(
+    () => course?.race.checkpoints.map((c) => c.services ?? defaultServices(c.aid)) ?? [],
+    [course],
+  );
+
+  // Profil nutrition : partagé par la nutrition et la checklist du matériel (eau obligatoire / flasques).
+  const [nutritionProfile, setNutritionProfile] = useState<NutritionProfile>(loadProfile);
+  const changeNutritionProfile = (next: NutritionProfile) => {
+    setNutritionProfile(next);
+    saveProfile(next);
+  };
 
   const [savingPdf, setSavingPdf] = useState(false);
   async function savePdf() {
@@ -156,7 +198,10 @@ export function App() {
     setSavingPdf(true);
     try {
       const { downloadPlanPdf } = await import('./lib/pdf');
-      await downloadPlanPdf({ course, plans, selected: Math.min(scenarioIndex, plans.length - 1) });
+      await downloadPlanPdf({
+        course, plans, selected: Math.min(scenarioIndex, plans.length - 1),
+        services, nutrition: nutritionProfile, gear: loadGear(course.race.name),
+      });
     } finally {
       setSavingPdf(false);
     }
@@ -169,7 +214,12 @@ export function App() {
           <img src="/icon.svg" alt="" width={28} height={28} />
           <span>Trail Planner</span>
         </div>
-        {course && (
+        {otherRace ? (
+          <div className="race-title">
+            <h1>{draftName}</h1>
+            <p>Plan à calculer</p>
+          </div>
+        ) : course && (
           <div className="race-title">
             <h1>{course.race.name}</h1>
             <p>
@@ -178,7 +228,7 @@ export function App() {
             </p>
           </div>
         )}
-        <button type="button" className="ghost no-print" onClick={() => void savePdf()} disabled={!plan || savingPdf}
+        <button type="button" className="ghost no-print" onClick={() => void savePdf()} disabled={!plan || savingPdf || stale}
           title="Télécharger le plan de course en PDF (fonctionne aussi hors ligne)">
           {savingPdf ? 'PDF…' : 'Télécharger le PDF'}
         </button>
@@ -231,6 +281,7 @@ export function App() {
               loading={status.kind === 'loading'}
               onSubmit={() => void submitEditor()}
               onCancel={shown ? () => setEditorOpen(false) : null}
+              onLoaded={(d) => void loadedRoadbook(d)}
             />
           ) : mode === 'custom' && (
             <div className="editor-summary no-print">
@@ -241,6 +292,19 @@ export function App() {
             </div>
           )}
 
+          {otherRace ? (
+            <div className="banner warn stale-banner" role="status">
+              Le plan de « {draftName} » n'est pas encore calculé :
+              {' '}{draftErrors.length ? 'complète la saisie ci-dessus (voir les erreurs)' : 'clique sur « Calculer mon plan »'}.
+            </div>
+          ) : stale && course && (
+            <div className="banner warn stale-banner" role="status">
+              Le plan ci-dessous est celui de « {course.race.name} » avant tes changements :
+              {' '}{draftErrors.length ? 'complète la saisie' : 'clique sur « Calculer mon plan »'} pour le mettre à jour.
+            </div>
+          )}
+
+          {!otherRace && <div className={stale ? 'results stale' : 'results'} aria-hidden={stale || undefined}>
           {plans.length > 0 && (
             <ScenarioCards plans={plans} selected={scenarioIndex} onSelect={setScenarioIndex} />
           )}
@@ -263,14 +327,22 @@ export function App() {
           )}
 
           {plan && course && (
-            <PassageTable plan={plan} markers={course.markers} onHover={setHoverKm} />
+            <PassageTable plan={plan} markers={course.markers} services={services} onHover={setHoverKm} />
           )}
 
+          {plan && course && (
+            <NutritionCard plan={plan} services={services} profile={nutritionProfile} onProfileChange={changeNutritionProfile} />
+          )}
+
+          {course && <GearCard raceName={course.race.name} plan={plan} profile={nutritionProfile} />}
+
           {plans.length > 1 && <CompareTable plans={plans} />}
+          </div>}
 
           {status.kind === 'loading' && !shown && mode === 'demo' && <p className="muted">Calcul en cours…</p>}
         </section>
       </main>
+      <Legend />
     </div>
   );
 }

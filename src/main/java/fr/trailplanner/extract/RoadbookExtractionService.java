@@ -1,8 +1,12 @@
 package fr.trailplanner.extract;
 
-import org.springframework.stereotype.Service;
+import fr.trailplanner.api.JsonSupport;
+import fr.trailplanner.model.Service;
+
+import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -12,28 +16,39 @@ import java.util.regex.Pattern;
  * Lecture d'un roadbook : préparation du fichier, appel de l'IA configurée, puis remise au propre
  * de sa réponse (les modèles, surtout locaux, prennent des libertés avec les formats demandés).
  */
-@Service
+@org.springframework.stereotype.Service   // nom qualifié : Service désigne ici les services d'un ravito
 public class RoadbookExtractionService {
 
-    private final RoadbookExtractor extractor;
+    private final DocumentReader reader;
 
-    public RoadbookExtractionService(RoadbookExtractor extractor) {
-        this.extractor = extractor;
+    public RoadbookExtractionService(DocumentReader reader) {
+        this.reader = reader;
     }
 
-    public RoadbookExtractor.Status status() {
-        return extractor.status();
+    public DocumentReader.Status status() {
+        return reader.status();
     }
 
     public ExtractedRoadbook extract(byte[] content, String filename) {
-        RoadbookDocument document = RoadbookPages.from(content, filename);
-        ExtractedRoadbook result = normalize(extractor.extract(document));
+        PreparedDocument document = DocumentPages.from(content, filename, DocumentPages.ROADBOOK);
+        String json = reader.read(new DocumentReader.Request(RoadbookPrompt.SYSTEM, RoadbookPrompt.user(document.texts()),
+                RoadbookPrompt.SCHEMA, document.images()));
+        ExtractedRoadbook result = normalize(parse(json, ExtractedRoadbook.class));
         if (document.notes().isEmpty()) {
             return result;
         }
         List<String> warnings = new ArrayList<>(document.notes());
         warnings.addAll(result.warnings());
         return new ExtractedRoadbook(result.name(), result.startDate(), result.startTime(), result.checkpoints(), warnings);
+    }
+
+    /** Réponse JSON du modèle → objet ; un JSON valide mais d'une autre forme est une mauvaise réponse. */
+    static <T> T parse(String json, Class<T> type) {
+        try {
+            return JsonSupport.mapper().readValue(json, type);
+        } catch (IOException e) {
+            throw ExtractionException.badAnswer("Réponse du modèle dans un format inattendu. Réessaie, ou essaie un autre modèle.", e);
+        }
     }
 
     private static final Pattern CLOCK = Pattern.compile("(\\d{1,2})\\s*[h:]\\s*(\\d{2})?", Pattern.CASE_INSENSITIVE);
@@ -50,7 +65,7 @@ public class RoadbookExtractionService {
                     trim(p.code()), trim(p.name()), p.km(),
                     start && p.gainM() == null ? Double.valueOf(0) : p.gainM(),
                     start && p.lossM() == null ? Double.valueOf(0) : p.lossM(),
-                    clock(p.cutoffIn()), clock(p.cutoffOut()), aid(p.aid())));
+                    clock(p.cutoffIn()), clock(p.cutoffOut()), aid(p.aid()), services(p.services())));
         }
         if (points.isEmpty()) {
             warnings.add("Aucun point de passage n'a été reconnu : vérifie que le fichier est bien le roadbook.");
@@ -92,6 +107,19 @@ public class RoadbookExtractionService {
             case "LIGHT", "FULL" -> aid.trim().toUpperCase(Locale.ROOT);
             default -> "NONE";
         };
+    }
+
+    /** Services connus, sans doublon, dans l'ordre de l'enum (le modèle peut en inventer ou en répéter). */
+    static List<String> services(List<String> raw) {
+        EnumSet<Service> set = EnumSet.noneOf(Service.class);
+        for (String s : raw) {
+            try {
+                set.add(Service.valueOf(s.trim().toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException ignored) {
+                // service inconnu : ignoré
+            }
+        }
+        return set.stream().map(Enum::name).toList();
     }
 
     private static String trim(String s) {

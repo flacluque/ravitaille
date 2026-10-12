@@ -1,4 +1,5 @@
-import type { Marker, RacePlan } from '../api/types';
+import type { Marker, RacePlan, Service } from '../api/types';
+import { SERVICE_INFO } from '../lib/services';
 import { durationMinutes, formatClock, formatDuration, formatHm, formatKm, formatPace } from '../lib/format';
 import { bindingCutoff } from '../lib/plan';
 import { StatusBadge } from './StatusBadge';
@@ -6,10 +7,12 @@ import { StatusBadge } from './StatusBadge';
 interface Props {
   plan: RacePlan;
   markers: Marker[];
+  /** Services de chaque point, dans l'ordre du plan (roadbook de la course). */
+  services: Service[][];
   onHover: (trackKm: number | null) => void;
 }
 
-export function PassageTable({ plan, markers, onHover }: Props) {
+export function PassageTable({ plan, markers, services, onHover }: Props) {
   return (
     <div className="card">
       <div className="card-head">
@@ -48,6 +51,7 @@ export function PassageTable({ plan, markers, onHover }: Props) {
                 >
                   <td>
                     <span className="code">{eta.code}</span> {eta.name}
+                    <ServiceIcons services={services[i] ?? []} />
                     <small className="muted mobile-only">km {formatKm(eta.km)}</small>
                   </td>
                   <td className="num opt">{formatKm(eta.km)}</td>
@@ -81,5 +85,15 @@ export function PassageTable({ plan, markers, onHover }: Props) {
         </table>
       </div>
     </div>
+  );
+}
+
+function ServiceIcons({ services }: { services: Service[] }) {
+  if (services.length === 0) return null;
+  const label = services.map((s) => SERVICE_INFO[s].label).join(', ');
+  return (
+    <span className="service-icons" title={label} aria-label={label}>
+      {services.map((s) => <span key={s} aria-hidden>{SERVICE_INFO[s].icon}</span>)}
+    </span>
   );
 }

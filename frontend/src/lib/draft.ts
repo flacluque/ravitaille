@@ -1,4 +1,5 @@
-import type { AidLevel, Checkpoint, ExtractedRoadbook, RaceDefinition } from '../api/types';
+import type { AidLevel, Checkpoint, ExtractedRoadbook, RaceDefinition, Service } from '../api/types';
+import { defaultServices, sortServices } from './services';
 
 /**
  * Roadbook tel que saisi dans l'éditeur : des champs texte, validés et convertis en RaceDefinition
@@ -19,6 +20,7 @@ export interface DraftCheckpoint {
   cutoffIn: string;
   cutoffOut: string;
   aid: AidLevel;
+  services: Service[];
 }
 
 export interface RaceDraft {
@@ -47,7 +49,19 @@ export function newId(): string {
 }
 
 export function emptyCheckpoint(partial: Partial<DraftCheckpoint> = {}): DraftCheckpoint {
-  return { id: newId(), code: '', name: '', km: '', gainM: '', lossM: '', cutoffIn: '', cutoffOut: '', aid: 'LIGHT', ...partial };
+  const aid = partial.aid ?? 'LIGHT';
+  return {
+    id: newId(), code: '', name: '', km: '', gainM: '', lossM: '', cutoffIn: '', cutoffOut: '',
+    aid, services: defaultServices(aid), ...partial,
+  };
+}
+
+/** Brouillon gardé dans le navigateur par une version sans services : on les déduit du type d'arrêt. */
+export function normalizeDraft(draft: RaceDraft): RaceDraft {
+  return {
+    ...draft,
+    checkpoints: draft.checkpoints.map((cp) => ({ ...cp, services: cp.services ?? defaultServices(cp.aid) })),
+  };
 }
 
 export function emptyDraft(): RaceDraft {
@@ -181,6 +195,7 @@ export function draftToRace(draft: RaceDraft, hasTrack: boolean): DraftResult {
       cutoffIn: resolved[i].cutoffIn,
       cutoffOut: resolved[i].cutoffOut,
       aid: cp.aid,
+      services: sortServices(cp.services),
     });
   });
 
@@ -222,6 +237,7 @@ export function raceToDraft(race: RaceDefinition, night?: Partial<NightWindow>):
       cutoffIn: clockText(cp.cutoffIn),
       cutoffOut: clockText(cp.cutoffOut),
       aid: cp.aid ?? 'NONE',
+      services: cp.services ?? defaultServices(cp.aid ?? 'NONE'),
     })),
   };
 }
@@ -256,8 +272,18 @@ export function draftToFile(draft: RaceDraft): string | null {
  * Roadbook lu par l'IA → brouillon de l'éditeur. Ce qui n'a pas été lu (date, plage de nuit) est
  * repris de la saisie en cours ; les points à vérifier s'ajoutent aux remarques de l'IA.
  */
-export function extractedToDraft(extracted: ExtractedRoadbook, current: RaceDraft): { draft: RaceDraft; warnings: string[] } {
+export function extractedToDraft(extracted: ExtractedRoadbook, current: RaceDraft, fileName = ''):
+  { draft: RaceDraft; warnings: string[] } {
   const warnings = [...extracted.warnings];
+  // Nom non lu : surtout ne pas garder celui de la course précédente, le plan d'une autre course
+  // s'afficherait sous son nom. On part du nom du fichier.
+  let name = extracted.name?.trim() ?? '';
+  if (!name) {
+    name = nameFromFile(fileName);
+    warnings.push(name
+      ? `Nom de la course non lu sur le roadbook : « ${name} » vient du nom du fichier, corrige-le si besoin.`
+      : 'Nom de la course non lu sur le roadbook : indique-le.');
+  }
   const currentDate = /^\d{4}-\d{2}-\d{2}/.exec(current.start)?.[0] ?? null;
   const currentTime = /T(\d{2}:\d{2})/.exec(current.start)?.[1] ?? null;
   const date = extracted.startDate ?? currentDate;
@@ -271,7 +297,7 @@ export function extractedToDraft(extracted: ExtractedRoadbook, current: RaceDraf
   return {
     warnings,
     draft: {
-      name: extracted.name ?? current.name,
+      name,
       start: date && time ? `${date}T${time}` : '',
       nightStart: current.nightStart,
       nightEnd: current.nightEnd,
@@ -285,9 +311,16 @@ export function extractedToDraft(extracted: ExtractedRoadbook, current: RaceDraf
         cutoffIn: cp.cutoffIn ?? '',
         cutoffOut: cp.cutoffOut ?? '',
         aid: cp.aid ?? 'NONE',
+        services: cp.services ?? [],
       })),
     },
   };
+}
+
+/** "roadbook_bogomiles-2026.jpg" → "Roadbook bogomiles 2026". */
+function nameFromFile(fileName: string): string {
+  const base = fileName.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return base ? base[0].toUpperCase() + base.slice(1) : '';
 }
 
 /** Vrai si l'éditeur contient déjà une saisie (au-delà du brouillon vide) : on demande avant d'écraser. */
@@ -295,4 +328,17 @@ export function hasContent(draft: RaceDraft): boolean {
   return draft.name.trim() !== ''
     || draft.checkpoints.length > 2
     || draft.checkpoints.some((cp, i) => i > 0 && (cp.km.trim() !== '' || cp.gainM.trim() !== '' || cp.cutoffIn.trim() !== ''));
+}
+
+/**
+ * Empreinte de ce qui détermine le plan d'une course saisie : sert à savoir si le plan affiché
+ * correspond encore à la saisie (les identifiants internes des points n'en font pas partie).
+ */
+export function draftSignature(draft: RaceDraft, gpx: { name: string; size: number } | null): string {
+  const { checkpoints, ...race } = draft;
+  return JSON.stringify({
+    ...race,
+    checkpoints: checkpoints.map(({ id: _id, ...cp }) => cp),
+    gpx: gpx ? `${gpx.name}:${gpx.size}` : null,
+  });
 }

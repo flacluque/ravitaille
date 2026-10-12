@@ -15,7 +15,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class RoadbookPagesTest {
+class DocumentPagesTest {
 
     @Test
     void uneImageRaisonnableGardeSaTaille() throws IOException {
@@ -23,7 +23,7 @@ class RoadbookPagesTest {
         try (InputStream in = getClass().getResourceAsStream("/roadbooks/troubadours-2026.jpg")) {
             jpg = in.readAllBytes();
         }
-        RoadbookDocument doc = RoadbookPages.from(jpg, "troubadours.jpg");
+        PreparedDocument doc = DocumentPages.from(jpg, "troubadours.jpg", DocumentPages.ROADBOOK);
 
         assertEquals(1, doc.images().size());
         assertEquals(List.of(), doc.texts());
@@ -34,22 +34,22 @@ class RoadbookPagesTest {
 
     @Test
     void unePhotoDeTelephoneEstReduite() throws IOException {
-        RoadbookDocument doc = RoadbookPages.from(png(new BufferedImage(4032, 3024, BufferedImage.TYPE_INT_ARGB)), "photo.png");
+        PreparedDocument doc = DocumentPages.from(png(new BufferedImage(4032, 3024, BufferedImage.TYPE_INT_ARGB)), "photo.png", DocumentPages.ROADBOOK);
 
         BufferedImage page = read(doc.images().get(0));
-        assertEquals(RoadbookPages.MAX_SIDE_PX, page.getWidth());
+        assertEquals(DocumentPages.MAX_SIDE_PX, page.getWidth());
         assertEquals(1500, page.getHeight());
     }
 
     @Test
     void unPdfDonneUneImageParPage() throws IOException {
-        RoadbookDocument doc = RoadbookPages.from(pdf(2), "roadbook.pdf");
+        PreparedDocument doc = DocumentPages.from(pdf(2), "roadbook.pdf", DocumentPages.ROADBOOK);
 
         assertEquals(2, doc.images().size());
         assertEquals(2, doc.texts().size());
         assertTrue(doc.notes().isEmpty());
         BufferedImage page = read(doc.images().get(0));
-        assertEquals(RoadbookPages.MAX_SIDE_PX_MULTIPAGE, page.getWidth(), "A4 paysage à 150 dpi (~1750 px), ramené à 1600");
+        assertEquals(DocumentPages.MAX_SIDE_PX_MULTIPAGE, page.getWidth(), "A4 paysage à 150 dpi (~1750 px), ramené à 1600");
     }
 
     @Test
@@ -58,7 +58,7 @@ class RoadbookPagesTest {
         try (InputStream in = getClass().getResourceAsStream("/roadbooks/malene-de-proust-2026.pdf")) {
             malene = in.readAllBytes();
         }
-        RoadbookDocument doc = RoadbookPages.from(malene, "malene.pdf");
+        PreparedDocument doc = DocumentPages.from(malene, "malene.pdf", DocumentPages.ROADBOOK);
 
         // Livret de 10 pages : profil (4), vagues de départ (6, 7), temps de passage et barrières (8).
         assertEquals(4, doc.images().size());
@@ -69,27 +69,27 @@ class RoadbookPagesTest {
 
     @Test
     void unLongPdfSansTexteSeLimiteAuxPremieresPages() {
-        assertEquals(List.of(), RoadbookPages.selectPages(List.of("", "", "", "", "", "")));
-        assertEquals(List.of(0, 1, 2), RoadbookPages.selectPages(List.of("", "", "")));
+        assertEquals(List.of(), DocumentPages.selectPages(List.of("", "", "", "", "", ""), DocumentPages.ROADBOOK));
+        assertEquals(List.of(0, 1, 2), DocumentPages.selectPages(List.of("", "", ""), DocumentPages.ROADBOOK));
     }
 
     @Test
     void lesHeuresEtLesKmComptentPlusQueLeReste() {
-        assertTrue(RoadbookPages.score("Le Rozier 25,5 km 12h15 BH 14h") > RoadbookPages.score("Départ, arrivée, ravitaillement"));
-        assertEquals(0, RoadbookPages.score("Charte du trailer : respecter la faune et la flore."));
+        assertTrue(DocumentPages.ROADBOOK.score("Le Rozier 25,5 km 12h15 BH 14h") > DocumentPages.ROADBOOK.score("Départ, arrivée, ravitaillement"));
+        assertEquals(0, DocumentPages.ROADBOOK.score("Charte du trailer : respecter la faune et la flore."));
     }
 
     @Test
     void refuseLesFichiersQuiNeSontNiImageNiPdf() {
-        assertThrows(IllegalArgumentException.class, () -> RoadbookPages.from("<gpx/>".getBytes(), "trace.gpx"));
-        assertThrows(IllegalArgumentException.class, () -> RoadbookPages.from(new byte[0], "vide"));
+        assertThrows(IllegalArgumentException.class, () -> DocumentPages.from("<gpx/>".getBytes(), "trace.gpx", DocumentPages.ROADBOOK));
+        assertThrows(IllegalArgumentException.class, () -> DocumentPages.from(new byte[0], "vide", DocumentPages.ROADBOOK));
     }
 
     @Test
     void unLongPdfScanneEstLuSurSesPremieresPages() throws IOException {
-        RoadbookDocument doc = RoadbookPages.from(pdf(RoadbookPages.MAX_PAGES + 2), "scan.pdf");
+        PreparedDocument doc = DocumentPages.from(pdf(DocumentPages.MAX_PAGES + 2), "scan.pdf", DocumentPages.ROADBOOK);
 
-        assertEquals(RoadbookPages.MAX_PAGES, doc.images().size());
+        assertEquals(DocumentPages.MAX_PAGES, doc.images().size());
         assertTrue(doc.notes().get(0).contains("sans texte"), doc.notes().get(0));
     }
 
@@ -111,5 +111,13 @@ class RoadbookPagesTest {
 
     private static BufferedImage read(byte[] bytes) throws IOException {
         return ImageIO.read(new ByteArrayInputStream(bytes));
+    }
+
+    @Test
+    void lesPagesDeMaterielSontRepereesParLeurPropreVocabulaire() {
+        String reglement = "Matériel obligatoire : 2 lampes frontales, couverture de survie, sifflet, gobelet, gants";
+        String parcours = "Le Rozier 25,5 km 12h15 BH 14h ravitaillement";
+        assertTrue(DocumentPages.GEAR.score(reglement) > DocumentPages.GEAR.score(parcours));
+        assertTrue(DocumentPages.ROADBOOK.score(parcours) > DocumentPages.ROADBOOK.score(reglement));
     }
 }

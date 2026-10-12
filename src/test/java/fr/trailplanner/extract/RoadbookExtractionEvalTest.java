@@ -39,7 +39,7 @@ class RoadbookExtractionEvalTest {
     void comparerLaLectureAuxSaisiesDeReference() throws IOException {
         String model = System.getProperty("ollama.model", "qwen2.5vl:7b");
         double minScore = Double.parseDouble(System.getProperty("ollama.minScore", "0"));
-        RoadbookExtractionService service = new RoadbookExtractionService(new OllamaRoadbookExtractor(
+        RoadbookExtractionService service = new RoadbookExtractionService(new OllamaDocumentReader(
                 new ExtractionProperties.Ollama(System.getProperty("ollama.url", "http://localhost:11434"), model,
                         Duration.ofMinutes(10), Integer.getInteger("ollama.contextTokens", 32768))));
 
@@ -92,6 +92,8 @@ class RoadbookExtractionEvalTest {
                     {"barrière entrée", clock(e.cutoffIn()), a == null ? null : a.cutoffIn()},
                     {"barrière sortie", clock(e.cutoffOut()), a == null ? null : a.cutoffOut()},
                     {"type", e.aid().name(), a == null ? null : a.aid()},
+                    {"services", e.services().stream().map(Enum::name).sorted().toList(),
+                            a == null ? null : a.services().stream().sorted().toList()},
             };
             for (Object[] f : fields) {
                 total++;

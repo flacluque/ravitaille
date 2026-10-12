@@ -2,6 +2,8 @@
 // Dates : LocalDateTime ISO sans fuseau ("2026-10-23T14:30:00"), durées : ISO-8601 ("PT8H48M").
 
 export type AidLevel = 'NONE' | 'LIGHT' | 'FULL';
+/** Ce qu'on trouve à un point (fr.trailplanner.model.Service). */
+export type Service = 'WATER' | 'DRINKS' | 'COLD_FOOD' | 'HOT_FOOD' | 'DROP_BAG' | 'ASSISTANCE';
 export type ElevationSource = 'AUTO' | 'ROADBOOK' | 'TRACK';
 export type CutoffStatus = 'NONE' | 'OK' | 'TIGHT' | 'MISSED';
 
@@ -14,6 +16,7 @@ export interface Checkpoint {
   cutoffIn: string | null;
   cutoffOut: string | null;
   aid: AidLevel;
+  services: Service[];
 }
 
 export interface RaceDefinition {
@@ -88,6 +91,8 @@ export interface CheckpointEta {
   marginIn: string | null;
   marginOut: string | null;
   status: CutoffStatus;
+  /** Part du tronçon courue de nuit (absente des plans gardés par une ancienne version). */
+  legNightDuration?: string;
 }
 
 export interface RacePlan {
@@ -154,6 +159,7 @@ export interface ExtractedRoadbook {
     cutoffIn: string | null;
     cutoffOut: string | null;
     aid: AidLevel;
+    services: Service[];
   }[];
   warnings: string[];
 }
@@ -164,4 +170,12 @@ export interface ExtractorStatus {
   model: string | null;
   ready: boolean;
   message: string | null;
+}
+
+/** Matériel lu dans un règlement (fr.trailplanner.extract.ExtractedGear) : à relire. */
+export interface ExtractedGear {
+  /** Course retenue, utile quand le document en couvre plusieurs. */
+  race: string | null;
+  items: { name: string; status: 'MANDATORY' | 'RECOMMENDED' }[];
+  warnings: string[];
 }

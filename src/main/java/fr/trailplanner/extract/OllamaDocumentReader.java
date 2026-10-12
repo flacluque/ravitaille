@@ -20,12 +20,12 @@ import java.time.Duration;
 import java.util.Base64;
 
 /**
- * Lecture du roadbook par un modèle de vision servi en local par Ollama (https://ollama.com) :
+ * Lecture de documents par un modèle de vision servi en local par Ollama (https://ollama.com) :
  * gratuit, hors ligne, rien ne sort de la machine.
  */
-public class OllamaRoadbookExtractor implements RoadbookExtractor {
+public class OllamaDocumentReader implements DocumentReader {
 
-    private static final Logger log = LoggerFactory.getLogger(OllamaRoadbookExtractor.class);
+    private static final Logger log = LoggerFactory.getLogger(OllamaDocumentReader.class);
 
     private final ObjectMapper mapper = JsonSupport.mapper();
     private final HttpClient http;
@@ -34,7 +34,7 @@ public class OllamaRoadbookExtractor implements RoadbookExtractor {
     private final Duration timeout;
     private final int contextTokens;
 
-    public OllamaRoadbookExtractor(ExtractionProperties.Ollama config) {
+    public OllamaDocumentReader(ExtractionProperties.Ollama config) {
         this.baseUrl = config.baseUrl().replaceAll("/+$", "");
         this.model = config.model();
         this.timeout = config.timeout();
@@ -43,37 +43,38 @@ public class OllamaRoadbookExtractor implements RoadbookExtractor {
     }
 
     @Override
-    public ExtractedRoadbook extract(RoadbookDocument document) {
-        JsonNode response = post("/api/chat", chatRequest(document), timeout);
+    public String read(Request request) {
+        JsonNode response = post("/api/chat", chatRequest(request), timeout);
         String content = response.path("message").path("content").asText("");
         // Réponse brute du modèle : logging.level.fr.trailplanner.extract=DEBUG pour comprendre une lecture ratée.
         log.debug("Réponse de {} : {}", model, content);
         try {
-            return mapper.readValue(content, ExtractedRoadbook.class);
+            mapper.readTree(content);
         } catch (IOException e) {
             throw ExtractionException.badAnswer(
                     "Le modèle " + model + " a répondu dans un format inattendu. Réessaie, ou essaie un autre modèle.", e);
         }
+        return content;
     }
 
-    ObjectNode chatRequest(RoadbookDocument document) {
+    ObjectNode chatRequest(Request request) {
         ObjectNode body = mapper.createObjectNode();
         body.put("model", model);
         body.put("stream", false);
         try {
-            body.set("format", mapper.readTree(RoadbookPrompt.SCHEMA));
+            body.set("format", mapper.readTree(request.schema()));
         } catch (IOException e) {
-            throw new IllegalStateException(e);
+            throw new IllegalArgumentException("Schéma JSON invalide", e);
         }
         ObjectNode options = body.putObject("options");
         options.put("temperature", 0);
         options.put("num_ctx", contextTokens);
 
         ArrayNode messages = body.putArray("messages");
-        messages.addObject().put("role", "system").put("content", RoadbookPrompt.SYSTEM);
-        ObjectNode user = messages.addObject().put("role", "user").put("content", RoadbookPrompt.user(document.texts()));
+        messages.addObject().put("role", "system").put("content", request.system());
+        ObjectNode user = messages.addObject().put("role", "user").put("content", request.user());
         ArrayNode images = user.putArray("images");
-        document.images().forEach(p -> images.add(Base64.getEncoder().encodeToString(p)));
+        request.images().forEach(p -> images.add(Base64.getEncoder().encodeToString(p)));
         return body;
     }
 

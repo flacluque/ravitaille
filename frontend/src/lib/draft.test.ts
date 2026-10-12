@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { ExtractedRoadbook, RaceDefinition } from '../api/types';
 import {
+  draftSignature,
   draftToFile,
   draftToRace,
   emptyCheckpoint,
   emptyDraft,
   extractedToDraft,
   hasContent,
+  normalizeDraft,
   parseClock,
   parseRoadbookFile,
   raceToDraft,
@@ -106,16 +108,16 @@ describe('fichier roadbook', () => {
     start: '2026-10-23T11:00:00',
     maxDuration: 'PT26H',
     checkpoints: [
-      { code: '1P', name: 'Départ', km: 0, gainM: 0, lossM: 0, cutoffIn: null, cutoffOut: null, aid: 'NONE' },
-      { code: '5', name: "Château d'Arques", km: 52, gainM: 2239, lossM: 2055, cutoffIn: '2026-10-23T21:00:00', cutoffOut: '2026-10-23T22:00:00', aid: 'FULL' },
-      { code: '1D', name: 'Arrivée', km: 103, gainM: 4000, lossM: 4090, cutoffIn: '2026-10-24T13:00:00', cutoffOut: null, aid: 'NONE' },
+      { code: '1P', name: 'Départ', km: 0, gainM: 0, lossM: 0, cutoffIn: null, cutoffOut: null, aid: 'NONE', services: [] },
+      { code: '5', name: "Château d'Arques", km: 52, gainM: 2239, lossM: 2055, cutoffIn: '2026-10-23T21:00:00', cutoffOut: '2026-10-23T22:00:00', aid: 'FULL', services: ['WATER', 'COLD_FOOD', 'HOT_FOOD', 'DROP_BAG'] },
+      { code: '1D', name: 'Arrivée', km: 103, gainM: 4000, lossM: 4090, cutoffIn: '2026-10-24T13:00:00', cutoffOut: null, aid: 'NONE', services: [] },
     ],
   };
 
   it('relit le format des exemples embarqués', () => {
     const draft = raceToDraft(bogomiles);
     expect(draft.start).toBe('2026-10-23T11:00');
-    expect(draft.checkpoints[1]).toMatchObject({ km: '52', cutoffIn: '21h00', cutoffOut: '22h00', aid: 'FULL' });
+    expect(draft.checkpoints[1]).toMatchObject({ km: '52', cutoffIn: '21h00', cutoffOut: '22h00', aid: 'FULL', services: ['WATER', 'COLD_FOOD', 'HOT_FOOD', 'DROP_BAG'] });
     expect(draft.checkpoints[2].cutoffIn).toBe('13h00');
   });
 
@@ -147,9 +149,9 @@ describe('roadbook lu par l\'IA', () => {
     startDate: null,
     startTime: '09:00',
     checkpoints: [
-      { code: '1P', name: 'Départ', km: 0, gainM: 0, lossM: 0, cutoffIn: null, cutoffOut: null, aid: 'NONE' },
-      { code: '3', name: 'Molières', km: 20, gainM: 772, lossM: null, cutoffIn: '12h30', cutoffOut: null, aid: 'LIGHT' },
-      { code: '1D', name: 'Arrivée', km: 88, gainM: 3426, lossM: 3564, cutoffIn: '04h30', cutoffOut: null, aid: 'NONE' },
+      { code: '1P', name: 'Départ', km: 0, gainM: 0, lossM: 0, cutoffIn: null, cutoffOut: null, aid: 'NONE', services: [] },
+      { code: '3', name: 'Molières', km: 20, gainM: 772, lossM: null, cutoffIn: '12h30', cutoffOut: null, aid: 'LIGHT', services: ['WATER', 'COLD_FOOD'] },
+      { code: '1D', name: 'Arrivée', km: 88, gainM: 3426, lossM: 3564, cutoffIn: '04h30', cutoffOut: null, aid: 'NONE', services: [] },
     ],
     warnings: ['Le logo annonce 85 km, le tableau 88 km.'],
   };
@@ -165,7 +167,7 @@ describe('roadbook lu par l\'IA', () => {
     const result = draftToRace(draft, false);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.race.checkpoints[1]).toMatchObject({ km: 20, gainM: 772, lossM: null, cutoffIn: '2026-10-23T12:30:00' });
+      expect(result.race.checkpoints[1]).toMatchObject({ km: 20, gainM: 772, lossM: null, cutoffIn: '2026-10-23T12:30:00', services: ['WATER', 'COLD_FOOD'] });
       expect(result.race.checkpoints[2].cutoffIn).toBe('2026-10-24T04:30:00');
     }
   });
@@ -176,11 +178,57 @@ describe('roadbook lu par l\'IA', () => {
     expect(warnings[1]).toBe('Date de départ non lue sur le roadbook : indique-la (heure lue : 09h00).');
   });
 
+  it('ne garde pas le nom de la course précédente quand le nom est illisible', () => {
+    const current = { ...emptyDraft(), name: 'Raid des Troubadours 2026', start: '2026-10-23T07:00' };
+    const noName = { ...extracted, name: null };
+    const fromFile = extractedToDraft(noName, current, 'roadbook_bogomiles-2026.jpg');
+    expect(fromFile.draft.name).toBe('Roadbook bogomiles 2026');
+    expect(fromFile.warnings).toContain('Nom de la course non lu sur le roadbook : « Roadbook bogomiles 2026 » vient du nom du fichier, corrige-le si besoin.');
+    expect(extractedToDraft(noName, current).draft.name).toBe('');
+  });
+
   it("sait si l'éditeur contient déjà une saisie", () => {
     expect(hasContent(emptyDraft())).toBe(false);
     expect(hasContent({ ...emptyDraft(), name: 'Mon trail' })).toBe(true);
     const draft = emptyDraft();
     draft.checkpoints[1].km = '42';
     expect(hasContent(draft)).toBe(true);
+  });
+});
+
+describe('services des ravitos', () => {
+  it('se déduisent du type d\'arrêt pour un point neuf ou un ancien roadbook', () => {
+    expect(emptyCheckpoint().services).toEqual(['WATER', 'DRINKS', 'COLD_FOOD']);
+    expect(emptyCheckpoint({ aid: 'NONE' }).services).toEqual([]);
+    const ancien = { name: 'x', start: '2026-10-23T08:00:00', maxDuration: null, checkpoints: [
+      { code: 'D', name: 'Départ', km: 0, gainM: 0, lossM: 0, cutoffIn: null, cutoffOut: null, aid: 'NONE' },
+      { code: 'B', name: 'Base', km: 30, gainM: 900, lossM: 0, cutoffIn: null, cutoffOut: null, aid: 'FULL' },
+    ] } as unknown as RaceDefinition;
+    expect(raceToDraft(ancien).checkpoints[1].services).toEqual(['WATER', 'DRINKS', 'COLD_FOOD', 'HOT_FOOD']);
+  });
+
+  it('complète un brouillon gardé avant leur arrivée', () => {
+    const draft = troubadours();
+    const ancien = { ...draft, checkpoints: draft.checkpoints.map(({ services: _s, ...cp }) => cp) } as unknown as RaceDraft;
+    expect(normalizeDraft(ancien).checkpoints[2].services).toEqual(['WATER', 'DRINKS', 'COLD_FOOD', 'HOT_FOOD']);
+  });
+
+  it('sont envoyés triés à l\'API', () => {
+    const draft = troubadours();
+    draft.checkpoints[1].services = ['ASSISTANCE', 'WATER'];
+    const result = draftToRace(draft, false);
+    expect(result.ok && result.race.checkpoints[1].services).toEqual(['WATER', 'ASSISTANCE']);
+  });
+});
+
+describe('empreinte de la saisie (plan à jour ou périmé)', () => {
+  it('ignore les identifiants internes mais suit le contenu et la trace GPX', () => {
+    const draft = troubadours();
+    const memeContenu = { ...draft, checkpoints: draft.checkpoints.map((cp) => ({ ...cp, id: `autre-${cp.id}` })) };
+    expect(draftSignature(memeContenu, null)).toBe(draftSignature(draft, null));
+
+    const modifie = { ...draft, checkpoints: draft.checkpoints.map((cp, i) => (i === 1 ? { ...cp, km: '19' } : cp)) };
+    expect(draftSignature(modifie, null)).not.toBe(draftSignature(draft, null));
+    expect(draftSignature(draft, { name: 'trace.gpx', size: 1000 })).not.toBe(draftSignature(draft, null));
   });
 });

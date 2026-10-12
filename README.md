@@ -37,10 +37,19 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
 - **Lire un roadbook (image / PDF)** : une IA lit le roadbook de l'organisation et remplit le
   tableau de « Ma course » ; tu vérifies ligne par ligne, le roadbook d'origine affiché au-dessus.
   Voir « Lecture automatique des roadbooks » plus bas.
+- **Nutrition et hydratation** : pour chaque tronçon, glucides et eau à prévoir (moins d'eau la nuit),
+  quoi consommer (gels, compotes, boisson énergétique selon ton profil) et combien de flasques remplir
+  à chaque point d'eau pour tenir jusqu'au suivant. Ce qu'il faut emporter au départ, et récupérer au
+  sac de délestage ou auprès de l'assistance. Alerte si les flasques ne suffisent pas.
+- **Matériel** : checklist par course, à cocher en faisant le sac. Elle se remplit en lisant le règlement
+  (image ou PDF, y compris un tableau commun à plusieurs courses), à partir d'une liste type, ou à la
+  main. Elle propose des suggestions selon le plan (frontale si tu passes la nuit dehors) et compare
+  l'eau obligatoire à tes flasques.
 - **Télécharger le PDF** : le plan en A4, prêt à garder sur le téléphone ou à imprimer. Il contient
   les trois scénarios, le profil avec les ravitos, tes références, les heures de passage du scénario
-  sélectionné (marges en couleur) et la comparaison des scénarios. Il est généré dans le navigateur,
-  donc ça marche aussi hors ligne.
+  sélectionné (services de chaque ravito, marges en couleur), la nutrition et l'hydratation par
+  tronçon, la comparaison des scénarios et la checklist du matériel à cocher. Il est généré dans le
+  navigateur, donc ça marche aussi hors ligne.
 - **Hors ligne** : le dernier plan calculé est gardé dans le navigateur, et l'appli est une PWA
   (installable sur le téléphone, fonctionne sans réseau une fois chargée — build de production :
   `npm run build && npm run preview`).
@@ -110,13 +119,15 @@ ollama pull qwen2.5vl:7b
 - L'IA ne fait que **pré-remplir** l'éditeur : rien n'est calculé sans ta relecture.
 - Changer de modèle : `trailplanner.extraction.ollama.model=...` (après `ollama pull ...`).
 - Désactiver : `trailplanner.extraction.provider=none`.
-- Ajouter une autre IA (cloud...) : une implémentation de `RoadbookExtractor` et une ligne dans
-  `ExtractionConfig` ; ni le front ni le reste du backend ne changent.
+- Ajouter une autre IA (cloud...) : une implémentation de `DocumentReader` et une ligne dans
+  `ExtractionConfig`. Ni le front ni le reste du backend ne changent : la même IA lit les roadbooks
+  et les règlements.
 
-**Mesurer la qualité d'un modèle** sur de vrais roadbooks (comparés à une saisie à la main) :
+**Mesurer la qualité d'un modèle** sur de vrais roadbooks et règlements (comparés à une saisie à la main) :
 
 ```bash
 mvn test -Dtest=RoadbookExtractionEvalTest -Dollama=true -Dollama.model=qwen2.5vl:7b
+mvn test -Dtest=GearExtractionEvalTest -Dollama=true -Dollama.model=qwen2.5vl:7b
 ```
 
 Le test affiche, point par point, les champs mal lus et un score global. Pour ajouter un roadbook de
@@ -170,7 +181,7 @@ fr.trailplanner
 ├── engine    Modèle d'effort, découpage en tronçons, planificateur
 ├── report    Rendu texte imprimable
 ├── api       Spring Boot : contrôleur REST, service, DTO
-└── extract   Lecture des roadbooks par une IA (interface + Ollama), préparation des images / PDF
+└── extract   Lecture de documents par une IA (roadbook, matériel) : interface + Ollama, images / PDF
 
 frontend/src
 ├── api         Types (miroir des records Java), client, copie hors ligne du dernier plan
@@ -188,6 +199,8 @@ et pourra être réutilisé tel quel (CLI, appli mobile via une API, batch de ca
 - [x] **v0.1-import** : saisir / importer son roadbook, trace GPX facultative
 - [x] **v0.1-lecture** : lecture du roadbook (image / PDF) par une IA configurable, Ollama par défaut
 - [x] **v0.1-références** : plusieurs références datées (courses, entraînements), pondérées
-- [ ] **v0.2** : plan nutrition / hydratation par tronçon, checklist matériel obligatoire
+- [x] **v0.2** : services des ravitos, nutrition / hydratation par tronçon, checklist du matériel
+  obligatoire (lue dans le règlement), le tout dans le PDF (voir [docs/v0.2-conception.md](docs/v0.2-conception.md))
+- [ ] **v0.2-météo** (option) : prévision Open-Meteo pour ajuster l'hydratation et le matériel
 - [ ] **v0.3** : import de l'historique (Strava/Garmin) et calibration par tranche de pente (montée/descente)
 - [ ] **v0.4** : mode assistance (crew) : où et quand retrouver le coureur

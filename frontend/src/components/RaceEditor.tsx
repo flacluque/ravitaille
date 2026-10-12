@@ -12,6 +12,8 @@ import {
   type RaceDraft,
 } from '../lib/draft';
 import { formatClock } from '../lib/format';
+import { ConfirmBar } from './ConfirmBar';
+import { aidFor, SERVICE_INFO, SERVICES, sortServices } from '../lib/services';
 
 interface Props {
   draft: RaceDraft;
@@ -22,6 +24,8 @@ interface Props {
   loading: boolean;
   onSubmit: () => void;
   onCancel: (() => void) | null;
+  /** Un roadbook vient d'être importé ou lu : l'appli recalcule aussitôt le plan s'il est complet. */
+  onLoaded: (draft: RaceDraft) => void;
 }
 
 const AIDS: { value: AidLevel; label: string }[] = [
@@ -31,12 +35,14 @@ const AIDS: { value: AidLevel; label: string }[] = [
 ];
 
 /** Saisie du roadbook (à partir du PDF / de l'image de l'organisation) et choix de la trace GPX. */
-export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading, onSubmit, onCancel }: Props) {
+export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading, onSubmit, onCancel, onLoaded }: Props) {
   const roadbookInput = useRef<HTMLInputElement>(null);
   const gpxInput = useRef<HTMLInputElement>(null);
   const scanInput = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const scan = useRoadbookScan();
+  // Fichier choisi alors que l'éditeur contient déjà une course : on demande avant d'écraser.
+  const [pendingScan, setPendingScan] = useState<File | null>(null);
   const resolved = resolveCutoffs(draft);
   const exported = draftToFile(draft);
 
@@ -56,7 +62,9 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
     e.target.value = '';
     if (!file) return;
     try {
-      onChange(parseRoadbookFile(await file.text()));
+      const imported = parseRoadbookFile(await file.text());
+      onChange(imported);
+      onLoaded(imported);
       setImportError(null);
     } catch (err) {
       setImportError(err instanceof Error ? err.message : String(err));
@@ -73,16 +81,22 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
     URL.revokeObjectURL(url);
   }
 
-  async function scanRoadbook(e: ChangeEvent<HTMLInputElement>) {
+  function chooseScan(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (hasContent(draft) && !window.confirm('Remplacer la saisie actuelle par la lecture de ce roadbook ?')) return;
+    if (hasContent(draft)) setPendingScan(file);
+    else void scanRoadbook(file);
+  }
+
+  async function scanRoadbook(file: File) {
+    setPendingScan(null);
     const extracted = await scan.read(file);
     if (extracted) {
-      const { draft: next, warnings } = extractedToDraft(extracted, draft);
+      const { draft: next, warnings } = extractedToDraft(extracted, draft, file.name);
       scan.setWarnings(warnings);
       onChange(next);
+      onLoaded(next);
     }
   }
 
@@ -106,7 +120,7 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
               Lire un roadbook (image / PDF)
             </button>
           )}
-          <input ref={scanInput} type="file" accept="image/*,.pdf,application/pdf" hidden onChange={scanRoadbook} />
+          <input ref={scanInput} type="file" accept="image/*,.pdf,application/pdf" hidden onChange={chooseScan} />
           <button type="button" className="ghost" onClick={() => roadbookInput.current?.click()}
             title="Recharger un roadbook exporté en JSON">Importer</button>
           <button type="button" className="ghost" onClick={exportRoadbook} disabled={!exported}
@@ -117,6 +131,14 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
         </div>
       </div>
       {importError && <p className="field-error">{importError}</p>}
+      {pendingScan && (
+        <ConfirmBar
+          message={`Remplacer « ${draft.name.trim() || 'la saisie actuelle'} » par la lecture de ${pendingScan.name} ?`}
+          confirmLabel="Lire et remplacer"
+          onConfirm={() => void scanRoadbook(pendingScan)}
+          onCancel={() => setPendingScan(null)}
+        />
+      )}
       <ScanPanel scan={scan} onRetryStatus={scan.refreshStatus} />
 
       <div className="editor-fields">
@@ -194,6 +216,22 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
                   <button type="button" className="ghost icon-btn" onClick={() => removeCp(cp.id)} aria-label={`Supprimer ${cp.name || `le point ${i + 1}`}`}>✕</button>
                 )}
               </span>
+              <div className="cp-services" role="group" aria-label={`Services à ${cp.name || `point ${i + 1}`}`}>
+                {SERVICES.map((service) => {
+                  const on = cp.services.includes(service);
+                  return (
+                    <button key={service} type="button" className={`chip ${on ? 'on' : ''}`} aria-pressed={on}
+                      title={SERVICE_INFO[service].label}
+                      onClick={() => {
+                        const services = sortServices(on ? cp.services.filter((x) => x !== service) : [...cp.services, service]);
+                        // Le type d'arrêt suit les services (repas chaud = base de vie) ; il reste modifiable à la main.
+                        setCp(cp.id, { services, aid: i === 0 || i === draft.checkpoints.length - 1 ? cp.aid : aidFor(services) });
+                      }}>
+                      <span aria-hidden>{SERVICE_INFO[service].icon}</span> {SERVICE_INFO[service].short}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           );
         })}

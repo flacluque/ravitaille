@@ -3,14 +3,14 @@
   "start": "2026-10-23T09:00:00",
   "maxDuration": "PT19H30M",
   "checkpoints": [
-    { "code": "1P", "name": "Départ Cité de Carcassonne",                   "km": 0,  "gainM": 0,    "lossM": 0,    "aid": "NONE" },
-    { "code": "2",  "name": "Lac de Cavayère",                              "km": 6,  "gainM": 137,  "lossM": 126,  "aid": "NONE" },
-    { "code": "3",  "name": "Molières-sur-l'Alberte (Hameau)",              "km": 20, "gainM": 772,  "lossM": 590,  "aid": "LIGHT", "cutoffIn": "2026-10-23T12:30:00" },
-    { "code": "4",  "name": "Caunette-sur-Lauquet (Mairie)",                "km": 33, "gainM": 1511, "lossM": 1210, "aid": "LIGHT", "cutoffIn": "2026-10-23T15:30:00" },
-    { "code": "10", "name": "Villardebelle (Village)",                      "km": 48, "gainM": 2278, "lossM": 1857, "aid": "FULL",  "cutoffIn": "2026-10-23T19:00:00" },
-    { "code": "11", "name": "Greffeil (Village)",                           "km": 57, "gainM": 2545, "lossM": 2416, "aid": "FULL",  "cutoffIn": "2026-10-23T21:00:00" },
-    { "code": "12", "name": "Ladern-sur-Lauquet (Village)",                 "km": 64, "gainM": 2853, "lossM": 2803, "aid": "LIGHT", "cutoffIn": "2026-10-23T22:30:00" },
-    { "code": "13", "name": "Palaja Montjausse (Camp militaire de Villemaury)", "km": 78, "gainM": 3297, "lossM": 3275, "aid": "LIGHT", "cutoffIn": "2026-10-24T02:00:00" },
-    { "code": "1D", "name": "Arrivée Cité médiévale de Carcassonne (Dôme)", "km": 88, "gainM": 3426, "lossM": 3564, "aid": "NONE",  "cutoffIn": "2026-10-24T04:30:00" }
+    {"code": "1P", "name": "Départ Cité de Carcassonne", "km": 0, "gainM": 0, "lossM": 0, "aid": "NONE", "services": []},
+    {"code": "2", "name": "Lac de Cavayère", "km": 6, "gainM": 137, "lossM": 126, "aid": "NONE", "services": []},
+    {"code": "3", "name": "Molières-sur-l'Alberte (Hameau)", "km": 20, "gainM": 772, "lossM": 590, "aid": "LIGHT", "cutoffIn": "2026-10-23T12:30:00", "services": ["WATER", "DRINKS", "COLD_FOOD"]},
+    {"code": "4", "name": "Caunette-sur-Lauquet (Mairie)", "km": 33, "gainM": 1511, "lossM": 1210, "aid": "LIGHT", "cutoffIn": "2026-10-23T15:30:00", "services": ["WATER", "DRINKS", "COLD_FOOD"]},
+    {"code": "10", "name": "Villardebelle (Village)", "km": 48, "gainM": 2278, "lossM": 1857, "aid": "FULL", "cutoffIn": "2026-10-23T19:00:00", "services": ["WATER", "DRINKS", "COLD_FOOD", "HOT_FOOD", "ASSISTANCE"]},
+    {"code": "11", "name": "Greffeil (Village)", "km": 57, "gainM": 2545, "lossM": 2416, "aid": "FULL", "cutoffIn": "2026-10-23T21:00:00", "services": ["WATER", "DRINKS", "COLD_FOOD", "HOT_FOOD"]},
+    {"code": "12", "name": "Ladern-sur-Lauquet (Village)", "km": 64, "gainM": 2853, "lossM": 2803, "aid": "LIGHT", "cutoffIn": "2026-10-23T22:30:00", "services": ["WATER", "DRINKS", "COLD_FOOD"]},
+    {"code": "13", "name": "Palaja Montjausse (Camp militaire de Villemaury)", "km": 78, "gainM": 3297, "lossM": 3275, "aid": "LIGHT", "cutoffIn": "2026-10-24T02:00:00", "services": ["WATER", "DRINKS", "COLD_FOOD"]},
+    {"code": "1D", "name": "Arrivée Cité médiévale de Carcassonne (Dôme)", "km": 88, "gainM": 3426, "lossM": 3564, "aid": "NONE", "cutoffIn": "2026-10-24T04:30:00", "services": ["WATER", "DRINKS", "COLD_FOOD", "DROP_BAG", "ASSISTANCE"]}
   ]
 }

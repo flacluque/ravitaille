@@ -33,7 +33,13 @@ public record ExtractedRoadbook(
      * @param cutoffIn  barrière à l'entrée, "12h30"
      * @param cutoffOut barrière à la sortie du ravito, "12h30"
      * @param aid       NONE, LIGHT ou FULL (cf. fr.trailplanner.model.AidLevel)
+     * @param services  ce qu'on trouve sur place (cf. fr.trailplanner.model.Service)
      */
     public record Point(String code, String name, Double km, Double gainM, Double lossM,
-                        String cutoffIn, String cutoffOut, String aid) {}
+                        String cutoffIn, String cutoffOut, String aid, List<String> services) {
+
+        public Point {
+            services = services == null ? List.of() : services.stream().filter(Objects::nonNull).toList();
+        }
+    }
 }

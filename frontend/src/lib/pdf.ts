@@ -1,8 +1,11 @@
 import type { jsPDF } from 'jspdf';
-import type { CourseView, CutoffStatus, RacePlan } from '../api/types';
+import type { CourseView, CutoffStatus, RacePlan, Service } from '../api/types';
 import { ACCENT_COLOR, STATUS_COLORS, TRACK_COLOR } from './colors';
 import { durationMinutes, formatClock, formatDuration, formatHm, formatKm, formatPace } from './format';
+import { GEAR_STATUS_LABEL, waterCheck, type GearItem, type GearStatus } from './gear';
+import { computeNutrition, describeActions, describeConsumption, describeTotals, type NutritionProfile } from './nutrition';
 import { bindingCutoff, tightestCutoff } from './plan';
+import { SERVICE_INFO } from './services';
 import { niceTicks } from './track';
 
 /**
@@ -14,6 +17,12 @@ export interface PdfInput {
   plans: RacePlan[];
   /** Scénario détaillé (les autres apparaissent dans la comparaison). */
   selected: number;
+  /** Services de chaque point (même ordre que le plan) : sous chaque ravito, et pour la nutrition. */
+  services?: Service[][];
+  /** Avec les services : section nutrition et hydratation du scénario détaillé. */
+  nutrition?: NutritionProfile;
+  /** Checklist du matériel de la course. */
+  gear?: GearItem[];
 }
 
 const PAGE_W = 210;
@@ -45,7 +54,7 @@ export function pdfFilename(raceName: string): string {
   return `plan-${slug || 'course'}.pdf`;
 }
 
-export async function buildPlanPdf({ course, plans, selected }: PdfInput): Promise<jsPDF> {
+export async function buildPlanPdf({ course, plans, selected, services, nutrition, gear }: PdfInput): Promise<jsPDF> {
   const [{ jsPDF }, { autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
   const plan = plans[Math.min(selected, plans.length - 1)];
@@ -61,7 +70,7 @@ export async function buildPlanPdf({ course, plans, selected }: PdfInput): Promi
 
   const table = (title: string, startY: number, options: Parameters<typeof autoTable>[1]) => {
     let top = ensureSpace(doc, startY + 7, 30);
-    top = sectionTitle(doc, title, top);
+    if (title) top = sectionTitle(doc, title, top);
     autoTable(doc, {
       startY: top,
       margin: { left: M, right: M, bottom: M + FOOTER_H },
@@ -94,8 +103,9 @@ export async function buildPlanPdf({ course, plans, selected }: PdfInput): Promi
     body: plan.checkpoints.map((eta, i) => {
       const cutoff = bindingCutoff(eta);
       const stop = durationMinutes(eta.stop);
+      const here = servicesText(services?.[i]);
       return [
-        `${pdfText(eta.code)}  ${pdfText(eta.name)}`,
+        `${pdfText(eta.code)}  ${pdfText(eta.name)}${here ? `\n${here}` : ''}`,
         formatKm(eta.km),
         String(Math.round(eta.cumulativeGainM)),
         i === 0 ? '' : `${formatDuration(eta.legDuration)}\n${formatKm(eta.legDistanceKm)} km +${Math.round(eta.legGainM)} m`,
@@ -118,6 +128,54 @@ export async function buildPlanPdf({ course, plans, selected }: PdfInput): Promi
       }
     },
   });
+
+  // --- Nutrition et hydratation du scénario détaillé ---
+  if (nutrition && services) {
+    const n = computeNutrition(plan, services, nutrition);
+    const names = plan.checkpoints.map((c) => pdfText(c.name));
+    let top = ensureSpace(doc, y + 7, 40);
+    top = sectionTitle(doc, `Nutrition et hydratation · scénario ${plan.scenario.name.toLowerCase()}`, top) + 2;
+    doc.setFontSize(8.5);
+    const intro = [
+      `${nutrition.carbsPerHour} g de glucides par heure, ${nutrition.waterDayMlPerHour} ml d'eau par heure `
+        + `(${nutrition.waterNightMlPerHour} la nuit). Le solide des ravitos n'est pas compté.`,
+      `Au départ : ${pdfText(describeActions(n.points[0], n, nutrition, true)) || 'rien à préparer'}.`,
+      ...n.alerts.map((a) => `Attention : ${pdfText(a)}`),
+    ];
+    doc.setTextColor(...TEXT);
+    for (const line of intro.flatMap((l) => doc.splitTextToSize(l, CONTENT_W) as string[])) {
+      top = ensureSpace(doc, top + 1, 4);
+      doc.text(line, M, top + 2);
+      top += 4;
+    }
+    y = table('', top - 5, {
+      head: [['Tronçon', 'Durée', 'Glucides', 'Eau', 'À consommer', "Au point d'arrivée"]],
+      body: n.legs.map((leg) => [
+        `${names[leg.index - 1]} ->\n${names[leg.index]}`,
+        formatHm(leg.minutes) + (leg.nightMinutes >= 15 ? `\ndont ${formatHm(leg.nightMinutes)} de nuit` : ''),
+        `${Math.round(leg.carbsG)} g`,
+        `${(Math.round(leg.waterMl / 50) * 50).toLocaleString('fr-FR').replace(/\s/g, ' ')} ml`,
+        pdfText(describeConsumption(leg, n, nutrition)) || '-',
+        leg.index === plan.checkpoints.length - 1 ? 'arrivée' : pdfText(describeActions(n.points[leg.index], n, nutrition, false)) || '-',
+      ]),
+      columnStyles: {
+        0: { cellWidth: 40 }, 1: { halign: 'right', cellWidth: 20 }, 2: { halign: 'right', cellWidth: 16 },
+        3: { halign: 'right', cellWidth: 16 },
+      },
+      didParseCell: (data) => {
+        if (data.section === 'head' && data.column.index >= 1 && data.column.index <= 3) data.cell.styles.halign = 'right';
+      },
+    });
+    doc.setFontSize(8.5);
+    doc.setTextColor(...TEXT);
+    const total = doc.splitTextToSize(`Sur la course : ${pdfText(describeTotals(n, nutrition))}.`, CONTENT_W) as string[];
+    let ty = ensureSpace(doc, y + 5, total.length * 4);
+    for (const line of total) {
+      doc.text(line, M, ty);
+      ty += 4;
+    }
+    y = ty - 2;
+  }
 
   // --- Comparaison des scénarios ---
   if (plans.length > 1) {
@@ -150,6 +208,43 @@ export async function buildPlanPdf({ course, plans, selected }: PdfInput): Promi
         }
         if (data.section === 'head' && data.column.index - 3 === selected) {
           data.cell.styles.fillColor = rgb(TRACK_COLOR);
+        }
+      },
+    });
+  }
+
+  // --- Matériel : checklist à cocher ---
+  if (gear && gear.length > 0) {
+    const order: GearStatus[] = ['MANDATORY', 'RECOMMENDED', 'PERSONAL'];
+    const sorted = order.flatMap((st) => gear.filter((i) => i.status === st));
+    const packed = gear.filter((i) => i.packed).length;
+    const water = nutrition ? waterCheck(gear, nutrition) : null;
+    let top = ensureSpace(doc, y + 7, 30);
+    top = sectionTitle(doc, `Matériel · ${packed} / ${gear.length} prêts`, top);
+    if (water) {
+      doc.setFontSize(8.5);
+      doc.setTextColor(...rgb(STATUS_COLORS[water.ok ? 'OK' : 'TIGHT']));
+      doc.text(doc.splitTextToSize(pdfText(water.message), CONTENT_W) as string[], M, top + 3);
+      top += 5;
+    }
+    y = table('', top - 5, {
+      head: [['', 'Élément', 'Statut']],
+      body: sorted.map((i) => ['', pdfText(i.name), GEAR_STATUS_LABEL[i.status]]),
+      columnStyles: { 0: { cellWidth: 8 }, 2: { cellWidth: 28, textColor: MUTED } },
+      didDrawCell: (data) => {
+        if (data.section !== 'body' || data.column.index !== 0) return;
+        // Case à cocher dessinée : les polices standard du PDF n'ont pas de symbole de case.
+        const size = 3.2;
+        const x = data.cell.x + 2.4;
+        const yy = data.cell.y + (data.cell.height - size) / 2;
+        doc.setDrawColor(...MUTED);
+        doc.setLineWidth(0.3);
+        doc.rect(x, yy, size, size, 'S');
+        if (sorted[data.row.index].packed) {
+          doc.setDrawColor(...rgb(ACCENT_COLOR));
+          doc.setLineWidth(0.5);
+          doc.line(x + 0.6, yy + size * 0.55, x + size * 0.42, yy + size - 0.6);
+          doc.line(x + size * 0.42, yy + size - 0.6, x + size - 0.4, yy + 0.5);
         }
       },
     });
@@ -332,6 +427,11 @@ function footers(doc: jsPDF) {
     doc.text(`Trail Planner · plan généré le ${generated}`, M, PAGE_H - M + 5);
     doc.text(`Page ${i} / ${pages}`, PAGE_W - M, PAGE_H - M + 5, { align: 'right' });
   }
+}
+
+/** Services d'un point en toutes lettres (les polices du PDF n'ont pas les icônes) : "eau · solide · assistance". */
+function servicesText(services: Service[] | undefined): string {
+  return (services ?? []).map((s) => SERVICE_INFO[s].short).join(' · ');
 }
 
 function sectionTitle(doc: jsPDF, title: string, y: number): number {

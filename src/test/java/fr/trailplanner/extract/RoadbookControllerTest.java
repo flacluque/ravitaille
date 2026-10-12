@@ -19,20 +19,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(RoadbookController.class)
-@Import(RoadbookExtractionService.class)
+@Import({RoadbookExtractionService.class, ExtractionErrors.class})
 class RoadbookControllerTest {
 
     @Autowired
     private MockMvc mvc;
 
     @MockBean
-    private RoadbookExtractor extractor;
+    private DocumentReader reader;
+
+    private void answers(ExtractedRoadbook roadbook) throws Exception {
+        when(reader.read(any())).thenReturn(fr.trailplanner.api.JsonSupport.mapper().writeValueAsString(roadbook));
+    }
 
     @Test
     void litUneImageEtRenvoieLeRoadbookNormalise() throws Exception {
-        when(extractor.extract(any(RoadbookDocument.class))).thenReturn(new ExtractedRoadbook("Raid", null, "9h00", List.of(
-                new ExtractedRoadbook.Point("1P", "Départ", 0.0, null, null, null, null, "NONE"),
-                new ExtractedRoadbook.Point("3", "Molières", 20.0, null, null, "Vend 23 12h30", null, "LIGHT")), List.of()));
+        answers(new ExtractedRoadbook("Raid", null, "9h00", List.of(
+                new ExtractedRoadbook.Point("1P", "Départ", 0.0, null, null, null, null, "NONE", null),
+                new ExtractedRoadbook.Point("3", "Molières", 20.0, null, null, "Vend 23 12h30", null, "LIGHT", null)), List.of()));
 
         mvc.perform(multipart("/api/roadbooks/extract").file(image()))
                 .andExpect(status().isOk())
@@ -44,7 +48,7 @@ class RoadbookControllerTest {
 
     @Test
     void uneIaIndisponibleRenvoie503AvecLExplication() throws Exception {
-        when(extractor.extract(any(RoadbookDocument.class))).thenThrow(ExtractionException.unavailable("Ollama ne répond pas"));
+        when(reader.read(any())).thenThrow(ExtractionException.unavailable("Ollama ne répond pas"));
 
         mvc.perform(multipart("/api/roadbooks/extract").file(image()))
                 .andExpect(status().isServiceUnavailable())
@@ -53,7 +57,7 @@ class RoadbookControllerTest {
 
     @Test
     void unLongPdfPrevientDesPagesLues() throws Exception {
-        when(extractor.extract(any(RoadbookDocument.class))).thenReturn(new ExtractedRoadbook("Malène", null, null, List.of(), List.of()));
+        answers(new ExtractedRoadbook("Malène", null, null, List.of(), List.of()));
         byte[] pdf;
         try (InputStream in = getClass().getResourceAsStream("/roadbooks/malene-de-proust-2026.pdf")) {
             pdf = in.readAllBytes();
@@ -62,7 +66,7 @@ class RoadbookControllerTest {
         mvc.perform(multipart("/api/roadbooks/extract").file(new MockMultipartFile("file", "malene.pdf", "application/pdf", pdf)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.warnings[0]").value("PDF de 10 pages : lu les pages 4, 6, 7 et 8, celles qui décrivent le parcours. "
-                        + "S'il manque des points, envoie seulement les bonnes pages (capture d'écran)."));
+                        + "S'il manque quelque chose, envoie seulement les bonnes pages (capture d'écran)."));
     }
 
     @Test
@@ -74,7 +78,7 @@ class RoadbookControllerTest {
 
     @Test
     void exposeLEtatDeLIa() throws Exception {
-        when(extractor.status()).thenReturn(new RoadbookExtractor.Status(true, "ollama", "qwen2.5vl:7b", false, "lance Ollama"));
+        when(reader.status()).thenReturn(new DocumentReader.Status(true, "ollama", "qwen2.5vl:7b", false, "lance Ollama"));
 
         mvc.perform(get("/api/roadbooks/extractor"))
                 .andExpect(status().isOk())

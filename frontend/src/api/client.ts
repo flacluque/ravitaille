@@ -1,4 +1,4 @@
-import type { CourseView, ElevationSource, ExtractedRoadbook, ExtractorStatus, RaceDefinition, RacePlan, Reference } from './types';
+import type { CourseView, ElevationSource, ExtractedGear, ExtractedRoadbook, ExtractorStatus, RaceDefinition, RacePlan, Reference } from './types';
 import type { NightWindow } from '../lib/draft';
 
 export class ApiError extends Error {}
@@ -69,6 +69,13 @@ export function extractRoadbook(file: File): Promise<ExtractedRoadbook> {
   const form = new FormData();
   form.append('file', file);
   return getJson('/api/roadbooks/extract', { method: 'POST', body: form });
+}
+
+/** Lecture de la liste du matériel dans un règlement (image ou PDF), pour la course donnée. */
+export function extractGear(file: File, raceName: string): Promise<ExtractedGear> {
+  const form = new FormData();
+  form.append('file', file);
+  return getJson(`/api/gear/extract?raceName=${encodeURIComponent(raceName)}`, { method: 'POST', body: form });
 }
 
 /**

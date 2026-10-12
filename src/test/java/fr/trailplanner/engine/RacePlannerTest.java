@@ -171,4 +171,17 @@ class RacePlannerTest {
         assertEquals(1, plan.references().get(0).weight());
         assertEquals(plan.finish(), plan.references().get(0).predictedFinish());
     }
+
+    @Test
+    void laPartDeNuitDeChaqueTronconSAdditionneAuTotal() {
+        RacePlan plan = planner.plan(courseDeReference(null), null, REFS, SANS_ARRET,
+                new NightWindow(LocalTime.of(14, 0), LocalTime.of(7, 0)), ElevationSource.ROADBOOK);
+
+        long parTroncon = plan.checkpoints().stream().mapToLong(e -> e.legNightDuration().toSeconds()).sum();
+        assertEquals(plan.nightDuration().toSeconds(), parTroncon, 2);
+        // Départ 11h, nuit à partir de 14h : le premier tronçon (≈ 4 h) en a déjà une partie, le second est presque tout de nuit.
+        assertTrue(plan.checkpoints().get(1).legNightDuration().toMinutes() > 0);
+        assertTrue(plan.checkpoints().get(2).legNightDuration().compareTo(plan.checkpoints().get(1).legNightDuration()) > 0);
+        assertEquals(0, plan.checkpoints().get(0).legNightDuration().toSeconds());
+    }
 }

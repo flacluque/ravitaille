@@ -42,9 +42,18 @@ public final class RoadbookPrompt {
             "LIGHT" pour un ravito classique (eau, boissons, solides froids, éventuellement boisson \
             chaude) ; "FULL" pour un gros ravito (solides chauds / repas chaud, base de vie, sac de \
             délestage).
+            - services : ce que le roadbook indique pour ce point, souvent en icônes ou en colonnes \
+            cochées. "WATER" : eau, boissons froides, goutte d'eau, gourde. "DRINKS" : autres boissons \
+            (boissons froides sucrées, cola, isotonique, boissons chaudes, thé, soupe). "COLD_FOOD" : \
+            solides froids, nourriture, fourchette et couteau. "HOT_FOOD" : solides chauds, repas chaud. \
+            "DROP_BAG" : sac de délestage. "ASSISTANCE" : assistance personnelle autorisée (une croix, \
+            un panneau d'interdiction ou « interdite » veut dire non autorisée : ne la mets pas). \
+            « Boissons froides » donne à la fois "WATER" et "DRINKS". Liste vide si rien n'est indiqué. \
+            Recopie aussi les services du départ et de l'arrivée s'ils sont indiqués.
 
             Pour la course :
-            - name : le nom de la course, avec l'année si elle est indiquée.
+            - name : le nom de la course, avec l'année si elle est indiquée. Cherche-le dans le titre, \
+            le logo ou l'en-tête ; null seulement s'il n'apparaît nulle part.
             - startTime : l'heure de départ au format "09:00". S'il y a plusieurs vagues, la première, \
             et cite les vagues dans warnings.
             - startDate : la date de départ au format "2026-10-23", seulement si le jour, le mois et \
@@ -57,9 +66,9 @@ public final class RoadbookPrompt {
             {"name": "Trail des Crêtes 2026", "startDate": null, "startTime": "08:00",
              "checkpoints": [
               {"code": "1", "name": "Départ Place du Village", "km": 0, "gainM": 0, "lossM": 0,
-               "cutoffIn": null, "cutoffOut": null, "aid": "NONE"},
+               "cutoffIn": null, "cutoffOut": null, "aid": "NONE", "services": []},
               {"code": "2", "name": "Col du Loup", "km": 12.5, "gainM": 640, "lossM": 210,
-               "cutoffIn": "11h30", "cutoffOut": null, "aid": "LIGHT"}],
+               "cutoffIn": "11h30", "cutoffOut": null, "aid": "LIGHT", "services": ["WATER", "COLD_FOOD"]}],
              "warnings": []}
             """;
 
@@ -68,19 +77,24 @@ public final class RoadbookPrompt {
     /** Longueur maximale du texte d'une page transmis au modèle (le reste est coupé). */
     static final int MAX_TEXT_PER_PAGE = 3000;
 
-    /**
-     * Message du coureur. Quand le PDF contient du texte, on le joint aux images : les nombres y sont
-     * exacts, et l'image sert à comprendre la mise en page (quelle valeur va dans quelle colonne).
-     */
+    /** Message du coureur, avec le texte des pages quand le PDF en contient. */
     public static String user(List<String> pageTexts) {
+        return USER + pageTexts(pageTexts);
+    }
+
+    /**
+     * Texte des pages, à joindre à la demande quand le PDF en contient : les nombres y sont exacts, et
+     * l'image sert à comprendre la mise en page (quelle valeur va dans quelle colonne). Vide sinon.
+     */
+    static String pageTexts(List<String> pageTexts) {
         if (pageTexts.stream().allMatch(String::isBlank)) {
-            return USER;
+            return "";
         }
-        StringBuilder sb = new StringBuilder(USER).append("""
+        StringBuilder sb = new StringBuilder("""
 
                 Texte extrait du PDF, page par page, dans l'ordre des images. Les nombres y sont exacts, \
                 mais l'alignement des colonnes peut être perdu : appuie-toi sur les images pour savoir à \
-                quel point et à quelle colonne chaque valeur se rapporte.
+                quelle ligne et à quelle colonne chaque valeur se rapporte.
                 """);
         for (int i = 0; i < pageTexts.size(); i++) {
             String text = pageTexts.get(i).strip();
@@ -116,9 +130,13 @@ public final class RoadbookPrompt {
                       "lossM": { "type": ["number", "null"] },
                       "cutoffIn": { "type": ["string", "null"] },
                       "cutoffOut": { "type": ["string", "null"] },
-                      "aid": { "type": "string", "enum": ["NONE", "LIGHT", "FULL"] }
+                      "aid": { "type": "string", "enum": ["NONE", "LIGHT", "FULL"] },
+                      "services": {
+                        "type": "array",
+                        "items": { "type": "string", "enum": ["WATER", "DRINKS", "COLD_FOOD", "HOT_FOOD", "DROP_BAG", "ASSISTANCE"] }
+                      }
                     },
-                    "required": ["code", "name", "km", "gainM", "lossM", "cutoffIn", "cutoffOut", "aid"]
+                    "required": ["code", "name", "km", "gainM", "lossM", "cutoffIn", "cutoffOut", "aid", "services"]
                   }
                 },
                 "warnings": { "type": "array", "items": { "type": "string" } }

@@ -320,3 +320,116 @@ tbody tr:hover { background: var(--surface-2); }
 .weight-bar { position: absolute; left: 0; top: 0; bottom: 0; background: color-mix(in srgb, var(--accent) 30%, transparent); }
 .weight-value { position: relative; padding-right: 6px; font-size: 0.82rem; font-weight: 600; }
 .hint-line { margin: -8px 0 0; }
+
+/* ---------- Services des ravitos ---------- */
+.cp-services { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; margin: -2px 0 4px; }
+.chip {
+  padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 500;
+  background: transparent; color: var(--muted); border: 1px dashed var(--border);
+}
+.chip.on { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--text); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+.service-icons { margin-left: 6px; font-size: 0.8rem; letter-spacing: 1px; white-space: nowrap; }
+@media (max-width: 1100px) {
+  .cp-services { margin: 2px 0 0; }
+}
+
+/* ---------- Légende (toujours visible) ---------- */
+.app { padding-bottom: 64px; }   /* la barre de légende ne cache pas le bas de la page */
+.legend {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 24px;
+  padding: 8px 48px 8px 20px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(6px);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 8px rgb(0 0 0 / 0.05);
+  font-size: 0.8rem;
+}
+.legend-group { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.legend-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.legend-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.legend .short { display: none; }
+.legend-close { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 2px 8px; }
+.legend-pill {
+  position: fixed; right: 12px; bottom: 12px; z-index: 1000;
+  padding: 6px 12px; border-radius: 999px; font-size: 0.8rem;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+}
+@media (max-width: 860px) {
+  .app { padding-bottom: 80px; }
+  .legend { padding: 6px 40px 6px 12px; gap: 4px 14px; font-size: 0.74rem; }
+  .legend .long { display: none; }
+  .legend .short { display: inline; }
+}
+
+/* ---------- Nutrition ---------- */
+.nutrition { display: flex; flex-direction: column; gap: 12px; }
+.nutrition .card-head { margin-bottom: 0; }
+.nutrition-profile summary { cursor: pointer; font-weight: 600; font-size: 0.9rem; color: var(--accent); }
+.nutrition-profile[open] { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; }
+.nutrition-profile input, .nutrition-profile select {
+  font: inherit; width: 100%; min-width: 0; padding: 6px 8px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+}
+/* Alignés par le bas : un libellé sur deux lignes ne décale pas son champ. */
+.profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); align-items: end; gap: 8px; margin: 10px 0; }
+.profile-grid label { display: flex; flex-direction: column; gap: 3px; font-size: 0.8rem; font-weight: 500; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+.check input { width: auto; }
+.products { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.product-row { display: grid; grid-template-columns: minmax(120px, 1fr) 170px 100px 70px 32px; gap: 6px; align-items: center; }
+.product-head { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
+.product-actions { display: flex; gap: 8px; }
+.nutrition-start { display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.nutrition-table td { vertical-align: top; }
+.nutrition-table .leg-name { white-space: normal; min-width: 150px; max-width: 220px; }
+.nutrition-table .leg-name small { display: block; }
+.nutrition-table td:nth-child(5), .nutrition-table td:nth-child(6) { white-space: normal; min-width: 170px; }
+.nutrition-total { margin: 0; font-size: 0.9rem; }
+@media (max-width: 860px) {
+  .product-row { grid-template-columns: 1fr 1fr; }
+  .product-head { display: none; }
+  /* Une fiche par tronçon : nom, puis durée / glucides / eau sur une ligne, puis quoi faire. */
+  .nutrition-table thead { display: none; }
+  .nutrition-table tr { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .nutrition-table td { display: block; border: none; padding: 2px 0; text-align: left; min-width: 0 !important; max-width: none; }
+  .nutrition-table td.num { text-align: left; }
+  .nutrition-table .leg-name, .nutrition-table td:nth-child(5), .nutrition-table td:nth-child(6) { grid-column: 1 / -1; }
+  .nutrition-table td[data-label]::before { content: attr(data-label); display: block; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+}
+
+/* ---------- Matériel ---------- */
+.gear { display: flex; flex-direction: column; gap: 12px; }
+.gear-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 0; }
+.gear-group h3 { margin: 4px 0 6px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.gear-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.gear-list li { display: grid; grid-template-columns: 1fr 130px 32px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.gear-list label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.gear-list input[type=checkbox] { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+.gear-list li.packed span { color: var(--muted); text-decoration: line-through; }
+.gear-list select, .gear-add input {
+  font: inherit; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); min-width: 0;
+}
+.gear-add { display: flex; gap: 8px; }
+.gear-add input { flex: 1; }
+.gear-water { margin: 0; padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; }
+.gear-water.ok { background: var(--ok-bg); color: var(--ok-fg); }
+.gear-water.ko { background: var(--tight-bg); color: var(--tight-fg); }
+.gear-ideas { display: flex; flex-wrap: wrap; gap: 6px; }
+.gear-ideas .chip { cursor: pointer; }
+@media (max-width: 860px) {
+  .gear-head { flex-direction: column; }
+  .gear-list li { grid-template-columns: 1fr 32px; }
+  .gear-list select { grid-column: 1; grid-row: 2; width: fit-content; margin-left: 28px; font-size: 0.8rem; }
+}
+
+/* ---------- Plan périmé (saisie modifiée depuis le calcul) ---------- */
+.results { display: flex; flex-direction: column; gap: 20px; }
+.results.stale { opacity: 0.35; filter: grayscale(0.6); pointer-events: none; user-select: none; }
+.stale-banner { margin: 0; }
+@media (max-width: 860px) { .results { gap: 12px; } }
+
+.confirm-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px;
+  padding: 10px 14px; margin: 8px 0; border-radius: 8px; background: var(--tight-bg); font-size: 0.9rem; }
+.confirm-actions { display: flex; gap: 8px; }

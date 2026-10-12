@@ -6,8 +6,9 @@ import java.time.LocalDateTime;
 /**
  * Prévision de passage à un point du roadbook.
  *
- * @param marginIn   barrière d'entrée - heure d'arrivée (null si pas de barrière)
- * @param marginOut  barrière de sortie - heure de départ du ravito (null si pas de barrière)
+ * @param marginIn         barrière d'entrée - heure d'arrivée (null si pas de barrière)
+ * @param marginOut        barrière de sortie - heure de départ du ravito (null si pas de barrière)
+ * @param legNightDuration part du tronçon courue de nuit (on boit moins la nuit : plan d'hydratation)
  */
 public record CheckpointEta(
         String code,
@@ -27,7 +28,8 @@ public record CheckpointEta(
         LocalDateTime cutoffOut,
         Duration marginIn,
         Duration marginOut,
-        CutoffStatus status) {
+        CutoffStatus status,
+        Duration legNightDuration) {
 
     public enum CutoffStatus {
         /** Pas de barrière horaire sur ce point. */

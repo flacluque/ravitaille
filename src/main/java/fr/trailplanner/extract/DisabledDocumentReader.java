@@ -1,12 +1,12 @@
 package fr.trailplanner.extract;
 
 /** trailplanner.extraction.provider=none : la saisie se fait à la main. */
-public class DisabledRoadbookExtractor implements RoadbookExtractor {
+public class DisabledDocumentReader implements DocumentReader {
 
     static final String MESSAGE = "Lecture automatique désactivée (trailplanner.extraction.provider=none).";
 
     @Override
-    public ExtractedRoadbook extract(RoadbookDocument document) {
+    public String read(Request request) {
         throw ExtractionException.unavailable(MESSAGE);
     }
 
