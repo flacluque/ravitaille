@@ -32,12 +32,13 @@ public class RacePlanner {
                          Scenario scenario,
                          NightWindow night,
                          ElevationSource requestedSource) {
-        return plan(race, track, references, scenario, night, requestedSource, null, null);
+        return plan(race, track, references, scenario, night, requestedSource, null, null, TrainingHistory.BLOCK_WEEKS);
     }
 
     /**
      * @param history historique d'entraînement (Strava) pour corriger la forme ; null pour s'en passer
      * @param today   date du jour, pour savoir où en est la préparation
+     * @param weeks   durée des blocs de préparation (10 à 16 semaines)
      */
     public RacePlan plan(RaceDefinition race,
                          TrackProfile track,
@@ -46,7 +47,8 @@ public class RacePlanner {
                          NightWindow night,
                          ElevationSource requestedSource,
                          TrainingHistory history,
-                         LocalDate today) {
+                         LocalDate today,
+                         int weeks) {
 
         ElevationSource source = CourseBuilder.resolve(requestedSource, race, track);
         List<Leg> legs = CourseBuilder.legs(race, track, source);
@@ -54,7 +56,8 @@ public class RacePlanner {
         LocalDate raceDate = race.start().toLocalDate();
 
         TrainingForm.Analysis form = history == null || references == null || references.isEmpty() ? null
-                : TrainingForm.analyze(history, references, raceDate, today, raceEffort, Scenario.REALISTE.fatigueExponent());
+                : TrainingForm.analyze(history, references, raceDate, today, raceEffort,
+                        Scenario.REALISTE.fatigueExponent(), weeks);
         boolean useForm = form != null && form.active();
         List<ReferenceWeighting.Weighted> weighted = useForm
                 ? ReferenceWeighting.weigh(references, raceEffort, raceDate, form.factors(), ReferenceWeighting.HALF_LIFE_DAYS_WITH_FORM)

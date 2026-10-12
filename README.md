@@ -186,9 +186,10 @@ Strava demande une **application API**, gratuite, à créer une fois avec ton co
 
    Le plan indique aussi l'arrivée prédite par chaque référence seule, et son poids.
 4. **Forme d'entraînement** (avec Strava, option « Tenir compte de mon entraînement Strava ») : on
-   compare le **bloc de préparation** de chaque référence à celui de ta course, soit les 12 semaines
+   compare le **bloc de préparation** de chaque référence à celui de ta course, soit les semaines
    avant la semaine de course (jusqu'à aujourd'hui pour une course à venir), en km-effort par semaine,
-   randonnées comprises si tu le choisis. Le temps de la référence est multiplié par
+   randonnées comprises si tu le choisis. La durée du bloc se règle de 10 à 16 semaines (12 par
+   défaut, « Ma préparation dure ») ; la même durée sert pour la course et les références. Le temps de la référence est multiplié par
    `(volume référence / volume course)^0,10`, dans la limite de ±8 % (Tanda 2011 : +10 % de volume
    ≈ −1 % de temps au niveau amateur). À partir de 3 courses dont on connaît la préparation, cet
    exposant est ajusté sur tes propres résultats. La demi-vie de la récence passe alors à 1 an, et :

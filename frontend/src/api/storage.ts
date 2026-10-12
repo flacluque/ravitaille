@@ -92,12 +92,17 @@ export function saveGear(raceName: string, items: GearItem[]): void {
 
 const TRAINING_KEY = 'trail-planner:entrainement';
 /** Par défaut : l'entraînement Strava compte (s'il est connecté), randonnées comprises. */
-export const DEFAULT_TRAINING: TrainingOptions = { strava: true, includeHikes: true };
+export const DEFAULT_TRAINING: TrainingOptions = { strava: true, includeHikes: true, weeks: 12 };
+export const MIN_PREP_WEEKS = 10;
+export const MAX_PREP_WEEKS = 16;
 
 export function loadTrainingOptions(): TrainingOptions {
   try {
     const raw = localStorage.getItem(TRAINING_KEY);
-    return raw ? { ...DEFAULT_TRAINING, ...(JSON.parse(raw) as Partial<TrainingOptions>) } : DEFAULT_TRAINING;
+    if (!raw) return DEFAULT_TRAINING;
+    const saved = { ...DEFAULT_TRAINING, ...(JSON.parse(raw) as Partial<TrainingOptions>) };
+    const weeks = Math.round(Number(saved.weeks));
+    return { ...saved, weeks: weeks >= MIN_PREP_WEEKS && weeks <= MAX_PREP_WEEKS ? weeks : DEFAULT_TRAINING.weeks };
   } catch {
     return DEFAULT_TRAINING;
   }

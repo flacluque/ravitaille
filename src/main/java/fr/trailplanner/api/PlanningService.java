@@ -66,9 +66,10 @@ public class PlanningService {
         LocalDate today = LocalDate.now(clock);
         List<String> warnings = new ArrayList<>();
         TrainingHistory history = history(request, today, warnings);
+        int weeks = request.training() == null ? TrainingHistory.BLOCK_WEEKS : request.training().weeksOrDefault();
         return request.scenariosOrDefault().stream()
                 .map(s -> planner.plan(request.race(), track, request.references(), s,
-                        request.night(), request.elevationSource(), history, today))
+                        request.night(), request.elevationSource(), history, today, weeks))
                 .map(p -> warnings.isEmpty() ? p : withWarnings(p, warnings))
                 .toList();
     }
@@ -90,8 +91,8 @@ public class PlanningService {
                 oldest = ref.date();
             }
         }
-        // Début du bloc de la plus ancienne date : semaine de course + 12 semaines.
-        LocalDate since = oldest.minusDays(7).minusWeeks(12);
+        // Début du bloc de la plus ancienne date : semaine de course + durée de la préparation.
+        LocalDate since = oldest.minusDays(7).minusWeeks(options.weeksOrDefault());
         try {
             return training.history(since, options.includeHikes()).orElse(null);
         } catch (RuntimeException e) {

@@ -519,3 +519,5 @@ tbody tr:hover { background: var(--surface-2); }
 @media (max-width: 640px) {
   .training-stats { grid-template-columns: 1fr; }
 }
+.form .training-options .prep-weeks { flex-direction: row; align-items: center; gap: 8px; font-weight: 400; flex-wrap: wrap; }
+.form .training-options .prep-weeks select { width: auto; padding: 4px 8px; }

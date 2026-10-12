@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { fetchStravaStatus } from '../api/client';
+import { MAX_PREP_WEEKS, MIN_PREP_WEEKS } from '../api/storage';
 import type { ElevationSource, Reference, ReferenceKind, TrainingOptions } from '../api/types';
 import { durationMinutes, formatHm, parseHmInput } from '../lib/format';
 import type { Target } from '../lib/strava';
@@ -45,6 +46,9 @@ const toRow = (r: Reference): Row => ({
   gain: String(r.gainM),
   time: formatHm(durationMinutes(r.time)),
 });
+/** Durées de préparation proposées : un plan d'entraînement dure de 10 à 16 semaines. */
+const PREP_WEEKS = Array.from({ length: MAX_PREP_WEEKS - MIN_PREP_WEEKS + 1 }, (_, i) => MIN_PREP_WEEKS + i);
+
 const isBlank = (r: Row) => !r.label.trim() && !r.km.trim() && !r.gain.trim() && !r.time.trim();
 const emptyRow = (): Row => ({ id: nextRowId++, label: '', date: '', kind: 'RACE', km: '', gain: '', time: '' });
 
@@ -171,11 +175,19 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
             Tenir compte de mon entraînement Strava
           </label>
           {training.strava && (
-            <label className="check sub">
-              <input type="checkbox" checked={training.includeHikes}
-                onChange={(e) => onTrainingChange({ ...training, includeHikes: e.target.checked })} />
-              Compter les randonnées dans le volume
-            </label>
+            <>
+              <label className="check sub">
+                <input type="checkbox" checked={training.includeHikes}
+                  onChange={(e) => onTrainingChange({ ...training, includeHikes: e.target.checked })} />
+                Compter les randonnées dans le volume
+              </label>
+              <label className="sub prep-weeks">
+                <span>Ma préparation dure</span>
+                <select value={training.weeks} onChange={(e) => onTrainingChange({ ...training, weeks: Number(e.target.value) })}>
+                  {PREP_WEEKS.map((w) => <option key={w} value={w}>{w} semaines</option>)}
+                </select>
+              </label>
+            </>
           )}
         </div>
       )}

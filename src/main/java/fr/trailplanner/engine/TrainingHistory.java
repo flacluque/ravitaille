@@ -9,15 +9,18 @@ import java.util.List;
 /**
  * Historique d'entraînement du coureur, découpé en <b>blocs de préparation</b>.
  * <p>
- * Avant un objectif, on suit un plan de 12 à 16 semaines. Le bloc d'une course, ce sont les
- * {@value #BLOCK_WEEKS} semaines qui précèdent sa dernière semaine (souvent allégée, comme chez Tanda
- * qui l'exclut). Pour une course à venir, le bloc s'arrête à aujourd'hui.
+ * Avant un objectif, on suit un plan de {@value #MIN_BLOCK_WEEKS} à {@value #MAX_BLOCK_WEEKS} semaines
+ * (réglable, {@value #BLOCK_WEEKS} par défaut). Le bloc d'une course, ce sont ces semaines qui précèdent
+ * sa dernière semaine (souvent allégée, comme chez Tanda qui l'exclut). Pour une course à venir, le bloc
+ * s'arrête à aujourd'hui.
  *
  * @param since date à partir de laquelle l'historique est connu : un bloc qui commence avant est incomplet
  */
 public record TrainingHistory(LocalDate since, List<TrainingSession> sessions) {
 
-    static final int BLOCK_WEEKS = 12;
+    public static final int BLOCK_WEEKS = 12;
+    public static final int MIN_BLOCK_WEEKS = 10;
+    public static final int MAX_BLOCK_WEEKS = 16;
     static final int RACE_WEEK_DAYS = 7;
     /** En dessous, on considère qu'il n'y a pas eu de préparation mesurable (ou qu'elle n'est pas sur Strava). */
     static final double MIN_WEEKLY_EFFORT_KM = 5;
@@ -30,12 +33,13 @@ public record TrainingHistory(LocalDate since, List<TrainingSession> sessions) {
      * Volume d'un bloc de préparation.
      *
      * @param end               fin du bloc (exclue)
+     * @param blockWeeks        durée du bloc en semaines
      * @param complete          l'historique couvre tout le bloc
      * @param weeklyEffortKm    km-effort par semaine, en moyenne
      * @param longestEffortKm   plus longue sortie, en km-effort
      * @param activeWeeks       semaines avec au moins 2 sorties (régularité)
      */
-    public record PrepBlock(LocalDate start, LocalDate end, boolean complete, double weeklyEffortKm, double weeklyKm,
+    public record PrepBlock(LocalDate start, LocalDate end, int blockWeeks, boolean complete, double weeklyEffortKm, double weeklyKm,
                             double weeklyGainM, double longestEffortKm, int sessions, int activeWeeks) {
 
         /** Assez de données pour comparer ce bloc à un autre. */
@@ -47,16 +51,22 @@ public record TrainingHistory(LocalDate since, List<TrainingSession> sessions) {
     /** Une semaine d'entraînement, pour le graphique. */
     public record Week(LocalDate start, double effortKm, double km, double gainM, int sessions) {}
 
-    /** Bloc de préparation d'une course du {@code date}, vu le {@code today}. */
+    /** Bloc de préparation de {@value #BLOCK_WEEKS} semaines d'une course du {@code date}, vu le {@code today}. */
     public PrepBlock blockBefore(LocalDate date, LocalDate today) {
+        return blockBefore(date, today, BLOCK_WEEKS);
+    }
+
+    /** Bloc de préparation de {@code weeks} semaines d'une course du {@code date}, vu le {@code today}. */
+    public PrepBlock blockBefore(LocalDate date, LocalDate today, int weeks) {
+        checkWeeks(weeks);
         LocalDate raceWeek = date.minusDays(RACE_WEEK_DAYS);
         LocalDate tomorrow = today.plusDays(1);
         LocalDate end = raceWeek.isBefore(tomorrow) ? raceWeek : tomorrow;
-        LocalDate start = end.minusWeeks(BLOCK_WEEKS);
+        LocalDate start = end.minusWeeks(weeks);
 
         double effort = 0, km = 0, gain = 0, longest = 0;
         int count = 0;
-        int[] perWeek = new int[BLOCK_WEEKS];
+        int[] perWeek = new int[weeks];
         for (TrainingSession s : sessions) {
             if (s.date().isBefore(start) || !s.date().isBefore(end)) {
                 continue;
@@ -74,8 +84,15 @@ public record TrainingHistory(LocalDate since, List<TrainingSession> sessions) {
                 active++;
             }
         }
-        return new PrepBlock(start, end, !start.isBefore(since), round1(effort / BLOCK_WEEKS), round1(km / BLOCK_WEEKS),
-                Math.round(gain / BLOCK_WEEKS), round1(longest), count, active);
+        return new PrepBlock(start, end, weeks, !start.isBefore(since), round1(effort / weeks), round1(km / weeks),
+                Math.round(gain / weeks), round1(longest), count, active);
+    }
+
+    public static void checkWeeks(int weeks) {
+        if (weeks < MIN_BLOCK_WEEKS || weeks > MAX_BLOCK_WEEKS) {
+            throw new IllegalArgumentException("Durée de préparation entre " + MIN_BLOCK_WEEKS + " et " + MAX_BLOCK_WEEKS
+                    + " semaines (reçu : " + weeks + ")");
+        }
     }
 
     /** Les {@code count} semaines qui finissent la veille de {@code end}, de la plus ancienne à la plus récente. */

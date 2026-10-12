@@ -17,6 +17,7 @@ export function TrainingCard({ plan }: { plan: RacePlan }) {
   if (!t) return null;
   const refs = comparedReferences(plan.references);
   const block = t.target;
+  const n = block.blockWeeks ?? 12;
   const raceShare = plan.totalEffortKm > 0 ? Math.round((100 * block.longestEffortKm) / plan.totalEffortKm) : null;
   const shown = hover !== null ? t.weeks[hover] : null;
 
@@ -25,7 +26,7 @@ export function TrainingCard({ plan }: { plan: RacePlan }) {
       <div className="card-head">
         <h2><span className="strava-mark small"><StravaLogo size={13} /></span> Ta préparation</h2>
         <p className="muted small">
-          Les 12 semaines avant ta course{block.end > new Date().toISOString().slice(0, 10) ? ", jusqu'à aujourd'hui" : ''},
+          Les {n} semaines avant ta course{block.end > new Date().toISOString().slice(0, 10) ? ", jusqu'à aujourd'hui" : ''},
           d'après Strava. Volume en km-effort : 100 m de D+ comptent comme 1 km.
         </p>
       </div>
@@ -44,7 +45,7 @@ export function TrainingCard({ plan }: { plan: RacePlan }) {
           </div>
           <div className="stat">
             <span className="stat-label">Régularité</span>
-            <span className="stat-value">{block.activeWeeks} <small>/ 12 semaines</small></span>
+            <span className="stat-value">{block.activeWeeks} <small>/ {n} semaines</small></span>
             <span className="muted small">avec au moins 2 sorties</span>
           </div>
         </div>
@@ -58,7 +59,7 @@ export function TrainingCard({ plan }: { plan: RacePlan }) {
             {shown
               ? <>Semaine du {weekLabel(shown)} : <strong>{Math.round(shown.effortKm)} km-effort</strong> ({formatKm(shown.km)} km,
                 {' '}{Math.round(shown.gainM).toLocaleString('fr-FR')} m D+), {shown.sessions} sortie{shown.sessions > 1 ? 's' : ''}</>
-              : <>Volume par semaine sur 16 semaines : en couleur pleine, les 12 semaines de préparation{t.active ? ', en pointillé leur moyenne' : ''} ; en pâle, les semaines d'avant.</>}
+              : <>Volume par semaine sur {t.weeks.length} semaines : en couleur pleine, les {n} semaines de préparation{t.active ? ', en pointillé leur moyenne' : ''} ; en pâle, les semaines d'avant.</>}
           </figcaption>
         </figure>
       )}

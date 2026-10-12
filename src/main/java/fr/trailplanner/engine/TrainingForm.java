@@ -38,7 +38,8 @@ public final class TrainingForm {
     static final double LOW_SPECIFICITY_PENALTY = 1.02;
     /** Le volume des 4 dernières semaines tombé sous la moitié du bloc : risque de désentraînement. */
     static final double DETRAINING_RATIO = 0.5;
-    static final int CHART_WEEKS = 16;
+    /** Le graphique montre aussi les 4 semaines d'avant le bloc. */
+    static final int CHART_EXTRA_WEEKS = 4;
 
     private TrainingForm() {}
 
@@ -61,10 +62,17 @@ public final class TrainingForm {
 
     public static Analysis analyze(TrainingHistory history, List<ReferencePerformance> references,
                                    LocalDate raceDate, LocalDate today, double raceEffortKm, double fatigueExponent) {
-        TrainingHistory.PrepBlock target = history.blockBefore(raceDate, today);
+        return analyze(history, references, raceDate, today, raceEffortKm, fatigueExponent, TrainingHistory.BLOCK_WEEKS);
+    }
+
+    /** @param weeks durée des blocs de préparation (la même pour la course et les références, pour comparer) */
+    public static Analysis analyze(TrainingHistory history, List<ReferencePerformance> references,
+                                   LocalDate raceDate, LocalDate today, double raceEffortKm, double fatigueExponent,
+                                   int weeks) {
+        TrainingHistory.PrepBlock target = history.blockBefore(raceDate, today, weeks);
         List<TrainingHistory.PrepBlock> blocks = new ArrayList<>();
         for (ReferencePerformance ref : references) {
-            blocks.add(ref.date() == null ? null : history.blockBefore(ref.date(), today));
+            blocks.add(ref.date() == null ? null : history.blockBefore(ref.date(), today, weeks));
         }
 
         int[] personal = {0};
@@ -79,8 +87,8 @@ public final class TrainingForm {
         if (!target.usable()) {
             notes.add(target.complete()
                     ? "Moins de " + (int) TrainingHistory.MIN_WEEKLY_EFFORT_KM + " km-effort par semaine sur Strava ces "
-                    + TrainingHistory.BLOCK_WEEKS + " dernières semaines : ta forme n'est pas prise en compte."
-                    : "L'historique Strava ne couvre pas tes " + TrainingHistory.BLOCK_WEEKS
+                    + weeks + " dernières semaines : ta forme n'est pas prise en compte."
+                    : "L'historique Strava ne couvre pas tes " + weeks
                     + " semaines de préparation : ta forme n'est pas prise en compte.");
         } else {
             long unmeasured = factors.stream().filter(f -> f == 1.0).count();
@@ -113,7 +121,7 @@ public final class TrainingForm {
         }
         LocalDate chartEnd = target.end();
         return new Analysis(target, blocks, List.copyOf(factors), round3(alpha), personal[0], lowSpecificity,
-                history.weeks(chartEnd, CHART_WEEKS), List.copyOf(notes));
+                history.weeks(chartEnd, weeks + CHART_EXTRA_WEEKS), List.copyOf(notes));
     }
 
     static double factor(TrainingHistory.PrepBlock reference, TrainingHistory.PrepBlock target, double alpha) {

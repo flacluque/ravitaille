@@ -272,9 +272,10 @@ function training(doc: jsPDF, plan: RacePlan, y: number,
   doc.setTextColor(...TEXT);
   if (t.active) {
     const share = plan.totalEffortKm > 0 ? ` (${Math.round((100 * b.longestEffortKm) / plan.totalEffortKm)} % de la course)` : '';
-    const line = `12 semaines : ${Math.round(b.weeklyEffortKm)} km-effort par semaine (${formatKm(b.weeklyKm)} km, `
+    const n = b.blockWeeks ?? 12;
+    const line = `${n} semaines : ${Math.round(b.weeklyEffortKm)} km-effort par semaine (${formatKm(b.weeklyKm)} km, `
       + `${Math.round(b.weeklyGainM)} m D+), plus longue sortie ${Math.round(b.longestEffortKm)} km-effort${share}, `
-      + `${b.activeWeeks} semaines sur 12 avec au moins 2 sorties.`;
+      + `${b.activeWeeks} semaines sur ${n} avec au moins 2 sorties.`;
     for (const l of doc.splitTextToSize(pdfText(line), CONTENT_W) as string[]) {
       doc.text(l, M, top + 2);
       top += 4;

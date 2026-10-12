@@ -51,7 +51,7 @@ describe('plan de course en PDF', () => {
     }));
     const training = {
       active: true, elasticity: 0.1, personalRaces: 0, lowSpecificity: true,
-      target: { start: '2026-07-01', end: '2026-10-13', complete: true, weeklyEffortKm: 52, weeklyKm: 40, weeklyGainM: 1200,
+      target: { start: '2026-07-01', end: '2026-10-13', blockWeeks: 14, complete: true, weeklyEffortKm: 52, weeklyKm: 40, weeklyGainM: 1200,
         longestEffortKm: 45, sessions: 48, activeWeeks: 11 },
       weeks, notes: ['Ta plus longue sortie (45 km-effort) fait 37 % de l\'effort de la course.'],
     };
@@ -61,7 +61,7 @@ describe('plan de course en PDF', () => {
     }));
     const doc = await buildPlanPdf({ course, plans: withTraining, selected: 1 });
     const text = new TextDecoder('latin1').decode(doc.output('arraybuffer'));
-    for (const expected of ['Ta préparation', '52 km-effort par semaine', 'moyenne 52', 'Temps corrig', '+30 %', '-3,1 %', 'plus longue sortie']) {
+    for (const expected of ['Ta préparation', '14 semaines : 52 km-effort par semaine', 'semaines sur 14', 'moyenne 52', 'Temps corrig', '+30 %', '-3,1 %', 'plus longue sortie']) {
       expect(text).toContain(expected);
     }
   });

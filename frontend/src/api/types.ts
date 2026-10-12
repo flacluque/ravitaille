@@ -119,6 +119,8 @@ export interface PrepBlock {
   start: string;
   /** Fin exclue. */
   end: string;
+  /** Durée du bloc, de 10 à 16 semaines (absente dans les plans gardés avant ce réglage). */
+  blockWeeks?: number;
   complete: boolean;
   weeklyEffortKm: number;
   weeklyKm: number;
@@ -156,6 +158,8 @@ export interface TrainingSummary {
 export interface TrainingOptions {
   strava: boolean;
   includeHikes: boolean;
+  /** Durée de la préparation, de 10 à 16 semaines. */
+  weeks: number;
 }
 
 export type ReferenceKind = 'RACE' | 'TRAINING';

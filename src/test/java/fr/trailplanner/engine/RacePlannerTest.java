@@ -199,7 +199,7 @@ class RacePlannerTest {
 
         RacePlan without = planner.plan(courseDeReference(null), null, refs, SANS_ARRET, null, ElevationSource.ROADBOOK);
         RacePlan with = planner.plan(courseDeReference(null), null, refs, SANS_ARRET, null, ElevationSource.ROADBOOK,
-                history, today);
+                history, today, 12);
 
         double weekly = with.training().target().weeklyEffortKm();
         double factor = Math.pow(40 / weekly, 0.10);
@@ -221,7 +221,7 @@ class RacePlannerTest {
                 Duration.ofHours(8).plusMinutes(48), null, ReferencePerformance.Kind.RACE));
 
         RacePlan prudent = planner.plan(courseDeReference(null), null, refs, Scenario.PRUDENT, null,
-                ElevationSource.ROADBOOK, history, today);
+                ElevationSource.ROADBOOK, history, today, 12);
         RacePlan sans = planner.plan(courseDeReference(null), null, refs, Scenario.PRUDENT, null, ElevationSource.ROADBOOK);
 
         assertTrue(prudent.training().lowSpecificity());

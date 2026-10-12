@@ -47,6 +47,15 @@ class TrainingHistoryTest {
     }
 
     @Test
+    void refuseUneDureeHorsDeDixASeizeSemaines() {
+        TrainingHistory history = new TrainingHistory(RACE.minusYears(1), List.of());
+        assertEquals(10, history.blockBefore(RACE, RACE, 10).blockWeeks());
+        assertEquals(16, history.blockBefore(RACE, RACE, 16).blockWeeks());
+        assertThrows(IllegalArgumentException.class, () -> history.blockBefore(RACE, RACE, 9));
+        assertThrows(IllegalArgumentException.class, () -> history.blockBefore(RACE, RACE, 17));
+    }
+
+    @Test
     void sArreteAujourdhuiPourUneCourseAVenir() {
         LocalDate today = RACE.minusWeeks(5);
         TrainingHistory history = new TrainingHistory(RACE.minusYears(1), regular(today.plusDays(1), 12, 2, 10, 0));

@@ -64,6 +64,18 @@ class PlanningServiceTest {
     }
 
     @Test
+    void utiliseLaDureeDePreparationChoisie() {
+        FakeSource source = new FakeSource();
+        PlanningService service = new PlanningService(source, TODAY);
+
+        RacePlan plan = service.plan(request(new PlanRequest.TrainingOptions(true, false, 16)), null).get(1);
+
+        assertEquals(LocalDate.of(2026, 4, 12).minusDays(7).minusWeeks(16), source.since);
+        assertEquals(16, plan.training().target().blockWeeks());
+        assertThrows(IllegalArgumentException.class, () -> new PlanRequest.TrainingOptions(true, false, 20));
+    }
+
+    @Test
     void sansOptionNiSourceOnSePasseDeLHistorique() {
         FakeSource source = new FakeSource();
         assertNull(new PlanningService(source, TODAY).plan(request(null), null).get(0).training());

@@ -50,6 +50,21 @@ class TrainingFormTest {
     }
 
     @Test
+    void compareDesBlocsDeLaDureeChoisie() {
+        TrainingHistory history = catharesThenTroubadours();
+        List<ReferencePerformance> refs = List.of(race(CATHARES, 60, 3200, 528));
+
+        TrainingForm.Analysis a = TrainingForm.analyze(history, refs, RACE, TODAY, TROUBADOURS_EFFORT, 1.07, 16);
+
+        assertEquals(16, a.target().blockWeeks());
+        assertEquals(TODAY.plusDays(1).minusWeeks(16), a.target().start());
+        assertEquals(16, a.referenceBlocks().get(0).blockWeeks());
+        // 12 semaines à 40, puis 4 semaines vides avant le bloc des Cathares : 30 par semaine sur 16.
+        assertEquals(30.0, a.referenceBlocks().get(0).weeklyEffortKm());
+        assertEquals(20, a.weeks().size(), "le bloc et les 4 semaines d'avant");
+    }
+
+    @Test
     void limiteLaCorrection() {
         TrainingHistory.PrepBlock small = block(10);
         TrainingHistory.PrepBlock huge = block(1000);
@@ -137,6 +152,6 @@ class TrainingFormTest {
     }
 
     private static TrainingHistory.PrepBlock block(double weekly) {
-        return new TrainingHistory.PrepBlock(RACE.minusWeeks(13), RACE.minusWeeks(1), true, weekly, weekly, 0, 20, 30, 12);
+        return new TrainingHistory.PrepBlock(RACE.minusWeeks(13), RACE.minusWeeks(1), 12, true, weekly, weekly, 0, 20, 30, 12);
     }
 }
