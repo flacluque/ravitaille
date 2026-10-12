@@ -456,7 +456,7 @@ tbody tr:hover { background: var(--surface-2); }
 .strava-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .strava-list li { display: grid; grid-template-columns: 1fr auto auto; gap: 6px 12px; align-items: center;
   border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
-.strava-list li.selected { border-color: var(--accent); }
+.strava-list li.selected { border-color: var(--strava); }
 .strava-list li.already { opacity: 0.6; }
 .strava-pick { display: flex; gap: 8px; align-items: flex-start; min-width: 0; cursor: pointer; }
 .strava-pick input { margin-top: 3px; }
@@ -471,7 +471,17 @@ tbody tr:hover { background: var(--surface-2); }
   .strava-list li select { margin-left: 24px; justify-self: start; }
 }
 .ref-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.strava-btn { color: var(--track); border-color: currentColor; }
+/* Strava : couleurs du bouton « Connect with Strava » (orange Strava, texte blanc), reconnaissable au premier coup d'œil. */
+:root { --strava: #fc4c02; --strava-hover: #e34402; }
+.strava-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--strava); color: #fff;
+  border: 1px solid var(--strava); font-weight: 600; }
+.strava-btn:hover:not(:disabled) { background: var(--strava-hover); border-color: var(--strava-hover); }
+.strava-btn:focus-visible { outline: 2px solid var(--strava); outline-offset: 2px; }
+.strava-logo { flex: none; }
+.strava-head h2 { display: flex; align-items: center; gap: 8px; }
+.strava-mark { display: inline-flex; padding: 5px; border-radius: 6px; background: var(--strava); color: #fff; }
+.strava-powered { margin: 4px 0 0; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--strava);
+  font-weight: 600; justify-content: flex-end; }
 .modal input, .modal select { font: inherit; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px;
   background: var(--surface-2); color: var(--text); }
 .modal input[type='checkbox'] { padding: 0; width: auto; }

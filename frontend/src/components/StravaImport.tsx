@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ApiError, disconnectStrava, fetchStravaActivities, fetchStravaStatus, stravaConnectUrl } from '../api/client';
 import type { Reference, ReferenceKind, StravaActivity, StravaStatus } from '../api/types';
 import { durationMinutes, formatHm, formatKm, formatMeters } from '../lib/format';
+import { StravaLogo } from './StravaLogo';
 import {
   activityToReference, closest, connectionMessage, filterActivities, isAlreadyReference, sortActivities, SPORT_LABELS,
   yearsAgo, type Target,
@@ -95,8 +96,8 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
   return createPortal(
     <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal strava" role="dialog" aria-modal="true" aria-labelledby="strava-title">
-        <div className="modal-head">
-          <h2 id="strava-title">Importer depuis Strava</h2>
+        <div className="modal-head strava-head">
+          <h2 id="strava-title"><span className="strava-mark"><StravaLogo size={18} /></span> Importer depuis Strava</h2>
           <button type="button" className="ghost icon-btn" onClick={onClose} aria-label="Fermer">✕</button>
         </div>
 
@@ -126,7 +127,9 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
           <div className="strava-connect">
             <p>Autorise Trail Planner à lire tes activités. Tes identifiants Strava ne passent jamais par l'appli,
               et tu peux révoquer l'accès à tout moment.</p>
-            <button type="button" onClick={() => window.location.assign(stravaConnectUrl())}>Connecter mon compte Strava</button>
+            <button type="button" className="strava-btn" onClick={() => window.location.assign(stravaConnectUrl())}>
+              <StravaLogo /> Se connecter avec Strava
+            </button>
             {error && <p className="field-error" role="alert">{error}</p>}
           </div>
         )}
@@ -195,12 +198,13 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
 
             <div className="modal-foot">
               <span className="muted small">Temps écoulé, arrêts compris, comme le veut le calcul.</span>
-              <button type="button" onClick={add} disabled={selected.size === 0}>
+              <button type="button" className="strava-btn" onClick={add} disabled={selected.size === 0}>
                 {selected.size > 1 ? `Ajouter ${selected.size} références` : 'Ajouter la référence'}
               </button>
             </div>
           </>
         )}
+        <p className="strava-powered"><StravaLogo size={12} /> Données d'activité fournies par Strava</p>
       </div>
     </div>,
     document.body,

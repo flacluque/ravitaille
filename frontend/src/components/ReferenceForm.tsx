@@ -3,6 +3,7 @@ import type { ElevationSource, Reference, ReferenceKind } from '../api/types';
 import { durationMinutes, formatHm, parseHmInput } from '../lib/format';
 import type { Target } from '../lib/strava';
 import { StravaImport } from './StravaImport';
+import { StravaLogo } from './StravaLogo';
 
 interface Props {
   initialReferences: Reference[];
@@ -148,8 +149,8 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
         <button type="button" className="ghost" onClick={() => setRows((rs) => [...rs, emptyRow()])}>
           + Ajouter une référence
         </button>
-        <button type="button" className="ghost strava-btn" onClick={() => setStravaOpen(true)}>
-          Importer depuis Strava
+        <button type="button" className="strava-btn" onClick={() => setStravaOpen(true)}>
+          <StravaLogo /> Importer depuis Strava
         </button>
       </div>
       {stravaOpen && (
