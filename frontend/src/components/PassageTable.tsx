@@ -10,17 +10,24 @@ interface Props {
   /** Services de chaque point, dans l'ordre du plan (roadbook de la course). */
   services: Service[][];
   onHover: (trackKm: number | null) => void;
+  /** Version allégée (point, km, passage, barrière, marge) avec un lien vers le tableau détaillé. */
+  onDetails?: () => void;
 }
 
-export function PassageTable({ plan, markers, services, onHover }: Props) {
+export function PassageTable({ plan, markers, services, onHover, onDetails }: Props) {
+  const simple = onDetails !== undefined;
   return (
-    <div className="card">
+    <div className={simple ? 'card passages-simple' : 'card'}>
       <div className="card-head">
         <h2>Heures de passage · scénario {plan.scenario.name.toLowerCase()}</h2>
-        <p className="muted small">
-          Arrivée {formatClock(plan.finish)} en {formatDuration(plan.totalDuration)}, dont {formatDuration(plan.totalStops)} d'arrêts
-          et {formatDuration(plan.nightDuration)} de nuit.
-        </p>
+        {simple ? (
+          <button type="button" className="link-btn" onClick={onDetails}>Tableau détaillé</button>
+        ) : (
+          <p className="muted small">
+            Arrivée {formatClock(plan.finish)} en {formatDuration(plan.totalDuration)}, dont {formatDuration(plan.totalStops)} d'arrêts
+            et {formatDuration(plan.nightDuration)} de nuit.
+          </p>
+        )}
       </div>
       <div className="table-scroll">
         <table className="passages">
@@ -28,10 +35,12 @@ export function PassageTable({ plan, markers, services, onHover }: Props) {
             <tr>
               <th>Point</th>
               <th className="num opt">Km</th>
-              <th className="num opt">D+</th>
-              <th className="num opt">Tronçon</th>
-              <th className="num opt">Allure</th>
-              <th className="num opt">Arrêt</th>
+              {!simple && <>
+                <th className="num opt">D+</th>
+                <th className="num opt">Tronçon</th>
+                <th className="num opt">Allure</th>
+                <th className="num opt">Arrêt</th>
+              </>}
               <th className="num">Arrivée</th>
               <th className="num">Barrière</th>
               <th className="num">Marge</th>
@@ -55,17 +64,19 @@ export function PassageTable({ plan, markers, services, onHover }: Props) {
                     <small className="muted mobile-only">km {formatKm(eta.km)}</small>
                   </td>
                   <td className="num opt">{formatKm(eta.km)}</td>
-                  <td className="num opt">{Math.round(eta.cumulativeGainM)}</td>
-                  <td className="num opt">
-                    {i > 0 && (
-                      <>
-                        {formatDuration(eta.legDuration)}
-                        <small className="muted leg-detail">{formatKm(eta.legDistanceKm)} km · +{Math.round(eta.legGainM)} m</small>
-                      </>
-                    )}
-                  </td>
-                  <td className="num opt">{i > 0 && formatPace(eta.legPaceMinPerKm)}</td>
-                  <td className="num opt">{stop > 0 ? `${Math.round(stop)} min` : ''}</td>
+                  {!simple && <>
+                    <td className="num opt">{Math.round(eta.cumulativeGainM)}</td>
+                    <td className="num opt">
+                      {i > 0 && (
+                        <>
+                          {formatDuration(eta.legDuration)}
+                          <small className="muted leg-detail">{formatKm(eta.legDistanceKm)} km · +{Math.round(eta.legGainM)} m</small>
+                        </>
+                      )}
+                    </td>
+                    <td className="num opt">{i > 0 && formatPace(eta.legPaceMinPerKm)}</td>
+                    <td className="num opt">{stop > 0 ? `${Math.round(stop)} min` : ''}</td>
+                  </>}
                   <td className="num strong">{formatClock(eta.arrival)}</td>
                   <td className="num">
                     {cutoff && (

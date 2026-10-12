@@ -15,6 +15,9 @@ import { ReferenceForm } from './components/ReferenceForm';
 import { ReferenceInsights } from './components/ReferenceInsights';
 import { TrainingCard } from './components/TrainingCard';
 import { AlgorithmPage } from './components/AlgorithmPage';
+import { PlanHero } from './components/PlanHero';
+import { RavitosCard } from './components/RavitosCard';
+import { TrainingLine } from './components/TrainingLine';
 import { ScenarioCards } from './components/ScenarioCards';
 import { draftSignature, draftToRace, emptyDraft, type RaceDraft } from './lib/draft';
 import { formatClock, formatKm, formatMeters } from './lib/format';
@@ -23,6 +26,18 @@ import { defaultServices } from './lib/services';
 // Course d'exemple embarquée (src/main/resources/samples/bogomiles).
 const SAMPLE_ID = 'bogomiles';
 const CUSTOM_ID = 'custom';
+type Tab = 'plan' | 'ravitos' | 'sac' | 'analyse' | 'algo';
+const TABS: [Tab, string][] = [['plan', 'Mon plan'], ['ravitos', 'Ravitos'], ['sac', 'Sac'], ['analyse', 'Analyse'], ['algo', 'Comment ça marche']];
+const TAB_HASH: Record<Tab, string> = { plan: '#plan', ravitos: '#ravitos', sac: '#sac', analyse: '#analyse', algo: '#algorithme' };
+
+/** Onglet d'une adresse ; null pour une ancre interne (#source-…) qui ne change pas d'onglet. */
+function tabFromHash(hash: string): Tab | null {
+  if (hash === '' || hash === '#') return 'plan';
+  if (hash.startsWith('#algo')) return 'algo';
+  const found = TABS.find(([id]) => TAB_HASH[id] === hash);
+  return found ? found[0] : null;
+}
+
 const DEFAULT_REFERENCES: Reference[] = [{ label: '', date: null, kind: 'RACE', km: 60, gainM: 3200, time: 'PT8H48M' }];
 
 type Mode = 'demo' | 'custom';
@@ -54,19 +69,18 @@ export function App() {
   const [references, setReferences] = useState<Reference[]>(initial?.references.length ? initial.references : DEFAULT_REFERENCES);
   const [source, setSource] = useState<ElevationSource>(initial?.source ?? 'AUTO');
   const hasData = useRef(initial !== null);
-  // Onglet affiché : le plan, ou « Comment ça marche » (#algorithme, pour pouvoir partager le lien).
-  const [tab, setTab] = useState<'plan' | 'algo'>(() => (window.location.hash.startsWith('#algo') ? 'algo' : 'plan'));
+  // Onglet affiché, avec sa propre adresse (#ravitos, #algorithme…) pour pouvoir partager le lien.
+  const [tab, setTab] = useState<Tab>(() => tabFromHash(window.location.hash) ?? 'plan');
   useEffect(() => {
     const onHash = () => {
-      if (window.location.hash.startsWith('#algo')) setTab('algo');
-      else if (window.location.hash === '' || window.location.hash === '#plan') setTab('plan');
+      const next = tabFromHash(window.location.hash);
+      if (next) setTab(next);
     };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
+  const goTab = (next: Tab) => { window.location.hash = TAB_HASH[next]; };
   useEffect(() => {
-    // La carte Leaflet recalcule sa taille quand elle réapparaît.
-    if (tab === 'plan') window.dispatchEvent(new Event('resize'));
     window.scrollTo(0, 0);
   }, [tab]);
   // Tenir compte de l'entraînement Strava : lu au moment de chaque calcul.
@@ -220,14 +234,26 @@ export function App() {
   };
 
   const [savingPdf, setSavingPdf] = useState(false);
-  async function savePdf() {
+  const [pdfMenu, setPdfMenu] = useState(false);
+  useEffect(() => {
+    if (!pdfMenu) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !(e.target as Element).closest('.pdf-menu')) setPdfMenu(false);
+    };
+    window.addEventListener('mousedown', close);
+    window.addEventListener('keydown', close);
+    return () => { window.removeEventListener('mousedown', close); window.removeEventListener('keydown', close); };
+  }, [pdfMenu]);
+
+  async function savePdf(variant: 'summary' | 'full') {
     if (!course || plans.length === 0) return;
+    setPdfMenu(false);
     setSavingPdf(true);
     try {
       const { downloadPlanPdf } = await import('./lib/pdf');
       await downloadPlanPdf({
         course, plans, selected: Math.min(scenarioIndex, plans.length - 1),
-        services, nutrition: nutritionProfile, gear: loadGear(course.race.name),
+        services, nutrition: nutritionProfile, gear: loadGear(course.race.name), variant,
       });
     } finally {
       setSavingPdf(false);
@@ -255,15 +281,31 @@ export function App() {
             </p>
           </div>
         )}
-        <button type="button" className="ghost no-print" onClick={() => void savePdf()} disabled={!plan || savingPdf || stale}
-          title="Télécharger le plan de course en PDF (fonctionne aussi hors ligne)">
-          {savingPdf ? 'PDF…' : 'Télécharger le PDF'}
-        </button>
+        <div className="pdf-menu no-print">
+          <button type="button" className="ghost" onClick={() => setPdfMenu((m) => !m)} disabled={!plan || savingPdf || stale}
+            aria-expanded={pdfMenu} aria-haspopup="menu"
+            title="Télécharger le plan de course en PDF (fonctionne aussi hors ligne)">
+            {savingPdf ? 'PDF…' : 'Télécharger le PDF ▾'}
+          </button>
+          {pdfMenu && (
+            <div className="pdf-menu-list" role="menu">
+              <button type="button" role="menuitem" onClick={() => void savePdf('summary')}>
+                <strong>Résumé · 1 page</strong>
+                <span className="muted small">Passages, barrières et ravitos, à garder sur soi</span>
+              </button>
+              <button type="button" role="menuitem" onClick={() => void savePdf('full')}>
+                <strong>Complet</strong>
+                <span className="muted small">Tout le plan : profil, références, préparation, nutrition, matériel</span>
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       <nav className="tabs no-print" aria-label="Pages">
-        <a href="#plan" aria-current={tab === 'plan' ? 'page' : undefined}>Mon plan</a>
-        <a href="#algorithme" aria-current={tab === 'algo' ? 'page' : undefined}>Comment ça marche</a>
+        {TABS.map(([id, label]) => (
+          <a key={id} href={TAB_HASH[id]} aria-current={tab === id ? 'page' : undefined}>{label}</a>
+        ))}
       </nav>
 
       {status.kind === 'unreachable' && hasData.current && (
@@ -283,7 +325,7 @@ export function App() {
 
       {tab === 'algo' && <AlgorithmPage plan={plan} />}
 
-      <main className="layout" hidden={tab !== 'plan'}>
+      <main className="layout" hidden={tab === 'algo'}>
         <aside className="side no-print">
           <div className="card mode-switch" role="radiogroup" aria-label="Course">
             <button type="button" role="radio" aria-checked={mode === 'demo'} className={mode === 'demo' ? 'active' : ''}
@@ -308,7 +350,7 @@ export function App() {
         </aside>
 
         <section className="content">
-          {mode === 'custom' && (editorOpen || !shown) ? (
+          {tab !== 'plan' ? null : mode === 'custom' && (editorOpen || !shown) ? (
             <RaceEditor
               draft={draft}
               onChange={changeDraft}
@@ -342,46 +384,60 @@ export function App() {
           )}
 
           {!otherRace && <div className={stale ? 'results stale' : 'results'} aria-hidden={stale || undefined}>
-          {plans.length > 0 && (
-            <ScenarioCards plans={plans} selected={scenarioIndex} onSelect={setScenarioIndex} />
-          )}
+          {tab === 'plan' && <>
+            {plans.length > 0 && <PlanHero plans={plans} selected={scenarioIndex} onSelect={setScenarioIndex} />}
 
-          {plan && <ReferenceInsights plan={plan} />}
+            {plan?.training && <TrainingLine plan={plan} onDetails={() => goTab('analyse')} />}
 
-          {plan?.training && <TrainingCard plan={plan} />}
+            {plan?.warnings.length ? (
+              <ul className="warnings">
+                {plan.warnings.map((w) => <li key={w}>{w}</li>)}
+              </ul>
+            ) : null}
 
-          {plan?.warnings.length ? (
-            <ul className="warnings">
-              {plan.warnings.map((w) => <li key={w}>{w}</li>)}
-            </ul>
-          ) : null}
-
-          {course?.track && plan && (
-            <div className="card course-visuals">
-              <div className="map-wrap no-print">
-                <CourseMap track={course.track} markers={course.markers} plan={plan} hoverKm={hoverKm} onHover={setHoverKm} />
+            {course?.track && plan && (
+              <div className="card course-visuals">
+                <div className="map-wrap no-print">
+                  <CourseMap track={course.track} markers={course.markers} plan={plan} hoverKm={hoverKm} onHover={setHoverKm} />
+                </div>
+                <ElevationProfile track={course.track} markers={course.markers} plan={plan} hoverKm={hoverKm} onHover={setHoverKm} />
               </div>
-              <ElevationProfile track={course.track} markers={course.markers} plan={plan} hoverKm={hoverKm} onHover={setHoverKm} />
-            </div>
+            )}
+
+            {plan && course && (
+              <PassageTable plan={plan} markers={course.markers} services={services} onHover={setHoverKm}
+                onDetails={() => goTab('analyse')} />
+            )}
+          </>}
+
+          {tab === 'ravitos' && plan && course && <>
+            <RavitosCard plan={plan} services={services} profile={nutritionProfile} />
+            <details className="card-details">
+              <summary>Mon profil nutrition et le détail par tronçon</summary>
+              <NutritionCard plan={plan} services={services} profile={nutritionProfile} onProfileChange={changeNutritionProfile} />
+            </details>
+          </>}
+
+          {tab === 'sac' && course && <GearCard raceName={course.race.name} plan={plan} profile={nutritionProfile} />}
+
+          {tab === 'analyse' && <>
+            <p className="muted tab-intro">Tout ce qui sert au calcul, pour qui veut regarder de près.</p>
+            {plans.length > 0 && <ScenarioCards plans={plans} selected={scenarioIndex} onSelect={setScenarioIndex} />}
+            {plan && <ReferenceInsights plan={plan} />}
+            {plan?.training && <TrainingCard plan={plan} />}
+            {plan && course && <PassageTable plan={plan} markers={course.markers} services={services} onHover={setHoverKm} />}
+            {plans.length > 1 && <CompareTable plans={plans} />}
+          </>}
+
+          {tab !== 'plan' && !plan && status.kind !== 'loading' && (
+            <p className="muted">Calcule d'abord ton plan dans l'onglet « Mon plan ».</p>
           )}
-
-          {plan && course && (
-            <PassageTable plan={plan} markers={course.markers} services={services} onHover={setHoverKm} />
-          )}
-
-          {plan && course && (
-            <NutritionCard plan={plan} services={services} profile={nutritionProfile} onProfileChange={changeNutritionProfile} />
-          )}
-
-          {course && <GearCard raceName={course.race.name} plan={plan} profile={nutritionProfile} />}
-
-          {plans.length > 1 && <CompareTable plans={plans} />}
           </div>}
 
           {status.kind === 'loading' && !shown && mode === 'demo' && <p className="muted">Calcul en cours…</p>}
         </section>
       </main>
-      {tab === 'plan' && <Legend />}
+      {(tab === 'plan' || tab === 'ravitos' || tab === 'analyse') && <Legend />}
     </div>
   );
 }

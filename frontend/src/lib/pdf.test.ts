@@ -44,6 +44,15 @@ describe('plan de course en PDF', () => {
     expect(text).not.toContain('Mat\\351riel');
   });
 
+  it('tient le résumé sur une page : passages, barrières et ravitos', async () => {
+    const doc = await buildPlanPdf({ course, plans, selected: 1, services, nutrition: DEFAULT_PROFILE, gear, variant: 'summary' });
+    const text = new TextDecoder('latin1').decode(doc.output('arraybuffer'));
+    expect(doc.getNumberOfPages()).toBe(1);
+    for (const expected of ['Raid des Bogomiles 2026', 'Passages et ravitos', 'Au d', 'arriv']) expect(text).toContain(expected);
+    for (const absent of ['Profil', 'Comparaison des sc', 'Nutrition et hydratation', '1 / 3 pr']) expect(text).not.toContain(absent);
+    expect(pdfFilename('Raid des Bogomiles 2026', 'summary')).toBe('plan-raid-des-bogomiles-2026-resume.pdf');
+  });
+
   it('ajoute la préparation Strava quand le plan en tient compte', async () => {
     const weeks = Array.from({ length: 16 }, (_, i) => ({
       start: `2026-${String(6 + Math.floor(i / 4)).padStart(2, '0')}-${String(1 + (i % 4) * 7).padStart(2, '0')}`,

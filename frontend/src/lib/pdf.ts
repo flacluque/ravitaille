@@ -24,6 +24,8 @@ export interface PdfInput {
   nutrition?: NutritionProfile;
   /** Checklist du matériel de la course. */
   gear?: GearItem[];
+  /** « summary » : une page à garder sur soi (passages, barrières, ravitos) ; « full » (défaut) : tout le plan. */
+  variant?: 'summary' | 'full';
 }
 
 const PAGE_W = 210;
@@ -46,16 +48,16 @@ type RGB = [number, number, number];
 
 export async function downloadPlanPdf(input: PdfInput): Promise<void> {
   const doc = await buildPlanPdf(input);
-  doc.save(pdfFilename(input.course.race.name));
+  doc.save(pdfFilename(input.course.race.name, input.variant));
 }
 
-export function pdfFilename(raceName: string): string {
+export function pdfFilename(raceName: string, variant: PdfInput['variant'] = 'full'): string {
   const slug = raceName.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  return `plan-${slug || 'course'}.pdf`;
+  return `plan-${slug || 'course'}${variant === 'summary' ? '-resume' : ''}.pdf`;
 }
 
-export async function buildPlanPdf({ course, plans, selected, services, nutrition, gear }: PdfInput): Promise<jsPDF> {
+export async function buildPlanPdf({ course, plans, selected, services, nutrition, gear, variant = 'full' }: PdfInput): Promise<jsPDF> {
   const [{ jsPDF }, { autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
   const plan = plans[Math.min(selected, plans.length - 1)];
@@ -64,7 +66,7 @@ export async function buildPlanPdf({ course, plans, selected, services, nutritio
   let y = header(doc, course, plan);
   y = scenarioBoxes(doc, plans, selected, y + 6);
 
-  if (course.track) {
+  if (course.track && variant === 'full') {
     y = ensureSpace(doc, y + 7, 58);
     y = profile(doc, course, plan, y);
   }
@@ -83,6 +85,12 @@ export async function buildPlanPdf({ course, plans, selected, services, nutritio
     });
     return (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
   };
+
+  if (variant === 'summary') {
+    summary(doc, plan, y, table, services, nutrition);
+    footers(doc);
+    return doc;
+  }
 
   if (plan.references.length > 1) {
     y = table('Tes références', y, {
@@ -260,6 +268,52 @@ export async function buildPlanPdf({ course, plans, selected, services, nutritio
 }
 
 // ---------------------------------------------------------------------------------------------
+
+/** Résumé d'une page : ce qu'il faut emporter au départ, puis passages, barrières et actions à chaque ravito. */
+function summary(doc: jsPDF, plan: RacePlan, y: number, table: (title: string, startY: number, options: UserOptions) => number,
+  services: Service[][] | undefined, nutrition: NutritionProfile | undefined) {
+  const n = nutrition && services ? computeNutrition(plan, services, nutrition) : null;
+  let top = y + 6;
+  if (n && nutrition) {
+    doc.setFontSize(9);
+    doc.setTextColor(...TEXT);
+    const start = `Au départ : ${pdfText(describeActions(n.points[0], n, nutrition, true)) || 'rien à préparer'}.`;
+    for (const line of doc.splitTextToSize(start, CONTENT_W) as string[]) {
+      doc.text(line, M, top + 2);
+      top += 4.2;
+    }
+    for (const alert of n.alerts) {
+      doc.setTextColor(...rgb(STATUS_COLORS.TIGHT));
+      doc.text(doc.splitTextToSize(`Attention : ${pdfText(alert)}`, CONTENT_W) as string[], M, top + 2);
+      top += 4.2;
+    }
+  }
+  const last = plan.checkpoints.length - 1;
+  table(`Passages et ravitos · scénario ${plan.scenario.name.toLowerCase()}`, top - 5, {
+    styles: { font: 'helvetica', fontSize: 8, cellPadding: { top: 1.4, bottom: 1.4, left: 1.6, right: 1.6 }, textColor: TEXT, lineColor: BORDER },
+    head: [['Point', 'Km', 'Passage', 'Barrière', 'Marge', 'À faire']],
+    body: plan.checkpoints.map((eta, i) => {
+      const cutoff = bindingCutoff(eta);
+      const todo = n && nutrition && i > 0 && i < last ? pdfText(describeActions(n.points[i], n, nutrition, false)) : '';
+      return [
+        `${pdfText(eta.code)}  ${pdfText(eta.name)}`,
+        formatKm(eta.km),
+        formatClock(eta.arrival),
+        cutoff ? formatClock(cutoff.at) + (cutoff.out ? ' (sortie)' : '') : '',
+        cutoff ? formatHm(cutoff.marginMinutes) : '',
+        i === last ? 'arrivée' : todo,
+      ];
+    }),
+    columnStyles: {
+      0: { cellWidth: 50 }, 1: { halign: 'right', cellWidth: 12 }, 2: { halign: 'right', fontStyle: 'bold', cellWidth: 22 },
+      3: { halign: 'right', cellWidth: 26 }, 4: { halign: 'right', fontStyle: 'bold', cellWidth: 14 },
+    },
+    didParseCell: (data) => {
+      if (data.section === 'head' && data.column.index >= 1 && data.column.index <= 4) data.cell.styles.halign = 'right';
+      if (data.section === 'body' && data.column.index === 4) colorStatus(data.cell.styles, plan.checkpoints[data.row.index].status);
+    },
+  });
+}
 
 /** Ta préparation : chiffres clés, volume par semaine en barres, correction de chaque référence, alertes. */
 function training(doc: jsPDF, plan: RacePlan, y: number,

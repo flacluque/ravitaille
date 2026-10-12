@@ -25,6 +25,16 @@ npm install              # la première fois
 npm run dev              # http://localhost:5173 (les appels /api sont relayés vers le port 8080)
 ```
 
+- **Cinq onglets** pour ne pas se perdre :
+  - **Mon plan** : l'arrivée prévue et sa fourchette, la barrière la plus serrée, la carte, le profil et
+    les heures de passage (le tableau détaillé est dans « Analyse ») ;
+  - **Ravitos** : quoi emporter au départ, puis quoi faire à chaque ravito, à l'heure prévue ;
+  - **Sac** : la checklist du matériel ;
+  - **Analyse** : scénarios, poids des références, préparation, tableau détaillé, comparaison ;
+  - **Comment ça marche** : le calcul expliqué, avec ses sources.
+
+  Chaque onglet a son adresse (`#ravitos`, `#sac`…). Tes références se replient en un résumé une fois
+  le plan calculé ; les réglages fins sont dans « Options avancées ».
 - **Carte et profil synchronisés** : survole l'un ou l'autre pour voir l'altitude, le D+ cumulé et
   l'heure de passage estimée (interpolée entre deux ravitos).
 - **Trois scénarios** : clique sur une carte pour afficher son tableau détaillé ; le tableau de
@@ -54,7 +64,8 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
 - **Comment ça marche** : un onglet explique le calcul pas à pas (kilomètre-effort, loi de Riegel,
   pondération des références, forme d'entraînement, simulation, nutrition), avec les chiffres de ton
   plan et les sources des études utilisées. Lien direct : `#algorithme`.
-- **Télécharger le PDF** : le plan en A4, prêt à garder sur le téléphone ou à imprimer. Il contient
+- **Télécharger le PDF** : en **résumé** (une page à garder sur soi : passages, barrières et ce qu'il
+  faut faire à chaque ravito) ou **complet**. Le complet : le plan en A4, prêt à garder sur le téléphone ou à imprimer. Il contient
   les trois scénarios, le profil avec les ravitos, tes références, les heures de passage du scénario
   sélectionné (services de chaque ravito, marges en couleur), la nutrition et l'hydratation par
   tronçon, la comparaison des scénarios et la checklist du matériel à cocher. Il est généré dans le
