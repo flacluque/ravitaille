@@ -51,6 +51,9 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
   (image ou PDF, y compris un tableau commun à plusieurs courses), à partir d'une liste type, ou à la
   main. Elle propose des suggestions selon le plan (frontale si tu passes la nuit dehors) et compare
   l'eau obligatoire à tes flasques.
+- **Comment ça marche** : un onglet explique le calcul pas à pas (kilomètre-effort, loi de Riegel,
+  pondération des références, forme d'entraînement, simulation, nutrition), avec les chiffres de ton
+  plan et les sources des études utilisées. Lien direct : `#algorithme`.
 - **Télécharger le PDF** : le plan en A4, prêt à garder sur le téléphone ou à imprimer. Il contient
   les trois scénarios, le profil avec les ravitos, tes références, les heures de passage du scénario
   sélectionné (services de chaque ravito, marges en couleur), la nutrition et l'hydratation par

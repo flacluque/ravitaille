@@ -14,6 +14,7 @@ import { RaceEditor } from './components/RaceEditor';
 import { ReferenceForm } from './components/ReferenceForm';
 import { ReferenceInsights } from './components/ReferenceInsights';
 import { TrainingCard } from './components/TrainingCard';
+import { AlgorithmPage } from './components/AlgorithmPage';
 import { ScenarioCards } from './components/ScenarioCards';
 import { draftSignature, draftToRace, emptyDraft, type RaceDraft } from './lib/draft';
 import { formatClock, formatKm, formatMeters } from './lib/format';
@@ -53,6 +54,21 @@ export function App() {
   const [references, setReferences] = useState<Reference[]>(initial?.references.length ? initial.references : DEFAULT_REFERENCES);
   const [source, setSource] = useState<ElevationSource>(initial?.source ?? 'AUTO');
   const hasData = useRef(initial !== null);
+  // Onglet affiché : le plan, ou « Comment ça marche » (#algorithme, pour pouvoir partager le lien).
+  const [tab, setTab] = useState<'plan' | 'algo'>(() => (window.location.hash.startsWith('#algo') ? 'algo' : 'plan'));
+  useEffect(() => {
+    const onHash = () => {
+      if (window.location.hash.startsWith('#algo')) setTab('algo');
+      else if (window.location.hash === '' || window.location.hash === '#plan') setTab('plan');
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  useEffect(() => {
+    // La carte Leaflet recalcule sa taille quand elle réapparaît.
+    if (tab === 'plan') window.dispatchEvent(new Event('resize'));
+    window.scrollTo(0, 0);
+  }, [tab]);
   // Tenir compte de l'entraînement Strava : lu au moment de chaque calcul.
   const [training, setTraining] = useState(loadTrainingOptions);
   const trainingRef = useRef(training);
@@ -245,6 +261,11 @@ export function App() {
         </button>
       </header>
 
+      <nav className="tabs no-print" aria-label="Pages">
+        <a href="#plan" aria-current={tab === 'plan' ? 'page' : undefined}>Mon plan</a>
+        <a href="#algorithme" aria-current={tab === 'algo' ? 'page' : undefined}>Comment ça marche</a>
+      </nav>
+
       {status.kind === 'unreachable' && hasData.current && (
         <div className="banner warn no-print" role="status">
           Hors ligne : affichage du dernier plan calculé
@@ -260,7 +281,9 @@ export function App() {
         <div className="banner error" role="alert">Calcul impossible : {status.error}</div>
       )}
 
-      <main className="layout">
+      {tab === 'algo' && <AlgorithmPage plan={plan} />}
+
+      <main className="layout" hidden={tab !== 'plan'}>
         <aside className="side no-print">
           <div className="card mode-switch" role="radiogroup" aria-label="Course">
             <button type="button" role="radio" aria-checked={mode === 'demo'} className={mode === 'demo' ? 'active' : ''}
@@ -358,7 +381,7 @@ export function App() {
           {status.kind === 'loading' && !shown && mode === 'demo' && <p className="muted">Calcul en cours…</p>}
         </section>
       </main>
-      <Legend />
+      {tab === 'plan' && <Legend />}
     </div>
   );
 }
