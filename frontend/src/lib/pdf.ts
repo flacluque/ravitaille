@@ -4,7 +4,9 @@ import type { CourseView, CutoffStatus, RacePlan, Service } from '../api/types';
 import { ACCENT_COLOR, STATUS_COLORS, TRACK_COLOR } from './colors';
 import { durationMinutes, formatClock, formatDuration, formatHm, formatKm, formatPace } from './format';
 import { GEAR_STATUS_LABEL, waterCheck, type GearItem, type GearStatus } from './gear';
-import { computeNutrition, describeActions, describeConsumption, describeTotals, type NutritionProfile } from './nutrition';
+import {
+  computeNutrition, describeActions, describeFill, describeRhythm, describeTake, describeTotals, type NutritionPlan, type NutritionProfile,
+} from './nutrition';
 import { bindingCutoff, tightestCutoff } from './plan';
 import { SERVICE_INFO } from './services';
 import { niceTicks } from './track';
@@ -24,6 +26,8 @@ export interface PdfInput {
   nutrition?: NutritionProfile;
   /** Checklist du matériel de la course. */
   gear?: GearItem[];
+  /** Codes des points où l'assistance attend le coureur. */
+  crew?: string[];
   /** « summary » : une page à garder sur soi (passages, barrières, ravitos) ; « full » (défaut) : tout le plan. */
   variant?: 'summary' | 'full';
 }
@@ -57,7 +61,7 @@ export function pdfFilename(raceName: string, variant: PdfInput['variant'] = 'fu
   return `plan-${slug || 'course'}${variant === 'summary' ? '-resume' : ''}.pdf`;
 }
 
-export async function buildPlanPdf({ course, plans, selected, services, nutrition, gear, variant = 'full' }: PdfInput): Promise<jsPDF> {
+export async function buildPlanPdf({ course, plans, selected, services, nutrition, gear, crew = [], variant = 'full' }: PdfInput): Promise<jsPDF> {
   const [{ jsPDF }, { autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
   const plan = plans[Math.min(selected, plans.length - 1)];
@@ -87,7 +91,7 @@ export async function buildPlanPdf({ course, plans, selected, services, nutritio
   };
 
   if (variant === 'summary') {
-    summary(doc, plan, y, table, services, nutrition);
+    summary(doc, plan, y, table, services, nutrition, crew);
     footers(doc);
     return doc;
   }
@@ -143,14 +147,15 @@ export async function buildPlanPdf({ course, plans, selected, services, nutritio
 
   // --- Nutrition et hydratation du scénario détaillé ---
   if (nutrition && services) {
-    const n = computeNutrition(plan, services, nutrition);
+    const n = computeNutrition(plan, services, nutrition, crew);
     const names = plan.checkpoints.map((c) => pdfText(c.name));
+    const last = plan.checkpoints.length - 1;
     let top = ensureSpace(doc, y + 7, 40);
     top = sectionTitle(doc, `Nutrition et hydratation · scénario ${plan.scenario.name.toLowerCase()}`, top) + 2;
     doc.setFontSize(8.5);
     const intro = [
-      `${nutrition.carbsPerHour} g de glucides par heure, ${nutrition.waterDayMlPerHour} ml d'eau par heure `
-        + `(${nutrition.waterNightMlPerHour} la nuit). Le solide des ravitos n'est pas compté.`,
+      `${nutrition.carbsPerHour} g de glucides par heure (moins la première heure et la nuit), ${nutrition.waterDayMlPerHour} ml d'eau `
+        + `par heure (${nutrition.waterNightMlPerHour} la nuit)${nutrition.eatAtAid ? ', en mangeant aux ravitos' : ''}.`,
       `Au départ : ${pdfText(describeActions(n.points[0], n, nutrition, true)) || 'rien à préparer'}.`,
       ...n.alerts.map((a) => `Attention : ${pdfText(a)}`),
     ];
@@ -161,21 +166,19 @@ export async function buildPlanPdf({ course, plans, selected, services, nutritio
       top += 4;
     }
     y = table('', top - 5, {
-      head: [['Tronçon', 'Durée', 'Glucides', 'Eau', 'À consommer', "Au point d'arrivée"]],
+      head: [['Tronçon', 'Durée', 'Consigne', 'Glucides', "Au point d'arrivée"]],
       body: n.legs.map((leg) => [
         `${names[leg.index - 1]} ->\n${names[leg.index]}`,
         formatHm(leg.minutes) + (leg.nightMinutes >= 15 ? `\ndont ${formatHm(leg.nightMinutes)} de nuit` : ''),
-        `${Math.round(leg.carbsG)} g`,
-        `${(Math.round(leg.waterMl / 50) * 50).toLocaleString('fr-FR').replace(/\s/g, ' ')} ml`,
-        pdfText(describeConsumption(leg, n, nutrition)) || '-',
-        leg.index === plan.checkpoints.length - 1 ? 'arrivée' : pdfText(describeActions(n.points[leg.index], n, nutrition, false)) || '-',
+        pdfText(describeRhythm(leg, n, plan)) + (leg.sequence.length > 1 ? `\n${pdfText(sequenceText(leg.sequence, n))}` : ''),
+        `${Math.round(leg.aidCarbsG + leg.drinkCarbsG + leg.itemsCarbsG)} g`,
+        leg.index === last ? 'arrivée' : pdfText(describeActions(n.points[leg.index], n, nutrition, false)) || '-',
       ]),
       columnStyles: {
-        0: { cellWidth: 40 }, 1: { halign: 'right', cellWidth: 20 }, 2: { halign: 'right', cellWidth: 16 },
-        3: { halign: 'right', cellWidth: 16 },
+        0: { cellWidth: 38 }, 1: { halign: 'right', cellWidth: 20 }, 2: { cellWidth: 52 }, 3: { halign: 'right', cellWidth: 16 },
       },
       didParseCell: (data) => {
-        if (data.section === 'head' && data.column.index >= 1 && data.column.index <= 3) data.cell.styles.halign = 'right';
+        if (data.section === 'head' && (data.column.index === 1 || data.column.index === 3)) data.cell.styles.halign = 'right';
       },
     });
     doc.setFontSize(8.5);
@@ -187,6 +190,21 @@ export async function buildPlanPdf({ course, plans, selected, services, nutritio
       ty += 4;
     }
     y = ty - 2;
+
+    // --- Fiche pour l'assistance ---
+    const stops = n.points.filter((p) => p.crew);
+    if (stops.length > 0) {
+      y = table('Fiche pour mon assistance', y, {
+        head: [['Point', 'Vers', 'Préparer']],
+        body: stops.map((p) => [
+          names[p.index],
+          formatClock(plan.checkpoints[p.index].arrival),
+          pdfText([describeTake(p, n, nutrition), p.fillFlasks > 0 ? `${describeFill(p.fillFlasks, p.fillDrinkFlasks, n, '').trim()} prêtes` : '']
+            .filter(Boolean).join(' · ')) || 'rien',
+        ]),
+        columnStyles: { 0: { cellWidth: 50 }, 1: { cellWidth: 24, fontStyle: 'bold' } },
+      });
+    }
   }
 
   // --- Comparaison des scénarios ---
@@ -270,9 +288,14 @@ export async function buildPlanPdf({ course, plans, selected, services, nutritio
 // ---------------------------------------------------------------------------------------------
 
 /** Résumé d'une page : ce qu'il faut emporter au départ, puis passages, barrières et actions à chaque ravito. */
+/** "1. Gel Décathlon, 2. Gel Décathlon, 3. Compote Baouw" */
+function sequenceText(sequence: string[], n: NutritionPlan): string {
+  return sequence.map((id, k) => `${k + 1}. ${n.foods.find((f) => f.id === id)?.name ?? id}`).join(', ');
+}
+
 function summary(doc: jsPDF, plan: RacePlan, y: number, table: (title: string, startY: number, options: UserOptions) => number,
-  services: Service[][] | undefined, nutrition: NutritionProfile | undefined) {
-  const n = nutrition && services ? computeNutrition(plan, services, nutrition) : null;
+  services: Service[][] | undefined, nutrition: NutritionProfile | undefined, crew: string[]) {
+  const n = nutrition && services ? computeNutrition(plan, services, nutrition, crew) : null;
   let top = y + 6;
   if (n && nutrition) {
     doc.setFontSize(9);
@@ -289,19 +312,23 @@ function summary(doc: jsPDF, plan: RacePlan, y: number, table: (title: string, s
     }
   }
   const last = plan.checkpoints.length - 1;
-  table(`Passages et ravitos · scénario ${plan.scenario.name.toLowerCase()}`, top - 5, {
+  table(`Passages et ravitos · scénario ${plan.scenario.name.toLowerCase()}`, top - 2, {
     styles: { font: 'helvetica', fontSize: 8, cellPadding: { top: 1.4, bottom: 1.4, left: 1.6, right: 1.6 }, textColor: TEXT, lineColor: BORDER },
     head: [['Point', 'Km', 'Passage', 'Barrière', 'Marge', 'À faire']],
     body: plan.checkpoints.map((eta, i) => {
       const cutoff = bindingCutoff(eta);
-      const todo = n && nutrition && i > 0 && i < last ? pdfText(describeActions(n.points[i], n, nutrition, false)) : '';
+      const actions = n && nutrition && i > 0 && i < last ? describeActions(n.points[i], n, nutrition, false) : '';
+      const next = n && i < last ? describeRhythm(n.legs[i], n, plan) : '';
+      const rhythm = next ? `Ensuite : ${next.charAt(0).toLowerCase()}${next.slice(1)}` : '';
+      // pdfText ne garde pas les retours à la ligne : on les remet après coup.
+      const todo = [actions, rhythm].filter(Boolean).map(pdfText).join('\n');
       return [
         `${pdfText(eta.code)}  ${pdfText(eta.name)}`,
         formatKm(eta.km),
         formatClock(eta.arrival),
         cutoff ? formatClock(cutoff.at) + (cutoff.out ? ' (sortie)' : '') : '',
         cutoff ? formatHm(cutoff.marginMinutes) : '',
-        i === last ? 'arrivée' : todo,
+        i === last ? 'arrivée' : i === 0 ? pdfText(rhythm) : todo,
       ];
     }),
     columnStyles: {

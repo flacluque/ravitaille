@@ -53,10 +53,12 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
 - **Ta préparation** : avec Strava connecté, le calcul tient compte de ton entraînement. La carte
   montre ton volume semaine par semaine, ta plus longue sortie et ta régularité, et de combien le
   temps de chaque référence est corrigé selon l'écart avec ta préparation actuelle.
-- **Nutrition et hydratation** : pour chaque tronçon, glucides et eau à prévoir (moins d'eau la nuit),
-  quoi consommer (gels, compotes, boisson énergétique selon ton profil) et combien de flasques remplir
-  à chaque point d'eau pour tenir jusqu'au suivant. Ce qu'il faut emporter au départ, et récupérer au
-  sac de délestage ou auprès de l'assistance. Alerte si les flasques ne suffisent pas.
+- **Ravitos (nutrition et hydratation)** : ton profil en quelques clics (glucides par heure, flasques et
+  combien de boisson énergétique, tes propres produits : gels, solides, boissons, et si tu manges aux
+  ravitos), puis la course tronçon par tronçon : une consigne de rythme (« 1 gel toutes les 40 min »,
+  l'ordre de prise), quoi boire, et à chaque point quoi remplir, manger ou récupérer. Choisis où
+  t'attend ton assistance : tu ne portes que jusque-là, et une fiche lui dit quoi préparer. Moins de
+  glucides la première heure et la nuit ; alerte si les flasques ne suffisent pas.
 - **Matériel** : checklist par course, à cocher en faisant le sac. Elle se remplit en lisant le règlement
   (image ou PDF, y compris un tableau commun à plusieurs courses), à partir d'une liste type, ou à la
   main. Elle propose des suggestions selon le plan (frontale si tu passes la nuit dehors) et compare
