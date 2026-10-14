@@ -740,3 +740,50 @@ button.dp-day.selected { background: var(--accent); color: var(--accent-contrast
 .prep-field { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 500; min-width: 200px; }
 .prep-field select { width: auto; }
 .prep-dates { margin: 0; }
+
+/* ---------- Accueil ---------- */
+a.brand { text-decoration: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.welcome { max-width: 1080px; margin: 0 auto; padding: 28px 20px 40px; display: flex; flex-direction: column; gap: 36px; line-height: 1.5; }
+.welcome h2 { margin: 0 0 14px; font-size: 1.3rem; }
+.welcome h3 { margin: 0 0 4px; font-size: 1rem; }
+.welcome p { margin: 0; }
+.welcome-hero { display: grid; grid-template-columns: 1.15fr 1fr; gap: 32px; align-items: center; }
+.welcome-pitch { display: flex; flex-direction: column; gap: 16px; }
+.welcome-pitch h1 { margin: 0; font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1.15; color: var(--accent); }
+.welcome-lead { font-size: 1.1rem; }
+.welcome-cta { display: flex; flex-wrap: wrap; gap: 10px; }
+.welcome-cta button { padding: 12px 18px; font-size: 1rem; }
+.welcome-preview { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.welcome-preview-hero { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: 10px;
+  background: var(--accent); color: var(--accent-contrast); }
+.welcome-preview-hero .muted { color: inherit; opacity: 0.8; }
+.welcome-preview-hero strong { font-size: 2rem; line-height: 1.1; }
+.welcome-preview table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.welcome-preview td { padding: 6px 4px; border-bottom: 1px solid var(--border); }
+.welcome-preview td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.welcome-tight { color: var(--muted); }
+.welcome-preview .link-btn { align-self: flex-start; }
+.welcome-uses { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.welcome-uses li { display: flex; flex-direction: column; gap: 6px; }
+.welcome-uses p { color: var(--muted); font-size: 0.92rem; }
+.welcome-icon { font-size: 1.6rem; }
+.welcome-steps { list-style: none; margin: 0 0 16px; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; counter-reset: none; }
+.welcome-steps li { display: flex; gap: 12px; align-items: flex-start; }
+.welcome-steps p { color: var(--muted); font-size: 0.92rem; }
+.welcome-step-n { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent); color: var(--accent-contrast); font-weight: 700; }
+.welcome-more { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.welcome-more .card { display: flex; flex-direction: column; gap: 8px; }
+.welcome-more p { color: var(--muted); font-size: 0.92rem; }
+.welcome-more .link-btn { align-self: flex-start; }
+@media (max-width: 900px) {
+  .welcome-hero { grid-template-columns: 1fr; }
+  .welcome-uses, .welcome-steps { grid-template-columns: 1fr 1fr; }
+  .welcome-more { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .welcome { padding: 20px 16px 32px; gap: 28px; }
+  .welcome-uses, .welcome-steps { grid-template-columns: 1fr; }
+  .welcome-cta button { flex: 1 1 auto; }
+}
