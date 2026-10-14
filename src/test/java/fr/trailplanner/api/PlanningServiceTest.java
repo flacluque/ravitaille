@@ -53,9 +53,9 @@ class PlanningServiceTest {
     @Test
     void demandeLHistoriqueDepuisLeBlocDeLaPlusAncienneReference() {
         FakeSource source = new FakeSource();
-        PlanningService service = new PlanningService(source, TODAY);
+        PlanningService service = new PlanningService(TODAY);
 
-        List<RacePlan> plans = service.plan(request(new PlanRequest.TrainingOptions(true, true)), null);
+        List<RacePlan> plans = service.plan(request(new PlanRequest.TrainingOptions(true, true)), null, source);
 
         assertEquals(LocalDate.of(2026, 4, 12).minusDays(7).minusWeeks(12), source.since);
         assertTrue(source.hikes);
@@ -66,9 +66,9 @@ class PlanningServiceTest {
     @Test
     void utiliseLaDureeDePreparationChoisie() {
         FakeSource source = new FakeSource();
-        PlanningService service = new PlanningService(source, TODAY);
+        PlanningService service = new PlanningService(TODAY);
 
-        RacePlan plan = service.plan(request(new PlanRequest.TrainingOptions(true, false, 16)), null).get(1);
+        RacePlan plan = service.plan(request(new PlanRequest.TrainingOptions(true, false, 16)), null, source).get(1);
 
         assertEquals(LocalDate.of(2026, 4, 12).minusDays(7).minusWeeks(16), source.since);
         assertEquals(16, plan.training().target().blockWeeks());
@@ -78,11 +78,11 @@ class PlanningServiceTest {
     @Test
     void sansOptionNiSourceOnSePasseDeLHistorique() {
         FakeSource source = new FakeSource();
-        assertNull(new PlanningService(source, TODAY).plan(request(null), null).get(0).training());
-        assertNull(new PlanningService(source, TODAY).plan(request(new PlanRequest.TrainingOptions(false, false)), null)
+        assertNull(new PlanningService(TODAY).plan(request(null), null, source).get(0).training());
+        assertNull(new PlanningService(TODAY).plan(request(new PlanRequest.TrainingOptions(false, false)), null, source)
                 .get(0).training());
         assertNull(source.since, "Strava n'est pas interrogé");
-        assertNull(new PlanningService(null, TODAY).plan(request(new PlanRequest.TrainingOptions(true, false)), null)
+        assertNull(new PlanningService(TODAY).plan(request(new PlanRequest.TrainingOptions(true, false)), null, null)
                 .get(0).training());
     }
 
@@ -91,7 +91,7 @@ class PlanningServiceTest {
         FakeSource source = new FakeSource();
         source.failure = new IllegalStateException("Strava ne répond pas");
 
-        RacePlan plan = new PlanningService(source, TODAY).plan(request(new PlanRequest.TrainingOptions(true, false)), null).get(1);
+        RacePlan plan = new PlanningService(TODAY).plan(request(new PlanRequest.TrainingOptions(true, false)), null, source).get(1);
 
         assertNull(plan.training());
         assertTrue(plan.warnings().get(0).startsWith("Historique Strava indisponible (Strava ne répond pas)"), plan.warnings().toString());

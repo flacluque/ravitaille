@@ -1,0 +1,24 @@
+# Déploiement sur Render (https://render.com) : New + → Blueprint → ce dépôt.
+# Les valeurs « sync: false » sont demandées à la création : elles restent dans Render, jamais dans git.
+services:
+  - type: web
+    name: trail-planner
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /api/app
+    envVars:
+      - key: TRAILPLANNER_EXTRACTION_PROVIDER
+        value: gemini
+      - key: TRAILPLANNER_EXTRACTION_GEMINI_API_KEY
+        sync: false
+      - key: TRAILPLANNER_STRAVA_CLIENT_ID
+        sync: false
+      - key: TRAILPLANNER_STRAVA_CLIENT_SECRET
+        sync: false
+      - key: TRAILPLANNER_ACCESS_CODE
+        sync: false
+      - key: TRAILPLANNER_FEEDBACK_URL
+        sync: false
+      - key: TRAILPLANNER_SECRET
+        generateValue: true

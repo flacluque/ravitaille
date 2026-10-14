@@ -8,17 +8,19 @@ import java.time.Duration;
 /**
  * Configuration de l'IA de lecture des roadbooks (application.properties) :
  * <pre>
- * trailplanner.extraction.provider=ollama        # ou none pour désactiver
+ * trailplanner.extraction.provider=ollama        # gemini une fois en ligne, none pour désactiver
  * trailplanner.extraction.ollama.base-url=http://localhost:11434
  * trailplanner.extraction.ollama.model=qwen2.5vl:7b
+ * trailplanner.extraction.gemini.api-key=…        # variable TRAILPLANNER_EXTRACTION_GEMINI_API_KEY
  * </pre>
  */
 @ConfigurationProperties("trailplanner.extraction")
 public record ExtractionProperties(
         @DefaultValue("none") Provider provider,
-        @DefaultValue Ollama ollama) {
+        @DefaultValue Ollama ollama,
+        @DefaultValue Gemini gemini) {
 
-    public enum Provider { NONE, OLLAMA }
+    public enum Provider { NONE, OLLAMA, GEMINI }
 
     /**
      * @param timeout       un modèle local met de quelques dizaines de secondes à quelques minutes
@@ -31,4 +33,21 @@ public record ExtractionProperties(
             @DefaultValue("qwen2.5vl:7b") String model,
             @DefaultValue("5m") Duration timeout,
             @DefaultValue("32768") int contextTokens) {}
+
+    /**
+     * Gemini, l'IA de Google : une clé gratuite (https://aistudio.google.com/apikey) suffit pour quelques
+     * dizaines de lectures par jour. Les documents envoyés sortent alors de la machine.
+     *
+     * @param model modèle à vision ; l'alias « flash-latest » suit la dernière version rapide
+     */
+    public record Gemini(
+            @DefaultValue("") String apiKey,
+            @DefaultValue("gemini-flash-latest") String model,
+            @DefaultValue("https://generativelanguage.googleapis.com") String baseUrl,
+            @DefaultValue("2m") Duration timeout) {
+
+        public Gemini {
+            apiKey = apiKey == null ? "" : apiKey.strip();
+        }
+    }
 }

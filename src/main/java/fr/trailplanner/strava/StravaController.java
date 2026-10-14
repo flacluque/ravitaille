@@ -1,5 +1,7 @@
 package fr.trailplanner.strava;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -9,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.time.LocalDate;
@@ -20,40 +23,55 @@ import java.util.List;
 public class StravaController {
 
     private final StravaService strava;
+    private final StravaCookies cookies;
 
-    public StravaController(StravaService strava) {
+    public StravaController(StravaService strava, StravaCookies cookies) {
         this.strava = strava;
+        this.cookies = cookies;
     }
 
     @GetMapping("/status")
-    public StravaStatus status() {
-        return strava.status();
+    public StravaStatus status(HttpServletRequest request) {
+        return strava.status(cookies.read(request));
     }
 
     /** Le navigateur y est envoyé par « Connecter Strava » : redirection vers la page d'autorisation. */
     @GetMapping("/authorize")
     public ResponseEntity<Void> authorize(@RequestParam String origin) {
-        return redirect(strava.authorize(origin));
+        String server = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+        return redirect(strava.authorize(origin, server));
     }
 
-    /** Retour de Strava (redirect_uri), puis retour à l'appli. */
+    /** Retour de Strava (redirect_uri) : les jetons vont dans le cookie, puis retour à l'appli. */
     @GetMapping("/callback")
     public ResponseEntity<Void> callback(@RequestParam(required = false) String state,
                                          @RequestParam(required = false) String code,
                                          @RequestParam(required = false) String error,
-                                         @RequestParam(required = false) String scope) {
-        return redirect(strava.callback(state, code, error, scope));
+                                         @RequestParam(required = false) String scope,
+                                         HttpServletRequest request, HttpServletResponse response) {
+        StravaSession session = StravaSession.none();
+        String back = strava.callback(state, code, error, scope, session);
+        cookies.save(session, request, response);
+        return redirect(back);
     }
 
     @GetMapping("/activities")
     public List<StravaActivity> activities(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate after) {
-        return strava.activities(after != null ? after : LocalDate.now().minusYears(2));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate after,
+            HttpServletRequest request, HttpServletResponse response) {
+        StravaSession session = cookies.read(request);
+        try {
+            return strava.activities(session, after != null ? after : LocalDate.now().minusYears(2));
+        } finally {
+            cookies.save(session, request, response);
+        }
     }
 
     @DeleteMapping("/connection")
-    public ResponseEntity<Void> disconnect() {
-        strava.disconnect();
+    public ResponseEntity<Void> disconnect(HttpServletRequest request, HttpServletResponse response) {
+        StravaSession session = cookies.read(request);
+        strava.disconnect(session);
+        cookies.save(session, request, response);
         return ResponseEntity.noContent().build();
     }
 

@@ -8,7 +8,12 @@ import fr.trailplanner.model.NightWindow;
 import fr.trailplanner.model.RaceDefinition;
 import fr.trailplanner.model.ReferencePerformance;
 import fr.trailplanner.report.TextReport;
+import fr.trailplanner.strava.StravaCookies;
+import fr.trailplanner.strava.StravaService;
+import fr.trailplanner.strava.StravaSession;
 import fr.trailplanner.track.TrackProfile;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -35,9 +40,23 @@ import java.util.List;
 public class PlanController {
 
     private final PlanningService service;
+    private final StravaService strava;
+    private final StravaCookies cookies;
 
-    public PlanController(PlanningService service) {
+    public PlanController(PlanningService service, StravaService strava, StravaCookies cookies) {
         this.service = service;
+        this.strava = strava;
+        this.cookies = cookies;
+    }
+
+    /** Plans avec l'historique Strava du coureur qui fait la requête (cookie), réécrit s'il a été renouvelé. */
+    private List<RacePlan> plans(PlanRequest request, TrackProfile track, HttpServletRequest http, HttpServletResponse response) {
+        StravaSession session = cookies.read(http);
+        try {
+            return service.plan(request, track, strava.source(session));
+        } finally {
+            cookies.save(session, http, response);
+        }
     }
 
     /** Analyse d'une trace GPX : distance, D+/D-, profil. */
@@ -67,14 +86,15 @@ public class PlanController {
     /** Plan de course : roadbook + références (JSON) et trace GPX optionnelle. */
     @PostMapping(path = "/plans", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public List<RacePlan> plan(@RequestPart("request") PlanRequest request,
-                               @RequestPart(value = "gpx", required = false) MultipartFile gpx) throws IOException {
+                               @RequestPart(value = "gpx", required = false) MultipartFile gpx,
+                               HttpServletRequest http, HttpServletResponse response) throws IOException {
         TrackProfile track = null;
         if (gpx != null && !gpx.isEmpty()) {
             try (InputStream in = gpx.getInputStream()) {
                 track = service.loadTrack(in).profile();
             }
         }
-        return service.plan(request, track);
+        return plans(request, track, http, response);
     }
 
     /**
@@ -84,24 +104,26 @@ public class PlanController {
     @PostMapping(path = "/plans/full", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public PlanView planFull(@RequestPart("request") PlanRequest request,
                              @RequestPart(value = "gpx", required = false) MultipartFile gpx,
-                             @RequestParam(defaultValue = "0.1") double stepKm) throws IOException {
+                             @RequestParam(defaultValue = "0.1") double stepKm,
+                             HttpServletRequest http, HttpServletResponse response) throws IOException {
         if (request.race() == null) {
             throw new IllegalArgumentException("La course (race) est obligatoire");
         }
         if (gpx == null || gpx.isEmpty()) {
-            return new PlanView(CourseView.of(request.race(), null, null, stepKm), service.plan(request, null));
+            return new PlanView(CourseView.of(request.race(), null, null, stepKm), plans(request, null, http, response));
         }
         try (InputStream in = gpx.getInputStream()) {
             PlanningService.LoadedTrack track = service.loadTrack(in);
             return new PlanView(CourseView.of(request.race(), track.profile(), track.name(), stepKm),
-                    service.plan(request, track.profile()));
+                    plans(request, track.profile(), http, response));
         }
     }
 
     /** Même chose sans GPX, en JSON pur (le D+ officiel du roadbook suffit). */
     @PostMapping(path = "/plans", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public List<RacePlan> planJson(@RequestBody PlanRequest request) {
-        return service.plan(request, null);
+    public List<RacePlan> planJson(@RequestBody PlanRequest request, HttpServletRequest http,
+                                   HttpServletResponse response) {
+        return plans(request, null, http, response);
     }
 
     /**
@@ -124,11 +146,12 @@ public class PlanController {
      * Corps : { "references": [...], "elevationSource": "AUTO" }.
      */
     @PostMapping(path = "/demo/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public List<RacePlan> demoPlans(@PathVariable String id, @RequestBody DemoRequest body) {
+    public List<RacePlan> demoPlans(@PathVariable String id, @RequestBody DemoRequest body,
+                                    HttpServletRequest http, HttpServletResponse response) {
         PlanningService.Sample sample = service.loadSample(id);
         PlanRequest request = new PlanRequest(sample.race(), body.references(), DEMO_NIGHT, body.elevationSource(), null,
                 body.training());
-        return service.plan(request, sample.track() == null ? null : sample.track().profile());
+        return plans(request, sample.track() == null ? null : sample.track().profile(), http, response);
     }
 
     public record DemoRequest(List<ReferencePerformance> references, ElevationSource elevationSource,

@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, fetchCourse, fetchCustomPlans, fetchPlans, loadSnapshot, saveSnapshot, type Snapshot } from './api/client';
-import { loadDraft, loadGear, loadGpx, loadTrainingOptions, saveDraft, saveGpx, saveTrainingOptions } from './api/storage';
+import {
+  loadCrew, loadDraft, loadGear, loadGpx, loadNutrition, loadTrainingOptions, saveCrew, saveDraft, saveGpx, saveNutrition,
+  saveTrainingOptions,
+} from './api/storage';
 import type { ElevationSource, Reference } from './api/types';
 import { CompareTable } from './components/CompareTable';
 import { CourseMap } from './components/CourseMap';
 import { ElevationProfile } from './components/ElevationProfile';
 import { Legend } from './components/Legend';
 import { GearCard } from './components/GearCard';
-import { loadProfile, NutritionCard, saveProfile } from './components/NutritionCard';
 import type { NutritionProfile } from './lib/nutrition';
 import { PassageTable } from './components/PassageTable';
 import { RaceEditor } from './components/RaceEditor';
@@ -16,7 +18,7 @@ import { ReferenceInsights } from './components/ReferenceInsights';
 import { TrainingCard } from './components/TrainingCard';
 import { AlgorithmPage } from './components/AlgorithmPage';
 import { PlanHero } from './components/PlanHero';
-import { RavitosCard } from './components/RavitosCard';
+import { RavitosView } from './components/RavitosView';
 import { TrainingLine } from './components/TrainingLine';
 import { ScenarioCards } from './components/ScenarioCards';
 import { draftSignature, draftToRace, emptyDraft, type RaceDraft } from './lib/draft';
@@ -50,7 +52,7 @@ type Status =
   /** L'API a répondu mais refuse le calcul (roadbook incohérent...). */
   | { kind: 'rejected'; error: string };
 
-export function App() {
+export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}) {
   const initial = useMemo(loadSnapshot, []);
   const [data, setData] = useState<Snapshot | null>(initial);
   const [status, setStatus] = useState<Status>({ kind: 'loading' });
@@ -227,10 +229,19 @@ export function App() {
   );
 
   // Profil nutrition : partagé par la nutrition et la checklist du matériel (eau obligatoire / flasques).
-  const [nutritionProfile, setNutritionProfile] = useState<NutritionProfile>(loadProfile);
+  const [nutritionProfile, setNutritionProfile] = useState<NutritionProfile>(loadNutrition);
   const changeNutritionProfile = (next: NutritionProfile) => {
     setNutritionProfile(next);
-    saveProfile(next);
+    saveNutrition(next);
+  };
+
+  // Points où l'assistance attend le coureur : gardés course par course.
+  const crewRace = shown?.course.race.name ?? '';
+  const [crew, setCrew] = useState<string[]>([]);
+  useEffect(() => { setCrew(crewRace ? loadCrew(crewRace) : []); }, [crewRace]);
+  const changeCrew = (codes: string[]) => {
+    setCrew(codes);
+    if (crewRace) saveCrew(crewRace, codes);
   };
 
   const [savingPdf, setSavingPdf] = useState(false);
@@ -253,7 +264,7 @@ export function App() {
       const { downloadPlanPdf } = await import('./lib/pdf');
       await downloadPlanPdf({
         course, plans, selected: Math.min(scenarioIndex, plans.length - 1),
-        services, nutrition: nutritionProfile, gear: loadGear(course.race.name), variant,
+        services, nutrition: nutritionProfile, gear: loadGear(course.race.name), crew, variant,
       });
     } finally {
       setSavingPdf(false);
@@ -280,6 +291,12 @@ export function App() {
               {plan && <> · {formatKm(plan.totalDistanceKm)} km · {formatMeters(plan.totalGainM)} D+</>}
             </p>
           </div>
+        )}
+        {feedbackUrl && (
+          <a className="feedback no-print" href={feedbackUrl} target="_blank" rel="noreferrer"
+            title="Une idée, un bug, une remarque : dis-le-nous">
+            💬 <span className="long">Donner mon avis</span>
+          </a>
         )}
         <div className="pdf-menu no-print">
           <button type="button" className="ghost" onClick={() => setPdfMenu((m) => !m)} disabled={!plan || savingPdf || stale}
@@ -410,13 +427,10 @@ export function App() {
             )}
           </>}
 
-          {tab === 'ravitos' && plan && course && <>
-            <RavitosCard plan={plan} services={services} profile={nutritionProfile} />
-            <details className="card-details">
-              <summary>Mon profil nutrition et le détail par tronçon</summary>
-              <NutritionCard plan={plan} services={services} profile={nutritionProfile} onProfileChange={changeNutritionProfile} />
-            </details>
-          </>}
+          {tab === 'ravitos' && plan && course && (
+            <RavitosView plan={plan} services={services} profile={nutritionProfile} onProfileChange={changeNutritionProfile}
+              crew={crew} onCrewChange={changeCrew} />
+          )}
 
           {tab === 'sac' && course && <GearCard raceName={course.race.name} plan={plan} profile={nutritionProfile} />}
 

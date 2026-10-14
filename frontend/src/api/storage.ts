@@ -1,6 +1,7 @@
 import { normalizeDraft, type RaceDraft } from '../lib/draft';
 import { plain, type GearItem } from '../lib/gear';
 import type { TrainingOptions } from './types';
+import { DEFAULT_PROFILE, normalizeProfile, type NutritionProfile } from '../lib/nutrition';
 
 // Ta course reste dans ton navigateur : le roadbook (petit) dans localStorage, la trace GPX
 // (plusieurs Mo, au-delà du quota de localStorage) dans IndexedDB.
@@ -113,5 +114,46 @@ export function saveTrainingOptions(options: TrainingOptions): void {
     localStorage.setItem(TRAINING_KEY, JSON.stringify(options));
   } catch {
     // stockage indisponible : l'option vaut pour la session
+  }
+}
+
+const NUTRITION_KEY = 'trail-planner:nutrition';
+
+/** Profil nutrition, repris d'une version précédente si besoin (anciens types de produits…). */
+export function loadNutrition(): NutritionProfile {
+  try {
+    const raw = localStorage.getItem(NUTRITION_KEY);
+    return raw ? normalizeProfile(JSON.parse(raw)) : DEFAULT_PROFILE;
+  } catch {
+    return DEFAULT_PROFILE;
+  }
+}
+
+export function saveNutrition(profile: NutritionProfile): void {
+  try {
+    localStorage.setItem(NUTRITION_KEY, JSON.stringify(profile));
+  } catch {
+    // stockage indisponible : le profil vaut pour la session
+  }
+}
+
+const crewKey = (raceName: string) => `trail-planner:assistance:${plain(raceName)}`;
+
+/** Codes des points où l'assistance attend le coureur, pour cette course. */
+export function loadCrew(raceName: string): string[] {
+  try {
+    const raw = localStorage.getItem(crewKey(raceName));
+    const codes = raw ? (JSON.parse(raw) as unknown) : [];
+    return Array.isArray(codes) ? codes.filter((c): c is string => typeof c === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCrew(raceName: string, codes: string[]): void {
+  try {
+    localStorage.setItem(crewKey(raceName), JSON.stringify(codes));
+  } catch {
+    // stockage indisponible
   }
 }

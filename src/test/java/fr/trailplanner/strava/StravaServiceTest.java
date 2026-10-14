@@ -3,13 +3,10 @@ package fr.trailplanner.strava;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -24,19 +21,16 @@ import static org.junit.jupiter.api.Assertions.*;
 class StravaServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-10-12T08:00:00Z");
+    private static final String SERVER = "https://trail-planner.onrender.com";
 
-    @TempDir
-    Path dir;
     private FakeStrava fake;
-    private StravaTokenStore store;
     private StravaService service;
 
     @BeforeEach
     void setUp() throws IOException {
         fake = new FakeStrava();
-        StravaProperties props = new StravaProperties("4242", "secret", fake.url(), dir.resolve("strava.json").toString());
-        store = new StravaTokenStore(props.tokenPath());
-        service = new StravaService(props, new StravaClient(props), store, Clock.fixed(NOW, ZoneOffset.UTC));
+        StravaProperties props = new StravaProperties("4242", "secret", fake.url());
+        service = new StravaService(props, new StravaClient(props), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @AfterEach
@@ -44,43 +38,51 @@ class StravaServiceTest {
         fake.close();
     }
 
+    private static StravaSession connected(String access, long athleteId) {
+        return StravaSession.of(new StravaToken(access, "r-" + access, NOW.getEpochSecond() + 3600, athleteId, null));
+    }
+
     @Test
     void neFaitRienSansApplicationStrava() {
-        StravaProperties none = new StravaProperties("", "", fake.url(), dir.resolve("x.json").toString());
-        StravaService off = new StravaService(none, new StravaClient(none), new StravaTokenStore(none.tokenPath()), Clock.systemUTC());
+        StravaProperties none = new StravaProperties("", "", fake.url());
+        StravaService off = new StravaService(none, new StravaClient(none), Clock.systemUTC());
 
-        assertEquals(new StravaStatus(false, false, null, "Strava n'est pas configuré."), off.status());
-        StravaException e = assertThrows(StravaException.class, () -> off.authorize("http://localhost:5173"));
+        assertEquals(new StravaStatus(false, false, null, "Strava n'est pas configuré."), off.status(connected("a", 1)));
+        StravaException e = assertThrows(StravaException.class, () -> off.authorize("http://localhost:5173", SERVER));
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, e.status());
-        assertEquals(HttpStatus.SERVICE_UNAVAILABLE,
-                assertThrows(StravaException.class, () -> off.activities(LocalDate.of(2025, 1, 1))).status());
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, assertThrows(StravaException.class,
+                () -> off.activities(connected("a", 1), LocalDate.of(2025, 1, 1))).status());
     }
 
     @Test
     void nettoieEtVerifieLIdentifiantDeLApplication() {
-        StravaProperties copied = new StravaProperties(" 123456   ", "\"secret\" ", fake.url(), "");
+        StravaProperties copied = new StravaProperties(" 123456   ", "\"secret\" ", fake.url());
         assertTrue(copied.configured());
         assertEquals("123456", copied.clientId());
         assertEquals("secret", copied.clientSecret());
         String url = new StravaClient(copied).authorizeUrl("http://localhost:5173/api/strava/callback", "s");
         assertTrue(url.matches(".*[?&]client_id=123456(&.*|$)"), url);
 
-        StravaProperties wrong = new StravaProperties("a1b2c3d4e5f6", "secret", fake.url(), "");
+        StravaProperties wrong = new StravaProperties("a1b2c3d4e5f6", "secret", fake.url());
         assertFalse(wrong.configured());
         assertTrue(wrong.problem().contains("Client ID"), wrong.problem());
-        StravaService service = new StravaService(wrong, new StravaClient(wrong), store, Clock.systemUTC());
-        assertEquals(wrong.problem(), service.status().problem());
-        StravaException e = assertThrows(StravaException.class, () -> service.authorize("http://localhost:5173"));
+        StravaService service = new StravaService(wrong, new StravaClient(wrong), Clock.systemUTC());
+        assertEquals(wrong.problem(), service.status(StravaSession.none()).problem());
+        StravaException e = assertThrows(StravaException.class, () -> service.authorize("http://localhost:5173", SERVER));
         assertTrue(e.getMessage().startsWith(wrong.problem()));
 
-        assertTrue(new StravaProperties("123456", "", fake.url(), "").problem().contains("client-secret"));
+        assertTrue(new StravaProperties("123456", "", fake.url()).problem().contains("client-secret"));
     }
 
     @Test
-    void connecteLeCompteEtGardeLesJetons() throws IOException {
-        assertEquals(new StravaStatus(true, false, null), service.status());
+    void connecteLeCompteDansLaSessionDuNavigateur() {
+        StravaSession session = StravaSession.none();
+        assertEquals(new StravaStatus(true, false, null), service.status(session));
+        fake.tokenBody = """
+                {"access_token":"acces-1","refresh_token":"rafraichi-1","expires_at":4102444800,
+                 "athlete":{"id":777,"firstname":"Flavien","lastname":"L."}}""";
 
-        URI authorize = URI.create(service.authorize("http://localhost:5173/"));
+        URI authorize = URI.create(service.authorize("http://localhost:5173/", SERVER));
         String query = authorize.getQuery();
         assertTrue(authorize.toString().startsWith(fake.url() + "/oauth/authorize?"), authorize.toString());
         assertTrue(query.contains("client_id=4242"));
@@ -88,43 +90,49 @@ class StravaServiceTest {
         assertTrue(query.contains("scope=activity:read_all"));
         String state = query.replaceAll(".*state=([^&]+).*", "$1");
 
-        String back = service.callback(state, "le-code", null, "read,activity:read_all");
+        String back = service.callback(state, "le-code", null, "read,activity:read_all", session);
 
         assertEquals("http://localhost:5173/?strava=connected", back);
         assertTrue(fake.requests.get(0).contains("code=le-code"));
         assertTrue(fake.requests.get(0).contains("grant_type=authorization_code"));
         assertTrue(fake.requests.get(0).contains("client_secret=secret"));
-        assertEquals(new StravaStatus(true, true, "Flavien L."), service.status());
-        if (!System.getProperty("os.name").startsWith("Windows")) {
-            assertEquals("rw-------", java.nio.file.attribute.PosixFilePermissions.toString(
-                    Files.getPosixFilePermissions(dir.resolve("strava.json"))));
-        }
+        assertTrue(session.changed());
+        assertEquals(new StravaToken("acces-1", "rafraichi-1", 4102444800L, 777, "Flavien L."), session.token().orElseThrow());
+        assertEquals(new StravaStatus(true, true, "Flavien L."), service.status(session));
+        assertFalse(service.status(StravaSession.none()).connected(), "les autres navigateurs ne sont pas connectés");
     }
 
     @Test
-    void refuseUnRetourInconnuOuUneAdresseNonLocale() {
-        assertThrows(IllegalArgumentException.class, () -> service.authorize("https://exemple.com"));
-        assertThrows(IllegalArgumentException.class, () -> service.authorize("http://localhost.exemple.com"));
-        assertThrows(IllegalArgumentException.class, () -> service.callback("inconnu", "code", null, "activity:read_all"));
+    void accepteLAdresseDuServeurEnLigneEtRefuseLesAutres() {
+        String url = service.authorize(SERVER + "/", SERVER);
+        assertTrue(URI.create(url).getQuery().contains("redirect_uri=" + SERVER + "/api/strava/callback"), url);
+
+        assertThrows(IllegalArgumentException.class, () -> service.authorize("https://exemple.com", SERVER));
+        assertThrows(IllegalArgumentException.class, () -> service.authorize("http://localhost.exemple.com", SERVER));
+        assertThrows(IllegalArgumentException.class, () -> service.authorize("http://trail-planner.onrender.com", SERVER));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.callback("inconnu", "code", null, "activity:read_all", StravaSession.none()));
 
         // Un state ne sert qu'une fois.
-        String state = URI.create(service.authorize("http://127.0.0.1:4173")).getQuery().replaceAll(".*state=([^&]+).*", "$1");
-        assertEquals("http://127.0.0.1:4173/?strava=connected", service.callback(state, "c", null, "activity:read_all"));
-        assertThrows(IllegalArgumentException.class, () -> service.callback(state, "c", null, "activity:read_all"));
+        String state = URI.create(service.authorize("http://127.0.0.1:4173", SERVER)).getQuery().replaceAll(".*state=([^&]+).*", "$1");
+        assertEquals("http://127.0.0.1:4173/?strava=connected", service.callback(state, "c", null, "activity:read_all", StravaSession.none()));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.callback(state, "c", null, "activity:read_all", StravaSession.none()));
     }
 
     @Test
     void signaleUnRefusOuUnDroitManquant() {
-        assertEquals("http://localhost:5173/?strava=denied", service.callback(state(), null, "access_denied", null));
-        assertEquals("http://localhost:5173/?strava=scope", service.callback(state(), "c", null, "read"));
+        StravaSession session = StravaSession.none();
+        assertEquals("http://localhost:5173/?strava=denied", service.callback(state(), null, "access_denied", null, session));
+        assertEquals("http://localhost:5173/?strava=scope", service.callback(state(), "c", null, "read", session));
         fake.tokenStatus = 400;
-        assertEquals("http://localhost:5173/?strava=error", service.callback(state(), "c", null, "activity:read_all"));
-        assertFalse(service.status().connected());
+        assertEquals("http://localhost:5173/?strava=error", service.callback(state(), "c", null, "activity:read_all", session));
+        assertFalse(service.status(session).connected());
+        assertFalse(session.changed());
     }
 
     @Test
     void importeLesSortiesDeCourseAPiedEtDeTrail() {
-        store.save(new StravaToken("acces-1", "rafraichi-1", NOW.getEpochSecond() + 3600, "Flavien L."));
         fake.pages = List.of("""
                 [{"id": 1, "name": "Trail des Cathares ", "sport_type": "TrailRun", "start_date_local": "2026-04-12T07:30:00Z",
                   "distance": 60412.3, "total_elevation_gain": 3210.4, "elapsed_time": 31680, "moving_time": 29000, "workout_type": 1},
@@ -133,7 +141,7 @@ class StravaServiceTest {
                  {"id": 3, "name": "Sortie longue", "type": "Run", "start_date_local": "2026-06-20T06:00:00Z",
                   "distance": 25000, "total_elevation_gain": 800, "elapsed_time": 9000, "moving_time": 8400, "workout_type": null}]""");
 
-        List<StravaActivity> activities = service.activities(LocalDate.of(2025, 10, 12));
+        List<StravaActivity> activities = service.activities(connected("acces-1", 1), LocalDate.of(2025, 10, 12));
 
         assertEquals(List.of(3L, 1L), activities.stream().map(StravaActivity::id).toList());
         StravaActivity cathares = activities.get(1);
@@ -154,65 +162,66 @@ class StravaServiceTest {
 
     @Test
     void parcourtLesPagesJusquALaDerniere() {
-        store.save(new StravaToken("acces-1", "rafraichi-1", NOW.getEpochSecond() + 3600, null));
         String full = IntStream.range(0, StravaService.PER_PAGE)
                 .mapToObj(i -> run(i, "2026-03-01"))
                 .collect(Collectors.joining(",", "[", "]"));
         fake.pages = List.of(full, "[" + run(999, "2025-12-01") + "]");
 
-        assertEquals(StravaService.PER_PAGE + 1, service.activities(LocalDate.of(2025, 1, 1)).size());
+        assertEquals(StravaService.PER_PAGE + 1, service.activities(connected("acces-1", 1), LocalDate.of(2025, 1, 1)).size());
         assertEquals(2, fake.requests.size());
     }
 
     @Test
-    void renouvelleLeJetonExpire() {
-        store.save(new StravaToken("vieux", "rafraichi-0", NOW.getEpochSecond() - 10, "Flavien L."));
+    void renouvelleLeJetonExpireDansLaSession() {
+        StravaSession session = StravaSession.of(new StravaToken("vieux", "rafraichi-0", NOW.getEpochSecond() - 10, 777, "Flavien L."));
         fake.tokenBody = """
                 {"access_token":"acces-2","refresh_token":"rafraichi-2","expires_at":4102444800}""";
 
-        service.activities(LocalDate.of(2026, 1, 1));
+        service.activities(session, LocalDate.of(2026, 1, 1));
 
         assertTrue(fake.requests.get(0).contains("grant_type=refresh_token"));
         assertTrue(fake.requests.get(0).contains("refresh_token=rafraichi-0"));
         assertEquals("Bearer acces-2", fake.authorizations.get(0));
-        assertEquals(new StravaToken("acces-2", "rafraichi-2", 4102444800L, "Flavien L."), store.load().orElseThrow());
+        assertTrue(session.changed());
+        assertEquals(new StravaToken("acces-2", "rafraichi-2", 4102444800L, 777, "Flavien L."), session.token().orElseThrow());
     }
 
     @Test
     void oublieLesJetonsQuandStravaRefuseLAcces() {
-        store.save(new StravaToken("revoque", "r", NOW.getEpochSecond() + 3600, null));
+        StravaSession session = connected("revoque", 1);
         fake.activitiesStatus = 401;
 
-        StravaException e = assertThrows(StravaException.class, () -> service.activities(LocalDate.of(2026, 1, 1)));
+        StravaException e = assertThrows(StravaException.class, () -> service.activities(session, LocalDate.of(2026, 1, 1)));
 
         assertEquals(HttpStatus.UNAUTHORIZED, e.status());
-        assertFalse(service.status().connected());
-        assertEquals(HttpStatus.UNAUTHORIZED,
-                assertThrows(StravaException.class, () -> service.activities(LocalDate.of(2026, 1, 1))).status());
+        assertFalse(service.status(session).connected());
+        assertTrue(session.changed());
     }
 
     @Test
     void signaleLaLimiteDeRequetes() {
-        store.save(new StravaToken("a", "r", NOW.getEpochSecond() + 3600, null));
+        StravaSession session = connected("a", 1);
         fake.activitiesStatus = 429;
 
         assertEquals(HttpStatus.TOO_MANY_REQUESTS,
-                assertThrows(StravaException.class, () -> service.activities(LocalDate.of(2026, 1, 1))).status());
-        assertTrue(service.status().connected());
+                assertThrows(StravaException.class, () -> service.activities(session, LocalDate.of(2026, 1, 1))).status());
+        assertTrue(service.status(session).connected());
+        assertFalse(session.changed());
     }
 
     @Test
     void deconnecteEtRevoqueLAcces() {
-        store.save(new StravaToken("acces-1", "r", NOW.getEpochSecond() + 3600, null));
+        StravaSession session = connected("acces-1", 1);
 
-        service.disconnect();
+        service.disconnect(session);
 
-        assertFalse(service.status().connected());
+        assertFalse(service.status(session).connected());
+        assertTrue(session.changed());
         assertTrue(fake.requests.get(0).startsWith("POST /oauth/deauthorize access_token=acces-1"));
     }
 
     private String state() {
-        return URI.create(service.authorize("http://localhost:5173")).getQuery().replaceAll(".*state=([^&]+).*", "$1");
+        return URI.create(service.authorize("http://localhost:5173", SERVER)).getQuery().replaceAll(".*state=([^&]+).*", "$1");
     }
 
     private static String run(int id, String date) {
@@ -223,7 +232,6 @@ class StravaServiceTest {
 
     @Test
     void fournitLHistoriqueDEntrainementAvecOuSansRandonnees() {
-        store.save(new StravaToken("acces-1", "r", NOW.getEpochSecond() + 3600, null));
         fake.pages = List.of("""
                 [{"id": 1, "name": "Trail", "sport_type": "TrailRun", "start_date_local": "2026-09-01T07:00:00Z",
                   "distance": 20000, "total_elevation_gain": 1000, "elapsed_time": 9000, "moving_time": 8000},
@@ -231,9 +239,10 @@ class StravaServiceTest {
                   "distance": 12000, "total_elevation_gain": 900, "elapsed_time": 14000, "moving_time": 12000},
                  {"id": 3, "name": "Vélo", "sport_type": "Ride", "start_date_local": "2026-09-03T07:00:00Z",
                   "distance": 60000, "total_elevation_gain": 900, "elapsed_time": 9000, "moving_time": 8000}]""");
+        var source = service.source(connected("acces-1", 1));
 
-        var withHikes = service.history(LocalDate.of(2026, 1, 1), true).orElseThrow();
-        var runsOnly = service.history(LocalDate.of(2026, 1, 1), false).orElseThrow();
+        var withHikes = source.history(LocalDate.of(2026, 1, 1), true).orElseThrow();
+        var runsOnly = source.history(LocalDate.of(2026, 1, 1), false).orElseThrow();
 
         assertEquals(List.of("Hike", "TrailRun"), withHikes.sessions().stream().map(s -> s.sport()).toList());
         assertEquals(30.0, withHikes.sessions().get(1).effortKm());
@@ -241,13 +250,23 @@ class StravaServiceTest {
         assertEquals(LocalDate.of(2026, 1, 1), runsOnly.since());
         assertEquals(1, fake.requests.size(), "la seconde lecture vient du cache");
 
-        service.history(LocalDate.of(2025, 1, 1), false);
+        source.history(LocalDate.of(2025, 1, 1), false);
         assertEquals(2, fake.requests.size(), "plus ancien que le cache : nouvelle lecture");
     }
 
     @Test
+    void chaqueCoureurASonPropreHistorique() {
+        fake.pages = List.of("[" + run(1, "2026-09-01") + "]");
+        service.source(connected("alice", 1)).history(LocalDate.of(2026, 1, 1), false);
+        service.source(connected("bob", 2)).history(LocalDate.of(2026, 1, 1), false);
+        service.source(connected("alice-bis", 1)).history(LocalDate.of(2026, 1, 1), false);
+
+        assertEquals(List.of("Bearer alice", "Bearer bob"), fake.authorizations, "le même athlète relit son cache");
+    }
+
+    @Test
     void pasDHistoriqueSansCompteConnecte() {
-        assertTrue(service.history(LocalDate.of(2026, 1, 1), true).isEmpty());
+        assertTrue(service.source(StravaSession.none()).history(LocalDate.of(2026, 1, 1), true).isEmpty());
         assertTrue(fake.requests.isEmpty());
     }
 }

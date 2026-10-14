@@ -1,5 +1,7 @@
 package fr.trailplanner.api;
 
+import fr.trailplanner.strava.StravaConfig;
+import fr.trailplanner.web.WebConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -16,8 +18,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(PlanController.class)
-@Import(PlanningService.class)
+@WebMvcTest(value = PlanController.class, properties = "trailplanner.secret=test")
+@Import({PlanningService.class, StravaConfig.class, WebConfig.class})
 class PlanControllerTest {
 
     @Autowired

@@ -1,5 +1,6 @@
 package fr.trailplanner.strava;
 
+import fr.trailplanner.web.CookieCipher;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +13,11 @@ public class StravaConfig {
 
     @Bean
     StravaService stravaService(StravaProperties props) {
-        return new StravaService(props, new StravaClient(props), new StravaTokenStore(props.tokenPath()), Clock.systemUTC());
+        return new StravaService(props, new StravaClient(props), Clock.systemUTC());
+    }
+
+    @Bean
+    StravaCookies stravaCookies(CookieCipher cipher) {
+        return new StravaCookies(cipher);
     }
 }

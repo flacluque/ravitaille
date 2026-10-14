@@ -195,11 +195,15 @@ export function AlgorithmPage({ plan }: { plan: RacePlan | undefined }) {
       <section id="algo-nutrition">
         <h2>6. Nutrition et hydratation</h2>
         <ul>
-          <li>Glucides d'un tronçon = durée × objectif horaire (70 g/h par défaut) ; eau = durée de jour × objectif de jour
-            + durée de nuit × objectif de nuit.</li>
-          <li>Les flasques sont remplies à chaque point d'eau pour tenir jusqu'au suivant ; alerte si elles ne suffisent pas.</li>
-          <li>Boisson énergétique décomptée d'abord, puis gels, compotes et barres selon la proportion choisie ; ce qui reste
-            d'un tronçon passe au suivant. Le solide des ravitos n'est pas compté : c'est volontairement prudent.</li>
+          <li>Objectif d'un tronçon = durée × glucides par heure (60, 75 ou 90 g/h selon l'entraînement du ventre), avec un quart
+            de moins la première heure (l'estomac se met en route) et 10 % de moins la nuit (digestion plus lente).</li>
+          <li>Si tu manges aux ravitos : ≈ 30 g par ravito avec du solide, ≈ 60 g aux repas chauds, décomptés du tronçon suivant.</li>
+          <li>Eau : jour × 500 ml/h, nuit × 400 ml/h. Les flasques sont remplies à chaque point d'eau pour tenir jusqu'au suivant,
+            celles de boisson énergétique d'abord (autant que tu le choisis) ; leurs glucides sont décomptés.</li>
+          <li>Le reste vient de tes produits, pris à tour de rôle, d'où la consigne « 1 gel toutes les 40 min ». Ce qui manque
+            sur un tronçon passe au suivant.</li>
+          <li>On ne porte que jusqu'au prochain point d'assistance ou sac de délestage, qui donne la suite ; la fiche pour
+            l'assistance dit quoi préparer à chaque point.</li>
         </ul>
         <p className="muted small">Repères courants en ultra, à ajuster : ce ne sont pas des conseils médicaux.</p>
       </section>
