@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { StravaActivity } from '../api/types';
 import {
-  activityToReference, closest, closeness, connectionMessage, filterActivities, isAlreadyReference, sortActivities, yearsAgo,
+  activityToReference, blockSummary, closest, closeness, connectionMessage, filterActivities, isAlreadyReference, keySessions,
+  sortActivities, splitByBlock, weeksAgo, yearsAgo,
 } from './strava';
 
 const act = (id: number, date: string, km: number, gain: number, race = false): StravaActivity => ({
@@ -51,5 +52,45 @@ describe('import Strava', () => {
     expect(connectionMessage('connected')?.ok).toBe(true);
     expect(connectionMessage('denied')?.ok).toBe(false);
     expect(connectionMessage(null)).toBeNull();
+  });
+});
+
+describe('bloc de préparation', () => {
+  const today = new Date('2026-10-14T12:00:00Z');
+  const acts = [
+    act(10, '2026-10-10', 10, 100), act(11, '2026-10-05', 32, 1500), act(12, '2026-09-20', 25, 900, true),
+    act(13, '2026-09-01', 38, 2100), act(14, '2026-08-10', 12, 200), act(15, '2026-07-25', 28, 1400),
+    act(16, '2026-04-12', 60.4, 3210, true), act(17, '2026-03-01', 15, 100),
+  ];
+
+  it('sépare les 12 dernières semaines des sorties plus anciennes', () => {
+    expect(weeksAgo(12, today)).toBe('2026-07-22');
+    const { block, older } = splitByBlock(acts, weeksAgo(12, today));
+    expect(block.map((a) => a.id)).toEqual([10, 11, 12, 13, 14, 15]);
+    expect(older.map((a) => a.id)).toEqual([16, 17]);
+    // Bloc de la course d'avril : les sorties d'après ne comptent pas.
+    const april = splitByBlock(acts, '2026-01-11', '2026-04-05');
+    expect(april.block.map((a) => a.id)).toEqual([17]);
+    expect(april.older).toEqual([]);
+    expect(splitByBlock(acts, weeksAgo(10, today)).block.map((a) => a.id)).toEqual([10, 11, 12, 13, 14]);
+  });
+
+  it('résume le volume du bloc', () => {
+    const { block } = splitByBlock(acts, weeksAgo(12, today));
+    const s = blockSummary(block, 12);
+    expect(s.sessions).toBe(6);
+    expect(s.km).toBeCloseTo(145);
+    expect(s.gainM).toBe(6200);
+    expect(s.kmPerWeek).toBeCloseTo(145 / 12);
+    expect(s.longest?.id).toBe(13);
+    expect(blockSummary([], 12).longest).toBeNull();
+  });
+
+  it('propose les courses du bloc et les 3 sorties qui ressemblent le plus à la course, pas les footings', () => {
+    const { block } = splitByBlock(acts, weeksAgo(12, today));
+    expect(keySessions(block, troubadours).map((a) => a.id)).toEqual([11, 12, 13, 15]);
+    expect(keySessions(block, null).map((a) => a.id)).toEqual([11, 12, 13, 15]);
+    const existing = [activityToReference(act(13, '2026-09-01', 38, 2100), 'TRAINING')];
+    expect(keySessions(block, troubadours, existing).map((a) => a.id)).toEqual([11, 12, 14, 15]);
   });
 });

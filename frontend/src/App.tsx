@@ -359,7 +359,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
             initialSource={source}
             loading={status.kind === 'loading'}
             onSubmit={(refs, src) => void compute(refs, src)}
-            target={plan && !otherRace ? { km: plan.totalDistanceKm, gainM: plan.totalGainM } : null}
+            target={plan && !otherRace ? { km: plan.totalDistanceKm, gainM: plan.totalGainM, date: course?.race.start?.slice(0, 10) ?? null } : null}
             training={training}
             onTrainingChange={changeTraining}
           />

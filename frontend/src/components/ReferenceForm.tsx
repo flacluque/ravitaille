@@ -4,6 +4,7 @@ import { MAX_PREP_WEEKS, MIN_PREP_WEEKS } from '../api/storage';
 import type { ElevationSource, Reference, ReferenceKind, TrainingOptions } from '../api/types';
 import { durationMinutes, formatHm, formatKm, parseHmInput } from '../lib/format';
 import type { Target } from '../lib/strava';
+import { DatePicker } from './DatePicker';
 import { StravaImport } from './StravaImport';
 import { StravaLogo } from './StravaLogo';
 
@@ -159,7 +160,8 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
             <div className="ref-grid">
               <label>
                 <span>Date</span>
-                <input type="date" value={row.date} onChange={(e) => update(row.id, { date: e.target.value })} />
+                <DatePicker value={row.date} onChange={(date) => update(row.id, { date })} clearable placeholder="Facultative"
+                  ariaLabel="Date" />
               </label>
               <label>
                 <span>Type</span>
@@ -259,6 +261,8 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
           onAdd={addImported}
           onClose={() => { setStravaOpen(false); setStravaResult(null); }}
           connectionResult={stravaResult}
+          training={training}
+          onTrainingChange={onTrainingChange}
         />
       )}
     </form>
