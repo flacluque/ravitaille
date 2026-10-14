@@ -38,16 +38,27 @@ public record ExtractionProperties(
      * Gemini, l'IA de Google : une clé gratuite (https://aistudio.google.com/apikey) suffit pour quelques
      * dizaines de lectures par jour. Les documents envoyés sortent alors de la machine.
      *
-     * @param model modèle à vision ; l'alias « flash-latest » suit la dernière version rapide
+     * @param model          modèle à vision ; l'alias « flash-latest » suit la dernière version rapide
+     * @param fallbackModels modèles essayés quand le premier est surchargé ou à court de quota gratuit
      */
     public record Gemini(
             @DefaultValue("") String apiKey,
             @DefaultValue("gemini-flash-latest") String model,
+            @DefaultValue({"gemini-2.5-flash", "gemini-flash-lite-latest"}) java.util.List<String> fallbackModels,
             @DefaultValue("https://generativelanguage.googleapis.com") String baseUrl,
             @DefaultValue("2m") Duration timeout) {
 
         public Gemini {
             apiKey = apiKey == null ? "" : apiKey.strip();
+            fallbackModels = fallbackModels == null ? java.util.List.of() : java.util.List.copyOf(fallbackModels);
+        }
+
+        /** Le modèle choisi, puis ses secours, sans doublon. */
+        public java.util.List<String> models() {
+            java.util.LinkedHashSet<String> all = new java.util.LinkedHashSet<>();
+            all.add(model.strip());
+            fallbackModels.stream().map(String::strip).filter(m -> !m.isEmpty()).forEach(all::add);
+            return java.util.List.copyOf(all);
         }
     }
 }

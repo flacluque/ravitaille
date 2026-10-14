@@ -143,7 +143,9 @@ ollama pull qwen2.5vl:7b
 - **Gemini** (l'IA de Google, utilisée pour le site en ligne) : `trailplanner.extraction.provider=gemini`
   et une clé gratuite (https://aistudio.google.com/apikey) dans `TRAILPLANNER_EXTRACTION_GEMINI_API_KEY`.
   Plus rapide (quelques secondes), mais les documents sont envoyés à Google. Modèle :
-  `trailplanner.extraction.gemini.model` (par défaut `gemini-flash-latest`).
+  `trailplanner.extraction.gemini.model` (par défaut `gemini-flash-latest`). Gemini gratuit est souvent
+  surchargé : l'appli retente, puis essaie les modèles de `trailplanner.extraction.gemini.fallback-models`
+  (par défaut `gemini-2.5-flash,gemini-flash-lite-latest`, chacun avec son propre quota).
 - Désactiver : `trailplanner.extraction.provider=none`.
 - Ajouter une autre IA : une implémentation de `DocumentReader` et une ligne dans
   `ExtractionConfig`. Ni le front ni le reste du backend ne changent : la même IA lit les roadbooks
