@@ -689,3 +689,9 @@ a.feedback { white-space: nowrap; padding: 9px 12px; border: 1px solid var(--bor
   font-weight: 600; text-decoration: none; }
 a.feedback:hover { background: var(--surface-2); }
 @media (max-width: 640px) { a.feedback .long { display: none; } }
+.strava-step { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+.strava-step h3 { margin: 0; font-size: 1rem; }
+.strava-step .prep-weeks { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 500; }
+.strava-step .prep-weeks select { width: auto; }
+.strava-summary { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--surface-2); font-variant-numeric: tabular-nums; }
+.strava-step .link-btn { align-self: flex-start; }

@@ -259,6 +259,8 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
           onAdd={addImported}
           onClose={() => { setStravaOpen(false); setStravaResult(null); }}
           connectionResult={stravaResult}
+          training={training}
+          onTrainingChange={onTrainingChange}
         />
       )}
     </form>

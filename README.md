@@ -185,6 +185,12 @@ Strava demande une **application API**, gratuite, à créer une fois avec ton co
 - Les jetons de connexion sont gardés dans un **cookie chiffré du navigateur** (illisible sans la clé du
   serveur) : chacun ne voit que ses activités, le serveur ne garde aucun compte. L'API les renouvelle
   toute seule. « Se déconnecter » révoque l'accès chez Strava et efface le cookie.
+- L'import suit ta préparation : tu choisis sa durée (10 à 16 semaines, le même réglage que la prise en
+  compte de la forme), l'appli résume le bloc (sorties, km, D+, km/semaine) et coche d'office ses
+  **courses** et les **3 sorties qui ressemblent le plus à ta course**. Les footings restent hors des
+  références (ils fausseraient l'allure) mais comptent dans la mesure de la forme, activée à l'import.
+  Les **anciennes courses** (avant le bloc, jusqu'à 5 ans) sont proposées à part, les plus proches de ta
+  course d'abord.
 - Seules les sorties **Course à pied** et **Trail** sont proposées. Celles dont le type de sortie est
   « Course » dans Strava sont pré-réglées en course, les autres en entraînement (modifiable).
 - Une nouvelle application Strava ne connecte que le compte de son créateur. Pour des testeurs, passe sa

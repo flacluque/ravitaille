@@ -55,6 +55,56 @@ export function activityToReference(a: StravaActivity, kind: ReferenceKind): Ref
   };
 }
 
+/** Date d'il y a {@code weeks} semaines, au format "2026-07-22". */
+export function weeksAgo(weeks: number, today = new Date()): string {
+  const d = new Date(today);
+  d.setDate(d.getDate() - weeks * 7);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Sorties du bloc de préparation (depuis {@code blockStart}) et sorties plus anciennes. */
+export function splitByBlock(activities: StravaActivity[], blockStart: string) {
+  return {
+    block: activities.filter((a) => a.date >= blockStart),
+    older: activities.filter((a) => a.date < blockStart),
+  };
+}
+
+export interface BlockSummary {
+  sessions: number;
+  km: number;
+  gainM: number;
+  kmPerWeek: number;
+  longest: StravaActivity | null;
+}
+
+/** Volume du bloc de préparation, pour le montrer au coureur. */
+export function blockSummary(block: StravaActivity[], weeks: number): BlockSummary {
+  const km = block.reduce((t, a) => t + a.distanceKm, 0);
+  const gainM = block.reduce((t, a) => t + a.elevationGainM, 0);
+  const longest = block.reduce<StravaActivity | null>(
+    (best, a) => (!best || effort(a.distanceKm, a.elevationGainM) > effort(best.distanceKm, best.elevationGainM) ? a : best), null);
+  return { sessions: block.length, km, gainM, kmPerWeek: km / weeks, longest };
+}
+
+/** Nombre de sorties d'entraînement du bloc proposées d'office comme références. */
+export const KEY_TRAININGS = 3;
+
+/**
+ * Sorties du bloc qui valent une référence : ses courses, et les {@link KEY_TRAININGS} sorties
+ * d'entraînement qui ressemblent le plus à la course (les plus longues, à défaut de course préparée).
+ * Les footings n'en font pas partie : ils mesurent la forme, pas l'allure de course.
+ */
+export function keySessions(block: StravaActivity[], target: Target | null, existing: Reference[] = []): StravaActivity[] {
+  const fresh = block.filter((a) => !isAlreadyReference(a, existing));
+  const races = fresh.filter((a) => a.race);
+  const trainings = fresh.filter((a) => !a.race);
+  const ranked = target
+    ? sortActivities(trainings, target)
+    : [...trainings].sort((a, b) => effort(b.distanceKm, b.elevationGainM) - effort(a.distanceKm, a.elevationGainM));
+  return sortActivities([...races, ...ranked.slice(0, KEY_TRAININGS)], null);
+}
+
 /** Date d'il y a {@code years} ans, au format "2024-10-12". */
 export function yearsAgo(years: number, today = new Date()): string {
   const d = new Date(today);
