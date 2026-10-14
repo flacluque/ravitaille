@@ -695,3 +695,48 @@ a.feedback:hover { background: var(--surface-2); }
 .strava-step .prep-weeks select { width: auto; }
 .strava-summary { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--surface-2); font-variant-numeric: tabular-nums; }
 .strava-step .link-btn { align-self: flex-start; }
+
+/* ---------- Calendrier ---------- */
+button.date-picker-btn { display: inline-flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-weight: 400; text-align: left; white-space: nowrap; }
+button.date-picker-btn svg { flex: none; color: var(--accent); }
+button.date-picker-btn:hover { border-color: var(--accent); }
+.ref-grid button.date-picker-btn { padding: 6px 7px; font-size: 0.85rem; gap: 6px; overflow: hidden; }
+.date-picker { position: fixed; z-index: 3000; width: 296px; padding: 10px; border-radius: 12px; background: var(--surface);
+  border: 1px solid var(--border); box-shadow: 0 12px 32px rgb(0 0 0 / 0.18); color: var(--text); font-size: 0.9rem; }
+.dp-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.dp-title { flex: 1; display: flex; gap: 4px; justify-content: center; }
+.dp-title select { font: inherit; font-weight: 600; border: none; background: transparent; color: var(--text); padding: 4px 2px;
+  border-radius: 6px; cursor: pointer; text-transform: capitalize; }
+.dp-title select:hover { background: var(--surface-2); }
+button.dp-nav { width: 32px; height: 32px; padding: 0; border-radius: 8px; background: transparent; color: var(--accent);
+  font-size: 1.3rem; line-height: 1; }
+button.dp-nav:hover { background: var(--surface-2); }
+.dp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px 0; }
+.dp-weekday { text-align: center; font-size: 0.72rem; color: var(--muted); text-transform: uppercase; padding: 4px 0; }
+button.dp-day { position: relative; height: 36px; padding: 0; border-radius: 8px; background: transparent; color: var(--text);
+  font-weight: 400; font-variant-numeric: tabular-nums; }
+button.dp-day:hover { background: var(--surface-2); }
+button.dp-day:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+button.dp-day.out { color: var(--muted); opacity: 0.55; }
+button.dp-day.today { font-weight: 700; box-shadow: inset 0 0 0 1px var(--accent); }
+button.dp-day.range { background: color-mix(in srgb, var(--strava, #fc4c02) 14%, transparent); border-radius: 0; }
+button.dp-day.range-start { border-radius: 8px 0 0 8px; }
+button.dp-day.range-end { border-radius: 0 8px 8px 0; }
+button.dp-day.range-start.range-end { border-radius: 8px; }
+button.dp-day.flag::after { content: ''; position: absolute; top: 4px; right: 5px; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--strava, #fc4c02); }
+button.dp-day.selected { background: var(--accent); color: var(--accent-contrast); font-weight: 700; border-radius: 8px; }
+.dp-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 8px 2px 0; font-size: 0.78rem; color: var(--muted); }
+.dp-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.dp-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.dp-swatch.range { background: color-mix(in srgb, var(--strava, #fc4c02) 25%, transparent); }
+.dp-swatch.flag { width: 7px; height: 7px; border-radius: 50%; background: var(--strava, #fc4c02); }
+.dp-foot { display: flex; justify-content: space-between; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+.date-time { display: flex; gap: 6px; }
+.date-time input[type='time'] { width: auto; flex: none; }
+.editor .field { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 500; }
+.prep-fields { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; }
+.prep-field { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 500; min-width: 200px; }
+.prep-field select { width: auto; }
+.prep-dates { margin: 0; }

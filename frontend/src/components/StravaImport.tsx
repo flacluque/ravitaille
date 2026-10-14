@@ -7,8 +7,10 @@ import { durationMinutes, formatHm, formatKm, formatMeters } from '../lib/format
 import { StravaLogo } from './StravaLogo';
 import {
   activityToReference, blockSummary, closest, connectionMessage, isAlreadyReference, keySessions, sortActivities,
-  splitByBlock, SPORT_LABELS, weeksAgo, yearsAgo, type Target,
+  splitByBlock, SPORT_LABELS, yearsAgo, type Target,
 } from '../lib/strava';
+import { addDays, isIsoDate, prepWindow, todayIso } from '../lib/dates';
+import { DatePicker } from './DatePicker';
 
 interface Props {
   /** Références déjà saisies : les sorties correspondantes sont signalées. */
@@ -40,7 +42,13 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
   const weeks = training.weeks;
   /** Ancienneté des courses passées proposées, en années. */
   const [lookback, setLookback] = useState(2);
-  const since = useMemo(() => yearsAgo(Math.max(lookback, 1)), [lookback]);
+  /** Jour de la course : celui de la course affichée, modifiable ; sans course, le bloc finit aujourd'hui. */
+  const [raceDate, setRaceDate] = useState(() => (target?.date && isIsoDate(target.date) ? target.date : addDays(todayIso(), 7)));
+  const prep = useMemo(() => prepWindow(raceDate, weeks), [raceDate, weeks]);
+  const since = useMemo(() => {
+    const years = yearsAgo(Math.max(lookback, 1));
+    return prep.start < years ? prep.start : years;
+  }, [lookback, prep.start]);
   const [showAllBlock, setShowAllBlock] = useState(false);
   const [olderTrainings, setOlderTrainings] = useState(false);
   /** Sorties cochées, avec le type choisi. */
@@ -75,9 +83,10 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const blockStart = useMemo(() => weeksAgo(weeks), [weeks]);
-  const { block, older } = useMemo(() => splitByBlock(activities ?? [], blockStart), [activities, blockStart]);
-  const summary = useMemo(() => blockSummary(block, weeks), [block, weeks]);
+  const blockStart = prep.start;
+  const done = Math.round(prep.elapsedWeeks);
+  const { block, older } = useMemo(() => splitByBlock(activities ?? [], prep.start, prep.end), [activities, prep]);
+  const summary = useMemo(() => blockSummary(block, Math.max(1, prep.elapsedWeeks)), [block, prep.elapsedWeeks]);
   // Les références arrivent recréées à chaque rendu : on ne recalcule que si leur contenu change.
   const existingSig = existing.map((r) => `${r.date}|${r.km}`).join(',');
   const key = useMemo(() => keySessions(block, target, existing), [block, target, existingSig]);
@@ -205,15 +214,32 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
             {activities && <>
               <section className="strava-step">
                 <h3>1. Ta préparation</h3>
-                <label className="prep-weeks">
-                  <span>Elle dure</span>
-                  <select value={weeks} onChange={(e) => onTrainingChange({ ...training, weeks: Number(e.target.value) })}>
-                    {PREP_WEEKS.map((w) => <option key={w} value={w}>{w} semaines</option>)}
-                  </select>
-                  <span className="muted small">depuis le {frDate(blockStart)}</span>
-                </label>
+                <div className="prep-fields">
+                  <div className="prep-field">
+                    <span>Date de ta course</span>
+                    <DatePicker value={raceDate} onChange={(d) => d && setRaceDate(d)} ariaLabel="Date de ta course"
+                      highlight={{ from: prep.start, to: prep.raceWeek, label: `Préparation (${weeks} semaines)` }}
+                      flag={{ date: raceDate, label: 'Course' }} />
+                  </div>
+                  <label className="prep-field">
+                    <span>Ta préparation dure</span>
+                    <select value={weeks} onChange={(e) => onTrainingChange({ ...training, weeks: Number(e.target.value) })}>
+                      {PREP_WEEKS.map((w) => <option key={w} value={w}>{w} semaines</option>)}
+                    </select>
+                  </label>
+                </div>
+                <p className="prep-dates muted small">
+                  Du {frDate(prep.start)} au {frDate(addDays(prep.raceWeek, -1))}, avant la semaine de course
+                  {done === 0
+                    ? ' : elle n\'a pas encore commencé.'
+                    : done < weeks ? ` : ${done} semaine${done > 1 ? 's' : ''} sur ${weeks} déjà faite${done > 1 ? 's' : ''}.` : '.'}
+                  {target?.date && raceDate !== target.date && (
+                    <> {' '}<button type="button" className="link-btn" onClick={() => setRaceDate(target.date!)}>
+                      Revenir au {frDate(target.date)}</button></>
+                  )}
+                </p>
                 {summary.sessions === 0 ? (
-                  <p className="muted">Aucune sortie de course à pied ou de trail sur cette période.</p>
+                  prep.elapsedWeeks > 0 && <p className="muted">Aucune sortie de course à pied ou de trail sur cette période.</p>
                 ) : (
                   <p className="strava-summary">
                     <strong>{summary.sessions} sorties</strong> · {formatKm(summary.km)} km · {formatMeters(summary.gainM)} D+

@@ -1,3 +1,5 @@
+import { DatePicker } from './DatePicker';
+import { todayIso } from '../lib/dates';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { extractRoadbook, fetchExtractorStatus } from '../api/client';
 import type { AidLevel, ExtractorStatus } from '../api/types';
@@ -146,10 +148,15 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
           <span>Nom de la course</span>
           <input value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Trail des Troubadours" />
         </label>
-        <label>
+        <div className="field">
           <span>Départ</span>
-          <input type="datetime-local" value={draft.start} onChange={(e) => set({ start: e.target.value })} />
-        </label>
+          <span className="date-time">
+            <DatePicker value={draft.start.slice(0, 10)} ariaLabel="Date du départ"
+              onChange={(date) => set({ start: `${date}T${draft.start.slice(11, 16) || '08:00'}` })} />
+            <input type="time" value={draft.start.slice(11, 16)} aria-label="Heure du départ"
+              onChange={(e) => set({ start: `${draft.start.slice(0, 10) || todayIso()}T${e.target.value}` })} />
+          </span>
+        </div>
         <label className="narrow">
           <span>Nuit de</span>
           <input value={draft.nightStart} onChange={(e) => set({ nightStart: e.target.value })} placeholder="19h00" />

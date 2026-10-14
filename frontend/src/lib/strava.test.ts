@@ -68,6 +68,10 @@ describe('bloc de préparation', () => {
     const { block, older } = splitByBlock(acts, weeksAgo(12, today));
     expect(block.map((a) => a.id)).toEqual([10, 11, 12, 13, 14, 15]);
     expect(older.map((a) => a.id)).toEqual([16, 17]);
+    // Bloc de la course d'avril : les sorties d'après ne comptent pas.
+    const april = splitByBlock(acts, '2026-01-11', '2026-04-05');
+    expect(april.block.map((a) => a.id)).toEqual([17]);
+    expect(april.older).toEqual([]);
     expect(splitByBlock(acts, weeksAgo(10, today)).block.map((a) => a.id)).toEqual([10, 11, 12, 13, 14]);
   });
 

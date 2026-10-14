@@ -4,6 +4,8 @@ import type { Reference, ReferenceKind, StravaActivity } from '../api/types';
 export interface Target {
   km: number;
   gainM: number;
+  /** Jour de la course ("2026-10-23"), qui place le bloc de préparation. */
+  date?: string | null;
 }
 
 export interface ActivityFilter {
@@ -62,11 +64,11 @@ export function weeksAgo(weeks: number, today = new Date()): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** Sorties du bloc de préparation (depuis {@code blockStart}) et sorties plus anciennes. */
-export function splitByBlock(activities: StravaActivity[], blockStart: string) {
+/** Sorties du bloc de préparation (de {@code start} inclus à {@code end} exclu) et sorties plus anciennes. */
+export function splitByBlock(activities: StravaActivity[], start: string, end = '9999-12-31') {
   return {
-    block: activities.filter((a) => a.date >= blockStart),
-    older: activities.filter((a) => a.date < blockStart),
+    block: activities.filter((a) => a.date >= start && a.date < end),
+    older: activities.filter((a) => a.date < start),
   };
 }
 
