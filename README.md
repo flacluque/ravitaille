@@ -25,7 +25,9 @@ npm install              # la première fois
 npm run dev              # http://localhost:5173 (les appels /api sont relayés vers le port 8080)
 ```
 
-- **Cinq onglets** pour ne pas se perdre :
+- **Six onglets** pour ne pas se perdre :
+  - **Accueil** : à quoi sert Trail Planner et comment s'en servir, avec un aperçu du plan. Affiché à la
+    première visite, puis on arrive sur « Mon plan » (le logo ramène à l'accueil) ;
   - **Mon plan** : l'arrivée prévue et sa fourchette, la barrière la plus serrée, la carte, le profil et
     les heures de passage (le tableau détaillé est dans « Analyse ») ;
   - **Ravitos** : quoi emporter au départ, puis quoi faire à chaque ravito, à l'heure prévue ;

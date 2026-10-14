@@ -14,6 +14,7 @@ import type { NutritionProfile } from './lib/nutrition';
 import { PassageTable } from './components/PassageTable';
 import { RaceEditor } from './components/RaceEditor';
 import { ReferenceForm } from './components/ReferenceForm';
+import { WelcomePage } from './components/WelcomePage';
 import { ReferenceInsights } from './components/ReferenceInsights';
 import { TrainingCard } from './components/TrainingCard';
 import { AlgorithmPage } from './components/AlgorithmPage';
@@ -28,9 +29,26 @@ import { defaultServices } from './lib/services';
 // Course d'exemple embarquée (src/main/resources/samples/bogomiles).
 const SAMPLE_ID = 'bogomiles';
 const CUSTOM_ID = 'custom';
-type Tab = 'plan' | 'ravitos' | 'sac' | 'analyse' | 'algo';
-const TABS: [Tab, string][] = [['plan', 'Mon plan'], ['ravitos', 'Ravitos'], ['sac', 'Sac'], ['analyse', 'Analyse'], ['algo', 'Comment ça marche']];
-const TAB_HASH: Record<Tab, string> = { plan: '#plan', ravitos: '#ravitos', sac: '#sac', analyse: '#analyse', algo: '#algorithme' };
+type Tab = 'accueil' | 'plan' | 'ravitos' | 'sac' | 'analyse' | 'algo';
+const TABS: [Tab, string][] = [['accueil', 'Accueil'], ['plan', 'Mon plan'], ['ravitos', 'Ravitos'], ['sac', 'Sac'],
+  ['analyse', 'Analyse'], ['algo', 'Comment ça marche']];
+const TAB_HASH: Record<Tab, string> = {
+  accueil: '#accueil', plan: '#plan', ravitos: '#ravitos', sac: '#sac', analyse: '#analyse', algo: '#algorithme',
+};
+const WELCOME_SEEN = 'trail-planner:accueil-vu';
+
+/** Onglet de départ : l'accueil à la première visite, ensuite le plan (sauf lien vers un onglet). */
+function initialTab(): Tab {
+  const fromHash = window.location.hash ? tabFromHash(window.location.hash) : null;
+  if (fromHash) return fromHash;
+  // Retour de la connexion Strava : la fenêtre d'import s'ouvre dans « Mon plan ».
+  if (new URLSearchParams(window.location.search).has('strava')) return 'plan';
+  try {
+    return localStorage.getItem(WELCOME_SEEN) ? 'plan' : 'accueil';
+  } catch {
+    return 'accueil';
+  }
+}
 
 /** Onglet d'une adresse ; null pour une ancre interne (#source-…) qui ne change pas d'onglet. */
 function tabFromHash(hash: string): Tab | null {
@@ -72,7 +90,15 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   const [source, setSource] = useState<ElevationSource>(initial?.source ?? 'AUTO');
   const hasData = useRef(initial !== null);
   // Onglet affiché, avec sa propre adresse (#ravitos, #algorithme…) pour pouvoir partager le lien.
-  const [tab, setTab] = useState<Tab>(() => tabFromHash(window.location.hash) ?? 'plan');
+  const [tab, setTab] = useState<Tab>(initialTab);
+  useEffect(() => {
+    if (tab !== 'accueil') return;
+    try {
+      localStorage.setItem(WELCOME_SEEN, '1');
+    } catch {
+      // Stockage indisponible : l'accueil reviendra à la prochaine visite.
+    }
+  }, [tab]);
   useEffect(() => {
     const onHash = () => {
       const next = tabFromHash(window.location.hash);
@@ -274,11 +300,11 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">
+        <a className="brand" href={TAB_HASH.accueil} aria-label="Trail Planner : accueil">
           <img src="/icon.svg" alt="" width={28} height={28} />
           <span>Trail Planner</span>
-        </div>
-        {otherRace ? (
+        </a>
+        {tab === 'accueil' ? <div className="race-title" /> : otherRace ? (
           <div className="race-title">
             <h1>{draftName}</h1>
             <p>Plan à calculer</p>
@@ -298,7 +324,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
             💬 <span className="long">Donner mon avis</span>
           </a>
         )}
-        <div className="pdf-menu no-print">
+        <div className="pdf-menu no-print" hidden={tab === 'accueil'}>
           <button type="button" className="ghost" onClick={() => setPdfMenu((m) => !m)} disabled={!plan || savingPdf || stale}
             aria-expanded={pdfMenu} aria-haspopup="menu"
             title="Télécharger le plan de course en PDF (fonctionne aussi hors ligne)">
@@ -341,8 +367,14 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
       )}
 
       {tab === 'algo' && <AlgorithmPage plan={plan} />}
+      {tab === 'accueil' && (
+        <WelcomePage plan={plan} isExample={mode === 'demo'} feedbackUrl={feedbackUrl}
+          onExample={() => { switchMode('demo'); goTab('plan'); }}
+          onMyRace={() => { switchMode('custom'); goTab('plan'); }}
+          onAlgorithm={() => goTab('algo')} />
+      )}
 
-      <main className="layout" hidden={tab === 'algo'}>
+      <main className="layout" hidden={tab === 'algo' || tab === 'accueil'}>
         <aside className="side no-print">
           <div className="card mode-switch" role="radiogroup" aria-label="Course">
             <button type="button" role="radio" aria-checked={mode === 'demo'} className={mode === 'demo' ? 'active' : ''}
