@@ -3,8 +3,6 @@ package fr.trailplanner.strava;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
-import java.nio.file.Path;
-
 /**
  * Accès à Strava (application.properties, ou config/application.properties hors git pour le secret) :
  * <pre>
@@ -13,15 +11,13 @@ import java.nio.file.Path;
  * </pre>
  * L'identifiant et le secret viennent de l'application API créée sur https://www.strava.com/settings/api.
  *
- * @param baseUrl   adresse de Strava (changée dans les tests)
- * @param tokenFile où garder les jetons ; par défaut ~/.trail-planner/strava.json
+ * @param baseUrl adresse de Strava (changée dans les tests)
  */
 @ConfigurationProperties("trailplanner.strava")
 public record StravaProperties(
         @DefaultValue("") String clientId,
         @DefaultValue("") String clientSecret,
-        @DefaultValue("https://www.strava.com") String baseUrl,
-        @DefaultValue("") String tokenFile) {
+        @DefaultValue("https://www.strava.com") String baseUrl) {
 
     /** Une valeur recopiée garde facilement des espaces en fin de ligne ou des guillemets : on les retire. */
     public StravaProperties {
@@ -54,11 +50,5 @@ public record StravaProperties(
             v = v.substring(1, v.length() - 1).strip();
         }
         return v;
-    }
-
-    public Path tokenPath() {
-        return tokenFile.isBlank()
-                ? Path.of(System.getProperty("user.home"), ".trail-planner", "strava.json")
-                : Path.of(tokenFile);
     }
 }

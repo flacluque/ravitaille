@@ -10,3 +10,6 @@ frontend/dev-dist/
 
 # Secrets locaux (identifiants Strava…)
 config/
+
+# Front copié dans le jar par le Dockerfile
+src/main/resources/static/

@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -21,8 +22,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-/** Connexion du compte Strava, import des sorties comme références, et historique d'entraînement. */
-public class StravaService implements TrainingSource {
+/**
+ * Connexion d'un compte Strava, import des sorties comme références, et historique d'entraînement.
+ * Les jetons de chaque coureur sont dans sa {@link StravaSession} (cookie de son navigateur).
+ */
+public class StravaService {
 
     /** Sports gardés : « Course à pied » et « Trail ». */
     static final Set<String> RUNNING = Set.of("Run", "TrailRun");
@@ -30,48 +34,56 @@ public class StravaService implements TrainingSource {
     static final Set<String> RUNNING_AND_HIKING = Set.of("Run", "TrailRun", "Hike");
     /** Un calcul de plan relit l'historique : on le garde un moment pour ménager le quota de Strava. */
     static final Duration CACHE_TTL = Duration.ofMinutes(10);
+    /** Historiques gardés en mémoire (un par coureur). */
+    static final int CACHE_SIZE = 50;
     /** Type de sortie « Course » pour une activité de course à pied. */
     static final int RACE_WORKOUT = 1;
     static final int PER_PAGE = 200;
     /** 10 pages de 200 : de quoi couvrir des années d'entraînement sans épuiser le quota de Strava. */
     static final int MAX_PAGES = 10;
 
-    /** L'appli tourne en local : on ne renvoie le navigateur que vers une adresse locale. */
+    /** En local, l'appli peut être servie par Vite sur un autre port que l'API. */
     private static final Pattern LOCAL_ORIGIN = Pattern.compile("^http://(localhost|127\\.0\\.0\\.1)(:\\d{1,5})?$");
-    private static final int MAX_PENDING = 20;
+    private static final int MAX_PENDING = 200;
 
     private final StravaProperties props;
     private final StravaClient client;
-    private final StravaTokenStore store;
     private final Clock clock;
     private final SecureRandom random = new SecureRandom();
     /** Connexions en cours : state → adresse de l'appli à laquelle revenir. */
     private final Map<String, String> pending = new LinkedHashMap<>();
-    /** Dernières activités lues (tous sports gardés), depuis {@code since}, lues à {@code at}. */
-    private record Cached(LocalDate since, java.time.Instant at, List<StravaActivity> activities) {}
-    private Cached cache;
+    /** Dernières activités lues (tous sports gardés) d'un coureur, depuis {@code since}, lues à {@code at}. */
+    private record Cached(LocalDate since, Instant at, List<StravaActivity> activities) {}
+    private final Map<String, Cached> cache = new LinkedHashMap<>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, Cached> eldest) {
+            return size() > CACHE_SIZE;
+        }
+    };
 
-    public StravaService(StravaProperties props, StravaClient client, StravaTokenStore store, Clock clock) {
+    public StravaService(StravaProperties props, StravaClient client, Clock clock) {
         this.props = props;
         this.client = client;
-        this.store = store;
         this.clock = clock;
     }
 
-    public StravaStatus status() {
-        Optional<StravaToken> token = props.configured() ? store.load() : Optional.empty();
+    public StravaStatus status(StravaSession session) {
+        Optional<StravaToken> token = props.configured() ? session.token() : Optional.empty();
         String problem = props.configured() ? null : props.problem();
         return new StravaStatus(props.configured(), token.isPresent(), token.map(StravaToken::athlete).orElse(null), problem);
     }
 
-    /** Adresse de la page d'autorisation de Strava ; {@code origin} est l'adresse de l'appli (ex. http://localhost:5173). */
-    public String authorize(String origin) {
+    /**
+     * Adresse de la page d'autorisation de Strava. {@code origin} est l'adresse de l'appli, où revenir
+     * ensuite : une adresse locale, ou celle du serveur lui-même ({@code serverOrigin}) une fois en ligne.
+     */
+    public String authorize(String origin, String serverOrigin) {
         if (!props.configured()) {
             throw StravaException.notConfigured(props.problem());
         }
-        String base = origin == null ? "" : origin.replaceAll("/+$", "");
-        if (!LOCAL_ORIGIN.matcher(base).matches()) {
-            throw new IllegalArgumentException("Adresse de l'appli non locale : " + origin);
+        String base = trim(origin);
+        if (!LOCAL_ORIGIN.matcher(base).matches() && !base.equals(trim(serverOrigin))) {
+            throw new IllegalArgumentException("Adresse de l'appli inconnue : " + origin);
         }
         byte[] bytes = new byte[24];
         random.nextBytes(bytes);
@@ -85,11 +97,15 @@ public class StravaService implements TrainingSource {
         return client.authorizeUrl(base + "/api/strava/callback", state);
     }
 
+    private static String trim(String origin) {
+        return origin == null ? "" : origin.replaceAll("/+$", "");
+    }
+
     /**
-     * Retour de Strava après l'autorisation. Renvoie l'adresse de l'appli où envoyer le navigateur,
-     * avec le résultat : {@code ?strava=connected}, {@code denied} ou {@code error}.
+     * Retour de Strava après l'autorisation : les jetons vont dans {@code session}. Renvoie l'adresse de
+     * l'appli où envoyer le navigateur, avec le résultat : {@code ?strava=connected}, {@code denied} ou {@code error}.
      */
-    public String callback(String state, String code, String error, String scope) {
+    public String callback(String state, String code, String error, String scope, StravaSession session) {
         String origin;
         synchronized (pending) {
             origin = state == null ? null : pending.remove(state);
@@ -104,7 +120,7 @@ public class StravaService implements TrainingSource {
             return origin + "/?strava=scope";
         }
         try {
-            store.save(client.exchange(code));
+            session.update(client.exchange(code));
             return origin + "/?strava=connected";
         } catch (StravaException e) {
             return origin + "/?strava=error";
@@ -112,25 +128,33 @@ public class StravaService implements TrainingSource {
     }
 
     /** Sorties de course à pied et de trail depuis {@code since}, les plus récentes d'abord. */
-    public List<StravaActivity> activities(LocalDate since) {
-        return fetch(since, RUNNING);
+    public List<StravaActivity> activities(StravaSession session, LocalDate since) {
+        return fetch(session, since, RUNNING);
     }
 
-    /** Historique d'entraînement, si Strava est configuré et connecté ; sinon vide. */
-    @Override
-    public Optional<TrainingHistory> history(LocalDate since, boolean includeHikes) {
-        if (!props.configured() || store.load().isEmpty()) {
+    /** Historique d'entraînement du coureur de {@code session} (vide s'il n'a pas connecté Strava). */
+    public TrainingSource source(StravaSession session) {
+        return (since, includeHikes) -> history(session, since, includeHikes);
+    }
+
+    Optional<TrainingHistory> history(StravaSession session, LocalDate since, boolean includeHikes) {
+        Optional<StravaToken> token = session.token();
+        if (!props.configured() || token.isEmpty()) {
             return Optional.empty();
         }
-        List<StravaActivity> all;
-        synchronized (this) {
-            java.time.Instant now = clock.instant();
-            if (cache == null || cache.since().isAfter(since) || cache.at().plus(CACHE_TTL).isBefore(now)) {
-                cache = new Cached(since, now, fetch(since, RUNNING_AND_HIKING));
-            }
-            all = cache.activities();
+        String key = key(token.get());
+        Instant now = clock.instant();
+        Cached cached;
+        synchronized (cache) {
+            cached = cache.get(key);
         }
-        List<TrainingSession> sessions = all.stream()
+        if (cached == null || cached.since().isAfter(since) || cached.at().plus(CACHE_TTL).isBefore(now)) {
+            cached = new Cached(since, now, fetch(session, since, RUNNING_AND_HIKING));
+            synchronized (cache) {
+                cache.put(key, cached);
+            }
+        }
+        List<TrainingSession> sessions = cached.activities().stream()
                 .filter(a -> !a.date().isBefore(since))
                 .filter(a -> includeHikes || RUNNING.contains(a.sportType()))
                 .map(a -> new TrainingSession(a.date(), a.distanceKm(), a.elevationGainM(), a.sportType()))
@@ -138,13 +162,17 @@ public class StravaService implements TrainingSource {
         return Optional.of(new TrainingHistory(since, sessions));
     }
 
-    private List<StravaActivity> fetch(LocalDate since, Set<String> sports) {
-        String access = accessToken();
+    private static String key(StravaToken token) {
+        return token.athleteId() > 0 ? "athlete:" + token.athleteId() : "token:" + token.refreshToken();
+    }
+
+    private List<StravaActivity> fetch(StravaSession session, LocalDate since, Set<String> sports) {
+        String access = accessToken(session);
         long after = since.atStartOfDay(ZoneOffset.UTC).toEpochSecond();
         List<StravaActivity> result = new ArrayList<>();
         for (int page = 1; page <= MAX_PAGES; page++) {
             int current = page;
-            JsonNode items = call(() -> client.activities(access, after, current, PER_PAGE));
+            JsonNode items = call(session, () -> client.activities(access, after, current, PER_PAGE));
             for (JsonNode item : items) {
                 toActivity(item, sports).ifPresent(result::add);
             }
@@ -157,13 +185,13 @@ public class StravaService implements TrainingSource {
     }
 
     /** Révoque l'accès chez Strava (au mieux) et oublie les jetons. */
-    public void disconnect() {
-        synchronized (this) {
-            cache = null;
-        }
-        Optional<StravaToken> token = store.load();
-        store.delete();
+    public void disconnect(StravaSession session) {
+        Optional<StravaToken> token = session.token();
+        session.clear();
         token.ifPresent(t -> {
+            synchronized (cache) {
+                cache.remove(key(t));
+            }
             try {
                 client.deauthorize(t.accessToken());
             } catch (StravaException ignored) {
@@ -194,25 +222,26 @@ public class StravaService implements TrainingSource {
                 a.path("workout_type").asInt(-1) == RACE_WORKOUT));
     }
 
-    private String accessToken() {
+    private String accessToken(StravaSession session) {
         if (!props.configured()) {
             throw StravaException.notConfigured(props.problem());
         }
-        StravaToken token = store.load().orElseThrow(StravaException::notConnected);
+        StravaToken token = session.token().orElseThrow(StravaException::notConnected);
         if (token.expiresSoon(clock.instant())) {
-            token = call(() -> client.refresh(store.load().orElseThrow(StravaException::notConnected)));
-            store.save(token);
+            StravaToken current = token;
+            token = call(session, () -> client.refresh(current));
+            session.update(token);
         }
         return token.accessToken();
     }
 
     /** Un refus de Strava veut dire que l'accès a été révoqué : on oublie les jetons, il faudra se reconnecter. */
-    private <T> T call(java.util.function.Supplier<T> request) {
+    private <T> T call(StravaSession session, java.util.function.Supplier<T> request) {
         try {
             return request.get();
         } catch (StravaException e) {
             if (e.status() == HttpStatus.UNAUTHORIZED) {
-                store.delete();
+                session.clear();
             }
             throw e;
         }

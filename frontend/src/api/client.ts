@@ -143,3 +143,27 @@ export function migrateSnapshot(data: Snapshot & { reference?: Omit<Reference, '
   const references = rest.references ?? (reference ? [{ label: '', date: null, kind: 'RACE' as const, ...reference }] : []);
   return { ...rest, references, plans: rest.plans.map((p) => ({ ...p, references: p.references ?? [] })) };
 }
+
+/** Ce que le serveur demande avant tout (fr.trailplanner.web.AppController.AppInfo). */
+export interface AppInfo {
+  accessRequired: boolean;
+  accessGranted: boolean;
+  feedbackUrl: string | null;
+}
+
+export function fetchAppInfo(): Promise<AppInfo> {
+  return getJson('/api/app');
+}
+
+/** Envoie le code d'invitation ; le serveur le retient dans un cookie. */
+export async function enterAccessCode(code: string): Promise<void> {
+  const res = await fetch('/api/app/access', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new ApiError(body?.detail ?? `Erreur ${res.status}`);
+  }
+}

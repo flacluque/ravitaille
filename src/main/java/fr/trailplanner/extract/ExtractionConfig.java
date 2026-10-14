@@ -14,6 +14,7 @@ public class ExtractionConfig {
         return switch (props.provider()) {
             case NONE -> new DisabledDocumentReader();
             case OLLAMA -> new OllamaDocumentReader(props.ollama());
+            case GEMINI -> new GeminiDocumentReader(props.gemini());
         };
     }
 }

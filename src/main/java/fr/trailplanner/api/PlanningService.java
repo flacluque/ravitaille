@@ -5,7 +5,6 @@ import fr.trailplanner.engine.TrainingSource;
 import fr.trailplanner.model.ReferencePerformance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Clock;
@@ -34,21 +33,14 @@ public class PlanningService {
     private final GpxParser parser = new GpxParser();
     private final TrackAnalyzer analyzer = new TrackAnalyzer();
     private final RacePlanner planner = new RacePlanner();
-    private final TrainingSource training;
     private final Clock clock;
 
-    /** Sans historique d'entraînement (tests, exemples). */
-    public PlanningService() {
-        this((TrainingSource) null, Clock.systemDefaultZone());
-    }
-
     @Autowired
-    public PlanningService(ObjectProvider<TrainingSource> training) {
-        this(training.getIfAvailable(), Clock.systemDefaultZone());
+    public PlanningService() {
+        this(Clock.systemDefaultZone());
     }
 
-    PlanningService(TrainingSource training, Clock clock) {
-        this.training = training;
+    PlanningService(Clock clock) {
         this.clock = clock;
     }
 
@@ -59,13 +51,19 @@ public class PlanningService {
         return new LoadedTrack(parsed.name(), analyzer.analyze(parsed.points()));
     }
 
+    /** Plans sans historique d'entraînement. */
     public List<RacePlan> plan(PlanRequest request, TrackProfile track) {
+        return plan(request, track, null);
+    }
+
+    /** Plans, avec la forme du coureur si {@code training} donne son historique (Strava). */
+    public List<RacePlan> plan(PlanRequest request, TrackProfile track, TrainingSource training) {
         if (request.race() == null) {
             throw new IllegalArgumentException("La course (race) est obligatoire");
         }
         LocalDate today = LocalDate.now(clock);
         List<String> warnings = new ArrayList<>();
-        TrainingHistory history = history(request, today, warnings);
+        TrainingHistory history = history(request, training, today, warnings);
         int weeks = request.training() == null ? TrainingHistory.BLOCK_WEEKS : request.training().weeksOrDefault();
         return request.scenariosOrDefault().stream()
                 .map(s -> planner.plan(request.race(), track, request.references(), s,
@@ -78,7 +76,8 @@ public class PlanningService {
      * Historique d'entraînement couvrant le bloc de préparation de la course et de chaque référence.
      * Si Strava ne répond pas, le plan se fait sans, avec un avertissement.
      */
-    private TrainingHistory history(PlanRequest request, LocalDate today, List<String> warnings) {
+    private TrainingHistory history(PlanRequest request, TrainingSource training, LocalDate today,
+                                    List<String> warnings) {
         PlanRequest.TrainingOptions options = request.training();
         if (options == null || !options.strava() || training == null
                 || request.references() == null || request.references().isEmpty()) {

@@ -52,7 +52,7 @@ type Status =
   /** L'API a répondu mais refuse le calcul (roadbook incohérent...). */
   | { kind: 'rejected'; error: string };
 
-export function App() {
+export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}) {
   const initial = useMemo(loadSnapshot, []);
   const [data, setData] = useState<Snapshot | null>(initial);
   const [status, setStatus] = useState<Status>({ kind: 'loading' });
@@ -291,6 +291,12 @@ export function App() {
               {plan && <> · {formatKm(plan.totalDistanceKm)} km · {formatMeters(plan.totalGainM)} D+</>}
             </p>
           </div>
+        )}
+        {feedbackUrl && (
+          <a className="feedback no-print" href={feedbackUrl} target="_blank" rel="noreferrer"
+            title="Une idée, un bug, une remarque : dis-le-nous">
+            💬 <span className="long">Donner mon avis</span>
+          </a>
         )}
         <div className="pdf-menu no-print">
           <button type="button" className="ghost" onClick={() => setPdfMenu((m) => !m)} disabled={!plan || savingPdf || stale}

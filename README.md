@@ -140,8 +140,12 @@ ollama pull qwen2.5vl:7b
   plutôt que de l'inventer, et il faut ajouter la trace GPX de la course.
 - L'IA ne fait que **pré-remplir** l'éditeur : rien n'est calculé sans ta relecture.
 - Changer de modèle : `trailplanner.extraction.ollama.model=...` (après `ollama pull ...`).
+- **Gemini** (l'IA de Google, utilisée pour le site en ligne) : `trailplanner.extraction.provider=gemini`
+  et une clé gratuite (https://aistudio.google.com/apikey) dans `TRAILPLANNER_EXTRACTION_GEMINI_API_KEY`.
+  Plus rapide (quelques secondes), mais les documents sont envoyés à Google. Modèle :
+  `trailplanner.extraction.gemini.model` (par défaut `gemini-flash-latest`).
 - Désactiver : `trailplanner.extraction.provider=none`.
-- Ajouter une autre IA (cloud...) : une implémentation de `DocumentReader` et une ligne dans
+- Ajouter une autre IA : une implémentation de `DocumentReader` et une ligne dans
   `ExtractionConfig`. Ni le front ni le reste du backend ne changent : la même IA lit les roadbooks
   et les règlements.
 
@@ -173,15 +177,16 @@ Strava demande une **application API**, gratuite, à créer une fois avec ton co
    ```
    Ou, au choix, les variables d'environnement `TRAILPLANNER_STRAVA_CLIENT_ID` et
    `TRAILPLANNER_STRAVA_CLIENT_SECRET`.
-4. Redémarre l'API, puis dans l'appli : « Importer depuis Strava » → « Connecter mon compte Strava ».
+4. Redémarre l'API, puis dans l'appli : « Importer depuis Strava » → « Se connecter avec Strava ».
    Strava demande ton accord ; laisse cochée la lecture des activités (y compris privées).
 
-- Les jetons de connexion sont gardés dans `~/.trail-planner/strava.json`, lisible par toi seul ; l'API
-  les renouvelle toute seule. « Se déconnecter » révoque l'accès chez Strava et efface le fichier.
+- Les jetons de connexion sont gardés dans un **cookie chiffré du navigateur** (illisible sans la clé du
+  serveur) : chacun ne voit que ses activités, le serveur ne garde aucun compte. L'API les renouvelle
+  toute seule. « Se déconnecter » révoque l'accès chez Strava et efface le cookie.
 - Seules les sorties **Course à pied** et **Trail** sont proposées. Celles dont le type de sortie est
   « Course » dans Strava sont pré-réglées en course, les autres en entraînement (modifiable).
-- Une nouvelle application Strava ne peut connecter que le compte de son créateur : c'est fait pour
-  un usage personnel.
+- Une nouvelle application Strava ne connecte que le compte de son créateur. Pour des testeurs, passe sa
+  capacité à 10 sportifs dans les réglages de l'application (sans validation de Strava).
 - Strava affiche `"field":"client_id","code":"invalid"` : l'identifiant ne correspond à aucune
   application. `client-id` doit être le **Client ID**, un nombre (pas le secret ni un jeton d'accès),
   recopié depuis https://www.strava.com/settings/api ; redémarre l'API après chaque modification.
@@ -236,6 +241,36 @@ date souvent d'une édition précédente. La trace sert alors au profil et au co
 Pour le dénivelé mesuré sur la trace, on filtre le bruit altimétrique (hystérésis de 3 m) : sans
 ce filtre, la trace des Bogomiles donne ~4 500 m D+ au lieu de ~3 770 m.
 
+## Mettre le site en ligne (Render)
+
+Pour faire tester l'appli à des amis : un seul serveur (l'API sert aussi le front), décrit par le
+`Dockerfile` et `render.yaml`. L'offre gratuite de Render suffit : le site s'endort après 15 min sans
+visite et met environ une minute à se réveiller.
+
+1. **Clé Gemini** (lecture des roadbooks en ligne, gratuite) : https://aistudio.google.com/apikey →
+   « Create API key ». Les documents lus sont alors envoyés à Google.
+2. **Render** : crée un compte sur https://render.com avec GitHub, puis **New + → Blueprint** et choisis
+   ce dépôt (branche à déployer). Render lit `render.yaml` et demande les valeurs secrètes :
+   - `TRAILPLANNER_EXTRACTION_GEMINI_API_KEY` : la clé Gemini ;
+   - `TRAILPLANNER_STRAVA_CLIENT_ID` et `TRAILPLANNER_STRAVA_CLIENT_SECRET` : ceux de l'application Strava ;
+   - `TRAILPLANNER_ACCESS_CODE` : le code d'invitation à donner aux amis (vide : site ouvert à tous) ;
+   - `TRAILPLANNER_FEEDBACK_URL` : le lien du bouton « Donner mon avis » (formulaire Google Forms,
+     Tally…, ou `mailto:toi@exemple.fr`) ; vide : pas de bouton.
+
+   `TRAILPLANNER_SECRET` (clé des cookies) est tiré au hasard par Render. Le premier déploiement
+   prend quelques minutes ; l'adresse du site est du type `https://trail-planner-xxxx.onrender.com`.
+3. **Strava**, sur https://www.strava.com/settings/api :
+   - **domaine de rappel** : le domaine Render, sans `https://` (ex. `trail-planner-xxxx.onrender.com`).
+     Strava n'en accepte qu'un : pour revenir au local, remets `localhost` ;
+   - **capacité** : 10 sportifs, pour que tes amis puissent connecter leur compte.
+4. Envoie l'adresse et le code d'invitation. Chaque visiteur saisit le code une fois (retenu un an) ;
+   changer `TRAILPLANNER_ACCESS_CODE` le redemande à tout le monde.
+
+Ce qui est gardé où : références, courses et réglages restent dans le navigateur de chacun ; la
+connexion Strava est un cookie chiffré ; le serveur ne garde rien (il peut redémarrer sans perte).
+
+Pour essayer l'image en local : `docker build -t trail-planner . && docker run -p 8080:8080 trail-planner`.
+
 ## Architecture
 
 ```
@@ -246,8 +281,9 @@ fr.trailplanner
 ├── engine    Modèle d'effort, découpage en tronçons, planificateur
 ├── report    Rendu texte imprimable
 ├── api       Spring Boot : contrôleur REST, service, DTO
-├── extract   Lecture de documents par une IA (roadbook, matériel) : interface + Ollama, images / PDF
-└── strava    Connexion OAuth à Strava, jetons, import des sorties comme références
+├── extract   Lecture de documents par une IA (roadbook, matériel) : interface + Ollama / Gemini, images / PDF
+├── strava    Connexion OAuth à Strava, jetons en cookie chiffré, import des sorties comme références
+└── web       Site en ligne : chiffrement des cookies, code d'invitation, lien d'avis
 
 frontend/src
 ├── api         Types (miroir des records Java), client, copie hors ligne du dernier plan

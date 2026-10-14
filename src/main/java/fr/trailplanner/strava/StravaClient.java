@@ -50,14 +50,14 @@ public class StravaClient {
                 "client_id", clientId, "client_secret", clientSecret, "code", code, "grant_type", "authorization_code"));
         JsonNode athlete = json.path("athlete");
         String name = (athlete.path("firstname").asText("") + " " + athlete.path("lastname").asText("")).trim();
-        return token(json, name.isEmpty() ? null : name);
+        return token(json, athlete.path("id").asLong(0), name.isEmpty() ? null : name);
     }
 
     public StravaToken refresh(StravaToken current) {
         JsonNode json = postForm("/oauth/token", Map.of(
                 "client_id", clientId, "client_secret", clientSecret,
                 "refresh_token", current.refreshToken(), "grant_type", "refresh_token"));
-        return token(json, current.athlete());
+        return token(json, current.athleteId(), current.athlete());
     }
 
     /** Révoque l'accès chez Strava. */
@@ -73,13 +73,13 @@ public class StravaClient {
                 .header("Authorization", "Bearer " + accessToken).GET().build());
     }
 
-    private StravaToken token(JsonNode json, String athlete) {
+    private StravaToken token(JsonNode json, long athleteId, String athlete) {
         String access = json.path("access_token").asText(null);
         String refresh = json.path("refresh_token").asText(null);
         if (access == null || refresh == null) {
             throw new StravaException(HttpStatus.BAD_GATEWAY, "Réponse inattendue de Strava à la connexion.");
         }
-        return new StravaToken(access, refresh, json.path("expires_at").asLong(), athlete);
+        return new StravaToken(access, refresh, json.path("expires_at").asLong(), athleteId, athlete);
     }
 
     private JsonNode postForm(String path, Map<String, String> params) {
