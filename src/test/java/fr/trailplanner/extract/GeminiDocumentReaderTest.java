@@ -24,6 +24,8 @@ class GeminiDocumentReaderTest {
     private final List<String> keys = new ArrayList<>();
     private final List<String> bodies = new ArrayList<>();
     private volatile int status = 200;
+    /** Statuts renvoyés aux premières requêtes, avant {@code status}. */
+    private final java.util.Deque<Integer> firstStatuses = new java.util.concurrent.ConcurrentLinkedDeque<>();
     private volatile String answer = "{}";
 
     @BeforeEach
@@ -33,8 +35,13 @@ class GeminiDocumentReaderTest {
             paths.add(ex.getRequestURI().getPath());
             keys.add(ex.getRequestHeaders().getFirst("x-goog-api-key"));
             bodies.add(new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
-            byte[] bytes = answer.getBytes(StandardCharsets.UTF_8);
-            ex.sendResponseHeaders(status, bytes.length);
+            Integer first = firstStatuses.poll();
+            int code = first != null ? first : status;
+            byte[] bytes = (code == 200 ? answer : "{\"error\":{\"message\":\"The model is overloaded.\"}}").getBytes(StandardCharsets.UTF_8);
+            if (code != 200 && first == null) {
+                bytes = answer.getBytes(StandardCharsets.UTF_8);
+            }
+            ex.sendResponseHeaders(code, bytes.length);
             try (OutputStream out = ex.getResponseBody()) {
                 out.write(bytes);
             }
@@ -48,8 +55,8 @@ class GeminiDocumentReaderTest {
     }
 
     private GeminiDocumentReader reader(String key) {
-        return new GeminiDocumentReader(new ExtractionProperties.Gemini(key, "gemini-flash-latest",
-                "http://127.0.0.1:" + server.getAddress().getPort(), Duration.ofSeconds(5)));
+        return new GeminiDocumentReader(new ExtractionProperties.Gemini(key, "gemini-flash-latest", List.of("secours"),
+                "http://127.0.0.1:" + server.getAddress().getPort(), Duration.ofSeconds(5)), Duration.ofMillis(1));
     }
 
     private static final DocumentReader.Request REQUEST = new DocumentReader.Request(
@@ -93,10 +100,42 @@ class GeminiDocumentReaderTest {
         ExtractionException e = assertThrows(ExtractionException.class, () -> reader("cle").read(REQUEST));
         assertTrue(e.isUnavailable());
         assertTrue(e.getMessage().startsWith("Quota gratuit"));
+        assertEquals(List.of("/v1beta/models/gemini-flash-latest:generateContent", "/v1beta/models/secours:generateContent"),
+                paths, "quota épuisé : on passe directement au modèle de secours");
 
         status = 400;
         answer = "{\"error\":{\"message\":\"API key not valid. Please pass a valid API key.\"}}";
         assertTrue(assertThrows(ExtractionException.class, () -> reader("cle").read(REQUEST)).getMessage().startsWith("Clé Gemini refusée"));
+    }
+
+    @Test
+    void retenteQuandGeminiEstSurchargePuisPasseAuModeleDeSecours() {
+        answer = "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"{}\"}]}}]}";
+        firstStatuses.add(503);
+        assertEquals("{}", reader("cle").read(REQUEST));
+        assertEquals(2, paths.size());
+        assertEquals(paths.get(0), paths.get(1), "même modèle, second essai");
+
+        paths.clear();
+        firstStatuses.addAll(List.of(503, 503));
+        assertEquals("{}", reader("cle").read(REQUEST));
+        assertEquals("/v1beta/models/secours:generateContent", paths.get(2));
+
+        paths.clear();
+        status = 503;
+        answer = "{\"error\":{\"message\":\"The model is overloaded.\"}}";
+        ExtractionException e = assertThrows(ExtractionException.class, () -> reader("cle").read(REQUEST));
+        assertTrue(e.isUnavailable());
+        assertTrue(e.getMessage().startsWith("Gemini est surchargé en ce moment"), e.getMessage());
+        assertEquals(2 * GeminiDocumentReader.ATTEMPTS_PER_MODEL, paths.size());
+    }
+
+    @Test
+    void ignoreUnModeleRetire() {
+        answer = "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"{}\"}]}}]}";
+        firstStatuses.add(404);
+        assertEquals("{}", reader("cle").read(REQUEST));
+        assertEquals("/v1beta/models/secours:generateContent", paths.get(1));
     }
 
     @Test

@@ -34,9 +34,17 @@ public class GeminiDocumentReader implements DocumentReader {
     private final ExtractionProperties.Gemini config;
     private final String baseUrl;
 
+    static final int ATTEMPTS_PER_MODEL = 2;
+    private final Duration retryDelay;
+
     public GeminiDocumentReader(ExtractionProperties.Gemini config) {
+        this(config, Duration.ofSeconds(3));
+    }
+
+    GeminiDocumentReader(ExtractionProperties.Gemini config, Duration retryDelay) {
         this.config = config;
         this.baseUrl = config.baseUrl().replaceAll("/+$", "");
+        this.retryDelay = retryDelay;
     }
 
     @Override
@@ -126,19 +134,71 @@ public class GeminiDocumentReader implements DocumentReader {
         return out;
     }
 
+    /** Erreur passagère d'un modèle (surcharge, quota) : on peut retenter, ou passer au modèle suivant. */
+    private static final class Busy extends RuntimeException {
+        final boolean retrySameModel;
+
+        Busy(String message, boolean retrySameModel) {
+            super(message, null, false, false);
+            this.retrySameModel = retrySameModel;
+        }
+    }
+
+    /**
+     * Gemini gratuit est souvent surchargé (HTTP 503) : on retente le modèle après une courte pause,
+     * puis on passe aux modèles de secours (chacun a son propre quota gratuit).
+     */
     private JsonNode send(JsonNode body) {
-        String model = URLEncoder.encode(config.model(), StandardCharsets.UTF_8);
+        byte[] bytes;
+        try {
+            bytes = mapper.writeValueAsBytes(body);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+        Busy last = null;
+        for (String model : config.models()) {
+            for (int attempt = 1; attempt <= ATTEMPTS_PER_MODEL; attempt++) {
+                try {
+                    return send(bytes, model);
+                } catch (Busy e) {
+                    last = e;
+                    log.warn("Gemini {} indisponible (essai {}) : {}", model, attempt, e.getMessage());
+                    if (!e.retrySameModel) {
+                        break;
+                    }
+                    if (attempt < ATTEMPTS_PER_MODEL) {
+                        pause(retryDelay.multipliedBy(attempt));
+                    }
+                }
+            }
+        }
+        throw ExtractionException.unavailable(last != null && last.getMessage().startsWith("quota")
+                ? "Quota gratuit de Gemini atteint pour le moment : réessaie dans une minute, ou demain."
+                : "Gemini est surchargé en ce moment (c'est fréquent avec la version gratuite) : réessaie dans une minute.");
+    }
+
+    private void pause(Duration delay) {
+        try {
+            Thread.sleep(delay.toMillis());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw ExtractionException.unavailable("Lecture interrompue", e);
+        }
+    }
+
+    private JsonNode send(byte[] body, String model) {
+        String path = "/v1beta/models/" + URLEncoder.encode(model, StandardCharsets.UTF_8) + ":generateContent";
         HttpResponse<String> response;
         try {
-            HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + "/v1beta/models/" + model + ":generateContent"))
+            HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + path))
                     .timeout(config.timeout())
                     .header("Content-Type", "application/json")
                     .header("x-goog-api-key", config.apiKey())
-                    .POST(HttpRequest.BodyPublishers.ofByteArray(mapper.writeValueAsBytes(body)))
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(body))
                     .build();
             response = http.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (HttpTimeoutException e) {
-            throw ExtractionException.unavailable("Gemini n'a pas répondu à temps. Réessaie.", e);
+            throw new Busy("pas de réponse à temps", false);
         } catch (IOException e) {
             throw ExtractionException.unavailable("Gemini est injoignable : " + e.getMessage(), e);
         } catch (InterruptedException e) {
@@ -147,8 +207,14 @@ public class GeminiDocumentReader implements DocumentReader {
         }
         int status = response.statusCode();
         if (status == 429) {
-            throw ExtractionException.unavailable(
-                    "Quota gratuit de Gemini atteint pour le moment : réessaie dans une minute, ou demain.");
+            throw new Busy("quota : " + message(response.body()), false);
+        }
+        if (status >= 500) {
+            throw new Busy("HTTP " + status + " : " + message(response.body()), true);
+        }
+        if (status == 404) {
+            // Modèle retiré ou renommé par Google : on essaie le suivant.
+            throw new Busy("modèle inconnu", false);
         }
         if (status == 400 || status == 401 || status == 403) {
             String detail = message(response.body());
@@ -156,12 +222,6 @@ public class GeminiDocumentReader implements DocumentReader {
             throw status == 400 && !detail.contains("API key")
                     ? ExtractionException.badAnswer("Gemini a refusé la demande : " + detail, null)
                     : ExtractionException.unavailable("Clé Gemini refusée : vérifie TRAILPLANNER_EXTRACTION_GEMINI_API_KEY.");
-        }
-        if (status == 404) {
-            throw ExtractionException.unavailable("Modèle Gemini inconnu : " + config.model() + ".");
-        }
-        if (status >= 500) {
-            throw ExtractionException.unavailable("Gemini est surchargé (HTTP " + status + ") : réessaie dans un instant.");
         }
         if (status >= 400) {
             throw ExtractionException.badAnswer("Gemini a refusé la demande : " + message(response.body()), null);
