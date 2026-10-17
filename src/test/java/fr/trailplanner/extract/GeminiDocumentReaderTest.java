@@ -90,7 +90,7 @@ class GeminiDocumentReaderTest {
     void expliqueQuoiFaireSansCleOuQuotaEpuise() {
         GeminiDocumentReader none = reader("");
         assertFalse(none.status().ready());
-        assertTrue(none.status().message().contains("TRAILPLANNER_EXTRACTION_GEMINI_API_KEY"));
+        assertTrue(none.status().message().equals(GeminiDocumentReader.NOT_CONFIGURED));
         assertTrue(assertThrows(ExtractionException.class, () -> none.read(REQUEST)).isUnavailable());
         assertTrue(paths.isEmpty());
 
@@ -105,7 +105,7 @@ class GeminiDocumentReaderTest {
 
         status = 400;
         answer = "{\"error\":{\"message\":\"API key not valid. Please pass a valid API key.\"}}";
-        assertTrue(assertThrows(ExtractionException.class, () -> reader("cle").read(REQUEST)).getMessage().startsWith("Clé Gemini refusée"));
+        assertTrue(assertThrows(ExtractionException.class, () -> reader("cle").read(REQUEST)).getMessage().equals(GeminiDocumentReader.KEY_REFUSED));
     }
 
     @Test

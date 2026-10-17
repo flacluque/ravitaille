@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { enterAccessCode, fetchAppInfo, type AppInfo } from '../api/client';
+import { enterAccessCode, fetchAppInfo, humanError, type AppInfo } from '../api/client';
 
 /**
  * Écran du code d'invitation, quand le site en ligne en demande un. Sans réseau (appli installée,
@@ -27,7 +27,7 @@ export function AccessGate({ children }: { children: (info: AppInfo | null) => R
       await enterAccessCode(code);
       setInfo((i) => i && { ...i, accessGranted: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(humanError(err));
     } finally {
       setSending(false);
     }

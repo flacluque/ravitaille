@@ -26,13 +26,28 @@ const MAIN: [MainTab, string][] = [['plan', 'Plan'], ['course', 'En course'], ['
 export function MobileNav({ tab, hrefs, onPdf, pdfDisabled, pdfReason, feedbackUrl }: Props) {
   const [open, setOpen] = useState(false);
   const sheet = useRef<HTMLDivElement>(null);
+  const moreButton = useRef<HTMLButtonElement>(null);
   useEffect(() => setOpen(false), [tab]);
   useEffect(() => {
     if (!open) return;
-    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    window.addEventListener('keydown', escape);
+    // Feuille modale : Échap ferme et rend le focus au bouton « Plus » ; Tab tourne dans la feuille.
+    const keys = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        moreButton.current?.focus();
+        return;
+      }
+      if (e.key !== 'Tab' || !sheet.current) return;
+      const items = [...sheet.current.querySelectorAll<HTMLElement>('a, button:not(:disabled)')];
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    window.addEventListener('keydown', keys);
     sheet.current?.querySelector<HTMLElement>('a, button')?.focus();
-    return () => window.removeEventListener('keydown', escape);
+    return () => window.removeEventListener('keydown', keys);
   }, [open]);
   const inMore = !MAIN.some(([id]) => id === tab);
 
@@ -40,7 +55,7 @@ export function MobileNav({ tab, hrefs, onPdf, pdfDisabled, pdfReason, feedbackU
     <>
       {open && <div className="sheet-backdrop no-print" onClick={() => setOpen(false)} aria-hidden />}
       {open && (
-        <div ref={sheet} className="more-sheet no-print" role="dialog" aria-label="Plus">
+        <div ref={sheet} className="more-sheet no-print" role="dialog" aria-modal="true" aria-label="Plus">
           <a href={hrefs.accueil} aria-current={tab === 'accueil' ? 'page' : undefined}>Accueil</a>
           <a href={hrefs.analyse} aria-current={tab === 'analyse' ? 'page' : undefined}>Analyse détaillée</a>
           <a href={hrefs.algo} aria-current={tab === 'algo' ? 'page' : undefined}>Comment ça marche</a>
@@ -57,7 +72,7 @@ export function MobileNav({ tab, hrefs, onPdf, pdfDisabled, pdfReason, feedbackU
         {MAIN.map(([id, label]) => (
           <a key={id} href={hrefs[id]} aria-current={tab === id ? 'page' : undefined}>{ICONS[id]}<span>{label}</span></a>
         ))}
-        <button type="button" aria-expanded={open} aria-current={inMore ? 'page' : undefined} onClick={() => setOpen((o) => !o)}>
+        <button ref={moreButton} type="button" aria-expanded={open} aria-current={inMore ? 'page' : undefined} onClick={() => setOpen((o) => !o)}>
           {ICONS.more}<span>Plus</span>
         </button>
       </nav>

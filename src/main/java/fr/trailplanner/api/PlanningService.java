@@ -96,7 +96,7 @@ public class PlanningService {
             return training.history(since, options.includeHikes()).orElse(null);
         } catch (RuntimeException e) {
             log.warn("Historique d'entraînement indisponible : {}", e.getMessage());
-            warnings.add("Historique Strava indisponible (" + e.getMessage() + ") : ta forme n'est pas prise en compte.");
+            warnings.add("Historique Strava indisponible pour le moment : ta forme n'est pas prise en compte. Recalcule le plan plus tard.");
             return null;
         }
     }

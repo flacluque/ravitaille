@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import { UndoToast, useUndo } from './UndoToast';
 import type { ShareResult } from '../lib/crewShare';
 import { loadRunnerName, saveRunnerName } from '../api/storage';
@@ -43,19 +43,31 @@ export function RavitosView({ plan, services, profile, onProfileChange, crew, on
     }
   };
 
+  // Onglets au clavier : flèches gauche/droite, Début/Fin (motif « tabs » de l'ARIA APG).
+  function tabKeys(e: KeyboardEvent<HTMLDivElement>) {
+    const i = PARTS.findIndex(([id]) => id === part);
+    const next = e.key === 'ArrowRight' ? (i + 1) % PARTS.length : e.key === 'ArrowLeft' ? (i + PARTS.length - 1) % PARTS.length
+      : e.key === 'Home' ? 0 : e.key === 'End' ? PARTS.length - 1 : -1;
+    if (next < 0) return;
+    e.preventDefault();
+    choose(PARTS[next][0]);
+    document.getElementById(`ravitos-tab-${PARTS[next][0]}`)?.focus();
+  }
+
   return (
     <div className="ravitos">
-      <div className="segmented ravitos-parts" role="tablist" aria-label="Ravitos">
-        <button type="button" role="tab" aria-selected={part === 'deroule'} className={part === 'deroule' ? 'active' : ''}
-          onClick={() => choose('deroule')}>Déroulé</button>
-        <button type="button" role="tab" aria-selected={part === 'reglages'} className={part === 'reglages' ? 'active' : ''}
-          onClick={() => choose('reglages')}>Réglages</button>
+      <div className="segmented ravitos-parts" role="tablist" aria-label="Ravitos" onKeyDown={tabKeys}>
+        {PARTS.map(([id, label]) => (
+          <button key={id} type="button" role="tab" id={`ravitos-tab-${id}`} aria-selected={part === id} aria-controls="ravitos-panel"
+            tabIndex={part === id ? 0 : -1} className={part === id ? 'active' : ''} onClick={() => choose(id)}>{label}</button>
+        ))}
       </div>
 
+      <div className="ravitos-panel" role="tabpanel" id="ravitos-panel" aria-labelledby={`ravitos-tab-${part}`}>
       {part === 'reglages' ? <>
         <ProfileCard profile={profile} onChange={onProfileChange} />
         <CrewCard plan={plan} services={services} crew={crew} onChange={onCrewChange} onShare={onShareCrew} />
-        <button type="button" className="ravitos-done" onClick={() => choose('deroule')}>Voir le déroulé</button>
+        <button type="button" className="ghost ravitos-done" onClick={() => choose('deroule')}>Voir le déroulé</button>
       </> : <>
       <p className="muted small ravitos-basis">
         Calculé pour {profile.carbsPerHour} g de glucides par heure, {profile.flasks} flasques de {profile.flaskMl} ml
@@ -113,12 +125,16 @@ export function RavitosView({ plan, services, profile, onProfileChange, crew, on
                 </div>
                 <p className="ravitos-rhythm">{describeRhythm(leg, n, plan)}</p>
                 {leg.sequence.length > 1 && (
-                  <ol className="ravitos-seq" aria-label="Ordre de prise">
-                    {leg.sequence.map((id, k) => {
-                      const p = n.foods.find((f) => f.id === id);
-                      return <li key={k} className={p?.kind === 'GEL' ? 'gel' : 'solid'}>{k + 1}. {p?.name}</li>;
-                    })}
-                  </ol>
+                  // L'ordre de prise est un détail : replié, pour que le déroulé se lise d'un coup d'œil.
+                  <details className="ravitos-more">
+                    <summary>Ordre de prise ({leg.sequence.length})</summary>
+                    <ol className="ravitos-seq" aria-label="Ordre de prise">
+                      {leg.sequence.map((id, k) => {
+                        const p = n.foods.find((f) => f.id === id);
+                        return <li key={k} className={p?.kind === 'GEL' ? 'gel' : 'solid'}>{k + 1}. {p?.name}</li>;
+                      })}
+                    </ol>
+                  </details>
                 )}
                 <p className="ravitos-meta small">
                   <span><strong>Boire</strong> {leg.refilled ? describeFill(leg.flasks, leg.drinkFlasks, n, '').trim() : 'la fin de tes flasques'}</span>
@@ -145,11 +161,13 @@ export function RavitosView({ plan, services, profile, onProfileChange, crew, on
         lente). Le sodium vient de ta boisson énergétique. Repères courants en ultra, à ajuster : pas un conseil médical.
       </p>
       </>}
+      </div>
     </div>
   );
 }
 
 const PART_KEY = 'trail-planner:ravitos-partie';
+const PARTS: ['deroule' | 'reglages', string][] = [['deroule', 'Déroulé'], ['reglages', 'Réglages']];
 
 function readPart(): 'deroule' | 'reglages' {
   try {
@@ -311,6 +329,7 @@ function ProfileCard({ profile, onChange }: { profile: NutritionProfile; onChang
             ou <input type="number" min={20} max={150} step={5} value={profile.carbsPerHour}
               onChange={(e) => set({ carbsPerHour: Math.max(0, Number(e.target.value) || 0) })}
               aria-label="Glucides par heure" className={isLevel ? '' : 'custom'} /> g/h
+            {!isLevel && <strong className="inline-number-mine">ton réglage</strong>}
           </label>
         </div>
         <div className="profile-field">

@@ -6,12 +6,22 @@ import type { NightWindow } from '../lib/draft';
 
 export class ApiError extends Error {}
 
+/** Message d'erreur montrable au coureur : celui du serveur, ou une coupure réseau dite en clair. */
+export function humanError(e: unknown): string {
+  if (e instanceof ApiError) return e.message;
+  return 'Pas de réponse du serveur : vérifie ta connexion et réessaie (s\'il dormait, il met environ une minute à se réveiller).';
+}
+
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
   if (!res.ok) {
     // Les erreurs de l'API sont des ProblemDetail : { detail: "..." }
     const body = await res.json().catch(() => null);
-    throw new ApiError(body?.detail ?? `Erreur ${res.status} sur ${url}`);
+    // Sans message lisible (erreur interne, requête refusée par Spring), on reste compréhensible pour le coureur.
+    const detail = typeof body?.detail === 'string' && body.detail && !/^(Failed|Bad Request|Internal)/.test(body.detail) ? body.detail : null;
+    throw new ApiError(detail ?? (res.status >= 500
+      ? 'le serveur a rencontré un problème. Réessaie dans un instant.'
+      : 'une donnée de ta course ou de tes références n\'est pas valide. Vérifie la saisie.'));
   }
   return res.json() as Promise<T>;
 }
@@ -86,7 +96,7 @@ export function fetchStravaActivities(after: string): Promise<StravaActivity[]> 
 
 export async function disconnectStrava(): Promise<void> {
   const res = await fetch('/api/strava/connection', { method: 'DELETE' });
-  if (!res.ok) throw new ApiError(`Erreur ${res.status} à la déconnexion de Strava`);
+  if (!res.ok) throw new ApiError('La déconnexion de Strava a échoué : réessaie dans un instant.');
 }
 
 /** Lecture du roadbook (image ou PDF) par l'IA configurée côté serveur. Compter 30 s à 2 min en local. */
@@ -164,6 +174,6 @@ export async function enterAccessCode(code: string): Promise<void> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new ApiError(body?.detail ?? `Erreur ${res.status}`);
+    throw new ApiError(body?.detail ?? 'Code refusé : réessaie dans un instant.');
   }
 }

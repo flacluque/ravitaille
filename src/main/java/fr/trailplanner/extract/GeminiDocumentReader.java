@@ -28,6 +28,12 @@ import java.util.Map;
 public class GeminiDocumentReader implements DocumentReader {
 
     private static final Logger log = LoggerFactory.getLogger(GeminiDocumentReader.class);
+    // Messages pour le coureur : le détail technique (variable, réponse de Google) part dans les logs.
+    static final String NOT_CONFIGURED = "La lecture automatique n'est pas activée sur ce site : saisis le roadbook à la main.";
+    static final String KEY_REFUSED =
+            "La lecture automatique est indisponible pour le moment : réessaie plus tard, ou saisis le roadbook à la main.";
+    static final String UNREADABLE =
+            "L'IA n'a pas pu lire ce fichier : essaie une photo plus nette ou le PDF, ou saisis le roadbook à la main.";
 
     private final ObjectMapper mapper = JsonSupport.mapper();
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
@@ -45,13 +51,16 @@ public class GeminiDocumentReader implements DocumentReader {
         this.config = config;
         this.baseUrl = config.baseUrl().replaceAll("/+$", "");
         this.retryDelay = retryDelay;
+        if (config.apiKey().isEmpty()) {
+            log.warn(NOT_CONFIGURED);
+        }
     }
 
     @Override
     public Status status() {
         return config.apiKey().isEmpty()
                 ? new Status(true, "gemini", config.model(), false,
-                        "Clé Gemini manquante : renseigne TRAILPLANNER_EXTRACTION_GEMINI_API_KEY (clé gratuite sur aistudio.google.com).")
+                        NOT_CONFIGURED)
                 : new Status(true, "gemini", config.model(), true, null);
     }
 
@@ -200,7 +209,9 @@ public class GeminiDocumentReader implements DocumentReader {
         } catch (HttpTimeoutException e) {
             throw new Busy("pas de réponse à temps", false);
         } catch (IOException e) {
-            throw ExtractionException.unavailable("Gemini est injoignable : " + e.getMessage(), e);
+            log.warn("Gemini injoignable : {}", e.getMessage());
+            throw ExtractionException.unavailable(
+                    "Le service de lecture est injoignable : vérifie ta connexion et réessaie, ou saisis le roadbook à la main.", e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw ExtractionException.unavailable("Lecture interrompue", e);
@@ -220,11 +231,12 @@ public class GeminiDocumentReader implements DocumentReader {
             String detail = message(response.body());
             log.warn("Gemini a refusé la demande (HTTP {}) : {}", status, detail);
             throw status == 400 && !detail.contains("API key")
-                    ? ExtractionException.badAnswer("Gemini a refusé la demande : " + detail, null)
-                    : ExtractionException.unavailable("Clé Gemini refusée : vérifie TRAILPLANNER_EXTRACTION_GEMINI_API_KEY.");
+                    ? ExtractionException.badAnswer(UNREADABLE, null)
+                    : ExtractionException.unavailable(KEY_REFUSED);
         }
         if (status >= 400) {
-            throw ExtractionException.badAnswer("Gemini a refusé la demande : " + message(response.body()), null);
+            log.warn("Gemini a refusé la demande (HTTP {}) : {}", status, message(response.body()));
+            throw ExtractionException.badAnswer(UNREADABLE, null);
         }
         try {
             return mapper.readTree(response.body());
