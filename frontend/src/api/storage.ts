@@ -157,3 +157,25 @@ export function saveCrew(raceName: string, codes: string[]): void {
     // stockage indisponible
   }
 }
+
+const fixKey = (raceName: string) => `trail-planner:en-course:${plain(raceName)}`;
+
+/** Dernier point où le coureur s'est signalé pendant la course (recalage), pour ce départ. */
+export function loadFix(raceName: string, start: string): { index: number; atMinutes: number } | null {
+  try {
+    const raw = JSON.parse(localStorage.getItem(fixKey(raceName)) ?? 'null') as { index?: unknown; atMinutes?: unknown; start?: unknown } | null;
+    return raw && raw.start === start && typeof raw.index === 'number' && typeof raw.atMinutes === 'number'
+      ? { index: raw.index, atMinutes: raw.atMinutes } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveFix(raceName: string, start: string, fix: { index: number; atMinutes: number } | null): void {
+  try {
+    if (fix) localStorage.setItem(fixKey(raceName), JSON.stringify({ ...fix, start }));
+    else localStorage.removeItem(fixKey(raceName));
+  } catch {
+    // stockage indisponible : le recalage vaut pour la session
+  }
+}

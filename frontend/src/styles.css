@@ -819,3 +819,34 @@ a.brand { text-decoration: none; }
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.25); font-size: var(--fs-small); }
 .undo-toast .link-btn { color: inherit; }
 .undo-toast .icon-btn { color: inherit; border-color: transparent; }
+
+/* ---------- En course : une page de roadbook par point ---------- */
+.race-view { max-width: 560px; margin: 0 auto; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 16px; }
+.race-empty { max-width: 560px; margin: 24px auto; padding: 0 16px; }
+.race-status { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--surface-2); font-size: var(--fs-small); }
+.race-nav { display: flex; align-items: center; gap: 8px; }
+.race-nav button.ghost { width: 48px; height: 48px; padding: 0; font-size: var(--fs-title); line-height: 1; flex: none; }
+.race-nav-pos { flex: 1; text-align: center; font-size: var(--fs-small); color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.race-point { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 3px solid var(--text); }
+.race-point .code { font-size: var(--fs-lead); padding: 4px 10px; }
+.race-point h1 { font-size: var(--fs-display); line-height: 1.05; }
+.race-time { display: flex; flex-direction: column; gap: 4px; }
+.race-time-label { font-size: var(--fs-small); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+.race-time-value { font-family: var(--font-display); font-size: 3.815rem; line-height: 1; font-weight: 800; font-variant-numeric: tabular-nums; }
+.race-time-in { font-size: var(--fs-lead); font-weight: 600; }
+.race-cutoff { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--fs-body); }
+.race-block { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+.race-block h2 { font-size: var(--fs-lead); }
+.race-block p { margin: 0; }
+.race-leg-figures { display: flex; flex-wrap: wrap; gap: 6px 18px; font-variant-numeric: tabular-nums; }
+.race-leg-figures strong { font-family: var(--font-display); font-size: var(--fs-lead); }
+.race-leg-profile { width: 100%; height: 72px; display: block; }
+.race-night { padding: 8px 12px; border-radius: 8px; background: #1e293b; color: #e2e8f0; }
+.race-todo ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-lead); }
+.race-dry { color: var(--tight-fg); font-weight: 600; }
+.race-actions { position: sticky; bottom: 12px; display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--border); box-shadow: 0 8px 24px rgb(0 0 0 / 0.12); }
+.race-actions button { min-height: 52px; font-size: var(--fs-lead); }
+.ravitos-parts { align-self: stretch; display: grid; grid-template-columns: 1fr 1fr; }
+.ravitos-basis { margin: 0; }
+button.ravitos-done { align-self: flex-start; }

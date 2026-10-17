@@ -15,6 +15,8 @@ import { PassageTable } from './components/PassageTable';
 import { RaceEditor } from './components/RaceEditor';
 import { ReferenceForm } from './components/ReferenceForm';
 import { WelcomePage } from './components/WelcomePage';
+import { RaceView } from './components/RaceView';
+import { isRaceWindow, nowMinutes } from './lib/race';
 import { ReferenceInsights } from './components/ReferenceInsights';
 import { TrainingCard } from './components/TrainingCard';
 import { AlgorithmPage } from './components/AlgorithmPage';
@@ -29,11 +31,11 @@ import { defaultServices } from './lib/services';
 // Course d'exemple embarquée (src/main/resources/samples/bogomiles).
 const SAMPLE_ID = 'bogomiles';
 const CUSTOM_ID = 'custom';
-type Tab = 'accueil' | 'plan' | 'ravitos' | 'sac' | 'analyse' | 'algo';
-const TABS: [Tab, string][] = [['accueil', 'Accueil'], ['plan', 'Mon plan'], ['ravitos', 'Ravitos'], ['sac', 'Sac'],
-  ['analyse', 'Analyse'], ['algo', 'Comment ça marche']];
+type Tab = 'accueil' | 'plan' | 'course' | 'ravitos' | 'sac' | 'analyse' | 'algo';
+const TABS: [Tab, string][] = [['accueil', 'Accueil'], ['plan', 'Mon plan'], ['course', 'En course'], ['ravitos', 'Ravitos'],
+  ['sac', 'Sac'], ['analyse', 'Analyse'], ['algo', 'Comment ça marche']];
 const TAB_HASH: Record<Tab, string> = {
-  accueil: '#accueil', plan: '#plan', ravitos: '#ravitos', sac: '#sac', analyse: '#analyse', algo: '#algorithme',
+  accueil: '#accueil', plan: '#plan', course: '#course', ravitos: '#ravitos', sac: '#sac', analyse: '#analyse', algo: '#algorithme',
 };
 const WELCOME_SEEN = 'trail-planner:accueil-vu';
 
@@ -90,7 +92,12 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   const [source, setSource] = useState<ElevationSource>(initial?.source ?? 'AUTO');
   const hasData = useRef(initial !== null);
   // Onglet affiché, avec sa propre adresse (#ravitos, #algorithme…) pour pouvoir partager le lien.
-  const [tab, setTab] = useState<Tab>(initialTab);
+  // Le jour de la course, l'appli s'ouvre sur « En course » (sauf lien vers un autre onglet).
+  const [tab, setTab] = useState<Tab>(() => {
+    const plan = initial?.plans[Math.min(1, initial.plans.length - 1)];
+    const hashless = !window.location.hash && !new URLSearchParams(window.location.search).has('strava');
+    return hashless && plan && isRaceWindow(plan, nowMinutes()) ? 'course' : initialTab();
+  });
   useEffect(() => {
     if (tab !== 'accueil') return;
     try {
@@ -377,7 +384,12 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           onAlgorithm={() => goTab('algo')} />
       )}
 
-      <main className="layout" hidden={tab === 'algo' || tab === 'accueil'}>
+      {tab === 'course' && (plan && course
+        ? <RaceView plan={plan} course={course} services={services} profile={nutritionProfile} crew={crew} />
+        : <p className="muted race-empty">Calcule d'abord le plan de ta course dans « Mon plan » : cette page te guidera point
+          par point le jour J.</p>)}
+
+      <main className="layout" hidden={tab === 'algo' || tab === 'accueil' || tab === 'course'}>
         <aside className="side no-print">
           <div className="card mode-switch" role="radiogroup" aria-label="Course">
             <button type="button" role="radio" aria-checked={mode === 'demo'} className={mode === 'demo' ? 'active' : ''}

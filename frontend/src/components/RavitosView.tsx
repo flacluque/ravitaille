@@ -29,11 +29,35 @@ export function RavitosView({ plan, services, profile, onProfileChange, crew, on
   const firstCrew = n.points.find((p) => p.index > 0 && (p.crew || p.dropBag));
   const startCount = Object.values(n.points[0].take).reduce((s, v) => s + v, 0) + n.points[0].takeDrinkDoses;
   const raceHours = n.legs.reduce((s, l) => s + l.minutes, 0) / 60;
+  const [part, setPart] = useState<'deroule' | 'reglages'>(readPart);
+  const choose = (next: 'deroule' | 'reglages') => {
+    setPart(next);
+    try {
+      localStorage.setItem(PART_KEY, next);
+    } catch {
+      // stockage indisponible
+    }
+  };
 
   return (
     <div className="ravitos">
-      <ProfileCard profile={profile} onChange={onProfileChange} />
-      <CrewCard plan={plan} services={services} crew={crew} onChange={onCrewChange} />
+      <div className="segmented ravitos-parts" role="tablist" aria-label="Ravitos">
+        <button type="button" role="tab" aria-selected={part === 'deroule'} className={part === 'deroule' ? 'active' : ''}
+          onClick={() => choose('deroule')}>Déroulé</button>
+        <button type="button" role="tab" aria-selected={part === 'reglages'} className={part === 'reglages' ? 'active' : ''}
+          onClick={() => choose('reglages')}>Réglages</button>
+      </div>
+
+      {part === 'reglages' ? <>
+        <ProfileCard profile={profile} onChange={onProfileChange} />
+        <CrewCard plan={plan} services={services} crew={crew} onChange={onCrewChange} />
+        <button type="button" className="ravitos-done" onClick={() => choose('deroule')}>Voir le déroulé</button>
+      </> : <>
+      <p className="muted small ravitos-basis">
+        Calculé pour {profile.carbsPerHour} g de glucides par heure, {profile.flasks} flasques de {profile.flaskMl} ml
+        {crew.length > 0 ? `, assistance à ${crew.length} point${crew.length > 1 ? 's' : ''}` : ', sans assistance'}.{' '}
+        <button type="button" className="link-btn" onClick={() => choose('reglages')}>Modifier</button>
+      </p>
 
       <section className="ravitos-totals" aria-label="Sur toute la course">
         <div className="stat">
@@ -116,8 +140,19 @@ export function RavitosView({ plan, services, profile, onProfileChange, crew, on
         Un quart de glucides en moins la première heure (l'estomac se met en route) et 10 % de moins la nuit (digestion plus
         lente). Le sodium vient de ta boisson énergétique. Repères courants en ultra, à ajuster : pas un conseil médical.
       </p>
+      </>}
     </div>
   );
+}
+
+const PART_KEY = 'trail-planner:ravitos-partie';
+
+function readPart(): 'deroule' | 'reglages' {
+  try {
+    return localStorage.getItem(PART_KEY) === 'reglages' ? 'reglages' : 'deroule';
+  } catch {
+    return 'deroule';
+  }
 }
 
 function ArrivalBox({ plan, n, profile, index }: { plan: RacePlan; n: NutritionPlan; profile: NutritionProfile; index: number }) {
