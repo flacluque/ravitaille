@@ -617,6 +617,13 @@ button.legend-btn[aria-expanded='true'] { background: var(--accent); color: var(
 .plan-hero-scenarios button { flex: 1; min-height: 40px; background: transparent; color: inherit; border: 0; border-radius: 7px; font-weight: 600; }
 .plan-hero-scenarios button.active { background: var(--surface); color: var(--hero-bg); }
 .plan-hero-tight { font-size: var(--fs-small); }
+.plan-hero-help { font-size: var(--fs-micro); opacity: 0.9; }
+button.plan-hero-worst { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent); background: rgb(0 0 0 / 0.16); color: inherit;
+  font-weight: 400; font-size: var(--fs-small); text-align: left; }
+button.plan-hero-worst:hover { background: rgb(0 0 0 / 0.26); }
+/* Comparaison : le badge sous l'heure, pour que les trois scénarios tiennent sans couper la colonne prudente. */
+.compare .badge { display: flex; width: fit-content; margin: 2px 0 0 auto; white-space: normal; text-align: left; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .plan-hero-scenarios button.active { color: var(--text); }
 }

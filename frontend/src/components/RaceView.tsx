@@ -6,6 +6,8 @@ import { formatClockFromMinutes, formatDuration, formatKm, localMinutes } from '
 import { computeNutrition, describeActions, describeFill, describeRhythm, type NutritionProfile } from '../lib/nutrition';
 import { adjustedArrival, adjustedMargin, formatDelay, nowMinutes, offsetMinutes, raceProgress, type Fix } from '../lib/race';
 import { StatusBadge } from './StatusBadge';
+import { ConfirmBar } from './ConfirmBar';
+import { UndoToast, useUndo } from './UndoToast';
 import type { ShareResult } from '../lib/crewShare';
 
 interface Props {
@@ -19,6 +21,8 @@ interface Props {
 }
 
 const clock = (minutes: number) => formatClockFromMinutes(minutes);
+/** Au-delà de cet écart avec l'heure prévue (minutes), « Je suis à … » demande confirmation. */
+const CONFIRM_GAP = 20;
 
 /**
  * « En course » : une page par point, comme un roadbook qu'on feuillette au téléphone. Pilotée par
@@ -42,12 +46,29 @@ export function RaceView({ plan, course, services, profile, crew, onShareCrew }:
   const offset = offsetMinutes(plan, fix);
 
   const [crewNotice, setCrewNotice] = useState<ShareResult | null>(null);
-  function arrived(at: number) {
-    const next = { index, atMinutes: Math.round(at) };
+  // Un tap dans la poche ne doit pas décaler toute la course : confirmation si l'heure est loin du prévu,
+  // et annulation possible quelques secondes après.
+  const undo = useUndo();
+  const [confirming, setConfirming] = useState<{ index: number; at: number; gap: number } | null>(null);
+  function commit(target: number, at: number) {
+    const previous = fix;
+    const next = { index: target, atMinutes: Math.round(at) };
     setFix(next);
     saveFix(raceName, plan.start, next);
     setShown(null);
     setCrewNotice(null);
+    setConfirming(null);
+    undo.offer(`Pointé à ${plan.checkpoints[target].name} à ${clock(at)}.`, () => {
+      setFix(previous);
+      saveFix(raceName, plan.start, previous);
+    });
+  }
+  function arrived(at: number) {
+    // Écart avec l'heure prévue à ce point, sans tenir compte d'un recalage à ce même point.
+    const expected = adjustedArrival(plan, index, fix && fix.index < index ? fix : null);
+    const gap = at - expected;
+    if (Math.abs(gap) > CONFIRM_GAP) setConfirming({ index, at, gap });
+    else commit(index, at);
   }
   async function notifyCrew() {
     if (!fix || !onShareCrew) return;
@@ -80,7 +101,7 @@ export function RaceView({ plan, course, services, profile, crew, onShareCrew }:
             ? 'Course terminée. Bravo !'
             : fix
               ? offset > 1 ? `${formatDelay(offset)} de retard sur le plan` : offset < -1 ? `${formatDelay(offset)} d'avance sur le plan` : "Pile à l'heure du plan"
-              : "D'après l'heure, sans recalage"}
+              : "Heures du plan : tu n'as pas encore pointé"}
         {fix && <> · <button type="button" className="link-btn" onClick={clearFix}>annuler le recalage</button></>}
       </p>
 
@@ -150,6 +171,14 @@ export function RaceView({ plan, course, services, profile, crew, onShareCrew }:
 
       {progress.phase !== 'before' && index > 0 && (
         <div className="race-actions">
+          {confirming && (
+            <ConfirmBar
+              message={`Il est ${clock(confirming.at)}, soit ${formatDelay(confirming.gap)} ${confirming.gap < 0 ? 'avant' : 'après'} l'heure prévue à ${plan.checkpoints[confirming.index].name}. Tu y es vraiment ?`}
+              confirmLabel="Oui, j'y suis"
+              onConfirm={() => commit(confirming.index, confirming.at)}
+              onCancel={() => setConfirming(null)}
+            />
+          )}
           <button type="button" onClick={() => arrived(now)}>
             {fix?.index === index ? `Je suis à ${eta.name} (mettre à jour)` : `Je suis à ${eta.name}`}
           </button>
@@ -161,6 +190,7 @@ export function RaceView({ plan, course, services, profile, crew, onShareCrew }:
             : crewNotice === 'shared' ? 'Assistance prévenue.' : "Le lien n'a pas pu être partagé."}</span>}
         </div>
       )}
+      <UndoToast undo={undo} />
     </article>
   );
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckpointEta, Marker, RacePlan } from '../api/types';
 import { formatClockFromMinutes } from './format';
-import { bindingCutoff, estimatedMinutesAt, tightestCutoff } from './plan';
+import { bindingCutoff, estimatedMinutesAt, tightestCutoff, worstCutoff } from './plan';
 
 function eta(partial: Partial<CheckpointEta>): CheckpointEta {
   return {
@@ -41,6 +41,13 @@ describe('barrières', () => {
       eta({ code: 'C' }),
     ]);
     expect(tightestCutoff(p)?.eta.code).toBe('B');
+  });
+
+  it('trouve la marge la plus faible tous scénarios confondus', () => {
+    const real = plan([eta({ code: 'A', cutoffIn: '2026-10-23T14:30:00', marginIn: 'PT1H4M', status: 'OK' })]);
+    const prud = plan([eta({ code: 'A', cutoffIn: '2026-10-23T14:30:00', marginIn: 'PT58M', status: 'TIGHT' })]);
+    expect(worstCutoff([real, real, prud])).toMatchObject({ scenario: 2, cutoff: { marginMinutes: 58 } });
+    expect(worstCutoff([plan([eta({})])])).toBeNull();
   });
 });
 
