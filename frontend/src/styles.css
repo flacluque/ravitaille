@@ -72,9 +72,8 @@
 }
 
 * { box-sizing: border-box; }
-/* Focus clavier visible partout ; sur les surfaces colorées (hero), il prend la couleur du texte. */
+/* Focus clavier visible partout. */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.plan-hero :focus-visible { outline-color: currentColor; }
 .tabs a:focus-visible { outline-offset: -3px; border-radius: 6px; }
 body { margin: 0; background: var(--bg); color: var(--text); }
 h1, h2, h3 { margin: 0; line-height: 1.15; font-family: var(--font-display); font-weight: 700; letter-spacing: 0.005em; }
@@ -108,7 +107,9 @@ code { font-size: 0.9em; }
   margin: 0 auto;
   padding: 20px;
 }
+.layout.single { grid-template-columns: minmax(0, 1fr); }
 .side { display: flex; flex-direction: column; gap: 12px; }
+.plan-refs-alone { max-width: 420px; }
 .content { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 
 .card {
@@ -184,6 +185,8 @@ button.ghost { background: transparent; color: var(--accent); border: 1px solid 
 .profile .grid line { stroke: var(--border); }
 .profile text { fill: var(--muted); font-size: 12px; }
 .profile .hover-line { stroke: var(--accent); }
+.profile .night-band { fill: var(--text); opacity: 0.06; }
+.profile .night-label { font-size: var(--fs-micro); fill: var(--muted); }
 .profile .hover-dot { fill: var(--surface); stroke: var(--accent); stroke-width: 2; }
 .profile .cp-code { fill: #fff; font-size: 12px; font-weight: 700; }
 .profile .cp-none .cp-code { fill: #475569; }
@@ -599,27 +602,117 @@ button.legend-btn[aria-expanded='true'] { background: var(--accent); color: var(
 .tab-intro { margin: 0; }
 .link-btn.advanced-toggle { align-self: flex-start; color: var(--muted); }
 
-.plan-hero { --hero-bg: var(--accent); --hero-fg: var(--accent-contrast);
-  display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: center; padding: 18px 22px; border-radius: var(--radius);
-  background: var(--hero-bg); color: var(--hero-fg); transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-.plan-hero.tight { --hero-bg: var(--hero-tight); --hero-fg: #ffffff; }
-/* En sombre, un vert profond plutôt que l'accent clair : le hero ne doit pas éblouir de nuit. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .plan-hero:not(.tight):not(.missed) { --hero-bg: #24563f; --hero-fg: #f0f7f3; }
+/* Mon plan, façon roadbook : du papier, des filets noirs et les heures en grand, sans cartes blanches. */
+.overline { font-size: var(--fs-micro); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.plan-hero { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 20px 48px; align-items: end; }
+.plan-hero-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.plan-hero-label { font-size: var(--fs-micro); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.plan-hero-finish { font-family: var(--font-display); font-size: 6rem; font-weight: 800; line-height: 0.95; letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums; margin: 4px 0; }
+.plan-hero-day { font-size: 2.5rem; font-weight: 700; color: var(--muted); letter-spacing: 0; }
+.plan-hero-detail { font-size: var(--fs-lead); }
+.plan-hero-frieze { position: relative; height: 48px; margin-top: 14px; max-width: 620px; }
+.frieze-line { position: absolute; left: 0; right: 0; top: 14px; height: 2px; background: var(--text); }
+.frieze-band { position: absolute; top: 9px; height: 12px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 22%, var(--bg)); }
+.frieze-dot { position: absolute; top: 6px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: var(--accent);
+  border: 3px solid var(--bg); transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.frieze-cut { position: absolute; right: 0; top: 4px; width: 3px; height: 22px; background: var(--missed-fg); }
+.frieze-start, .frieze-end { position: absolute; top: 28px; font-size: var(--fs-micro); white-space: nowrap; }
+.frieze-start { left: 0; color: var(--muted); }
+.frieze-end { right: 0; color: var(--missed-fg); font-weight: 600; }
+.plan-hero-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.plan-hero-scenarios { display: flex; gap: 24px; border-bottom: 1px solid var(--border); }
+.plan-hero-scenarios button { min-height: 44px; padding: 0 2px; background: transparent; color: var(--muted); border: 0; border-radius: 0;
+  font-size: var(--fs-lead); font-weight: 600; box-shadow: inset 0 -3px 0 transparent; }
+.plan-hero-scenarios button:hover { color: var(--text); }
+.plan-hero-scenarios button.active { color: var(--text); font-weight: 700; box-shadow: inset 0 -3px 0 var(--text); }
+.plan-hero-help { font-size: var(--fs-small); color: var(--muted); }
+.plan-hero-watch { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 2px 0 2px 14px; border-left: 4px solid var(--text); }
+.plan-hero-watch-title { font-size: var(--fs-micro); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+button.plan-hero-worst { padding: 0; min-height: 44px; background: transparent; color: var(--text); border: 0; font-weight: 400; text-align: left; line-height: 1.6; }
+.plan-hero-worst-see { color: var(--accent); font-weight: 600; text-decoration: underline; }
+.plan-hero .badge { white-space: nowrap; }
+
+/* Grille de Mon plan : profil pleine largeur, roadbook à gauche, carte et références à droite (en haut sur mobile). */
+.plan-page { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px 44px; align-items: start;
+  grid-template-areas: "hero hero" "notes notes" "profile profile" "road map" "road refs"; grid-template-rows: auto auto auto auto 1fr; }
+.plan-page > .plan-hero { grid-area: hero; }
+.plan-page > .plan-notes { grid-area: notes; display: flex; flex-direction: column; gap: 12px; }
+.plan-page > .plan-notes:empty { display: none; }
+.plan-page > .plan-profile { grid-area: profile; }
+.plan-page > .roadbook { grid-area: road; }
+.plan-page > .plan-map { grid-area: map; }
+.plan-page > .plan-refs { grid-area: refs; }
+.plan-rule { border-top: 3px solid var(--text); padding-top: 12px; }
+.plan-map .map { height: 300px; border-radius: 4px; }
+.plan-map-toggle { display: none; }
+.plan-refs { display: flex; flex-direction: column; gap: 12px; }
+
+.roadbook-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.roadbook-cols, .roadbook-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) 72px 150px 230px; gap: 16px; align-items: center; }
+.roadbook-cols { padding: 0 12px 8px; border-bottom: 3px solid var(--text); font-size: var(--fs-micro); font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.roadbook-cols span:first-child { grid-column: 1 / 3; }
+.roadbook .num { text-align: right; font-variant-numeric: tabular-nums; }
+.roadbook-list { list-style: none; margin: 0; padding: 0; }
+.roadbook-day { padding: 12px 12px 4px; font-size: var(--fs-micro); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  border-bottom: 1px solid var(--text); }
+.roadbook-leg { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 16px; padding: 0 12px; color: var(--muted); font-size: var(--fs-small); }
+.roadbook-leg > span:last-child { align-self: center; padding: 6px 0; }
+.roadbook-leg-line { justify-self: center; width: 3px; min-height: 34px; background: var(--track); }
+.roadbook-night { color: var(--text); }
+.roadbook-point { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.roadbook-row { width: 100%; padding: 12px; background: transparent; color: var(--text); border: 0; border-radius: 0; font-weight: 400; text-align: left; }
+.roadbook-row:hover { background: var(--surface-2); }
+.roadbook-row:focus-visible { outline-offset: -2px; }
+.roadbook-code { justify-self: center; min-width: 40px; padding: 4px 6px; border: 2px solid var(--text); background: transparent;
+  font-family: var(--font-display); font-size: var(--fs-body); font-weight: 800; }
+.roadbook-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.roadbook-title { font-family: var(--font-display); font-size: 1.375rem; font-weight: 700; line-height: 1.15; }
+.roadbook-sub { display: flex; flex-wrap: wrap; gap: 0 10px; font-size: var(--fs-small); color: var(--muted); }
+.roadbook-sub:empty { display: none; }
+.roadbook-crew { color: var(--accent); }
+.roadbook-km { color: var(--muted); }
+.roadbook-time { font-family: var(--font-display); font-size: 2.125rem; font-weight: 800; line-height: 1; }
+.roadbook-barrier { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.roadbook-cut { font-size: var(--fs-small); color: var(--muted); font-family: var(--font-body); font-weight: 400; }
+.roadbook-detail { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 14px 92px; background: var(--surface-2); font-size: var(--fs-small); }
+.rb-m { display: none; }
+
+@media (max-width: 1100px) {
+  .plan-page { grid-template-columns: minmax(0, 1fr); grid-template-rows: none;
+    grid-template-areas: "refs" "hero" "notes" "profile" "map" "road"; }
+  .plan-hero { grid-template-columns: minmax(0, 1fr); }
+  .plan-map-toggle { display: inline-flex; }
+  .plan-refs .note { display: none; }
+  .plan-refs { max-width: 560px; width: 100%; }
 }
-.plan-hero.missed { --hero-bg: var(--hero-missed); --hero-fg: #ffffff; }
-.plan-hero-main { flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px; }
-.plan-hero-label { font-size: var(--fs-small); opacity: 0.85; }
-.plan-hero-finish { font-family: var(--font-display); font-size: var(--fs-hero); font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.plan-hero-detail { opacity: 0.9; }
-.plan-hero-side { flex: 1 1 240px; display: flex; flex-direction: column; gap: 8px; }
-.plan-hero-scenarios { display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: rgb(255 255 255 / 0.14); }
-.plan-hero-scenarios button { flex: 1; min-height: 40px; background: transparent; color: inherit; border: 0; border-radius: 7px; font-weight: 600; }
-.plan-hero-scenarios button.active { background: var(--surface); color: var(--hero-bg); }
-.plan-hero-tight { font-size: var(--fs-small); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .plan-hero-scenarios button.active { color: var(--text); }
+@media (max-width: 860px) {
+  .plan-hero-finish { font-size: 4.5rem; }
+  .plan-hero-day { font-size: var(--fs-title); }
+  .plan-hero-detail { font-size: var(--fs-body); }
+  .plan-hero-scenarios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+  .plan-hero-scenarios button { min-height: 48px; font-size: 1.0625rem; }
+  .frieze-end { font-size: var(--fs-micro); }
+  .roadbook-cols { display: flex; justify-content: space-between; padding: 0 0 6px; }
+  .roadbook-cols span:nth-child(2), .roadbook-cols span:nth-child(4) { display: none; }
+  .roadbook-row { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px 0; }
+  .roadbook-km, .roadbook-barrier { display: none; }
+  .roadbook-code { min-width: 36px; padding: 2px 4px; font-size: var(--fs-small); }
+  .roadbook-title { font-size: 1.1875rem; }
+  .roadbook-time { font-size: 1.875rem; }
+  .rb-m { display: block; }
+  .roadbook-sub .rb-m { display: inline; }
+  .roadbook-name .badge { margin-top: 4px; }
+  .roadbook-cut.rb-m { margin-top: 4px; font-size: var(--fs-micro); text-align: right; }
+  .roadbook-leg { grid-template-columns: 44px minmax(0, 1fr); gap: 10px; padding: 0; font-size: var(--fs-micro); }
+  .roadbook-leg-line { min-height: 30px; }
+  .roadbook-day { padding: 10px 0 4px; }
+  .roadbook-pace { display: none; }
+  .roadbook-detail { padding: 8px 0 12px 54px; }
 }
+/* Comparaison : le badge sous l'heure, pour que les trois scénarios tiennent sans couper la colonne prudente. */
+.compare .badge { display: flex; width: fit-content; margin: 2px 0 0 auto; white-space: normal; text-align: left; }
 
 .training-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 12px 16px; font-size: var(--fs-small); }
 .passages-simple .card-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
@@ -641,8 +734,6 @@ button.legend-btn[aria-expanded='true'] { background: var(--accent); color: var(
   background: transparent; color: var(--text); border: 0; border-radius: 6px; }
 .pdf-menu-list button:hover, .pdf-menu-list button:focus-visible { background: var(--surface-2); }
 @media (max-width: 640px) {
-  .plan-hero { padding: 16px; }
-  .plan-hero-finish { font-size: var(--fs-display); }
   .pdf-menu-list { right: auto; left: 0; }
 }
 

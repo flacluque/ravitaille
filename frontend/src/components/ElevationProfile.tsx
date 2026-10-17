@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerE
 import type { Marker, RacePlan, TrackSummary } from '../api/types';
 import { STATUS_COLORS, TRACK_COLOR } from '../lib/colors';
 import { statusShapePaint, statusShapePath, statusTextOffset } from '../lib/markerShape';
-import { formatClockFromMinutes, formatKm } from '../lib/format';
+import { durationMinutes, formatClockFromMinutes, formatKm } from '../lib/format';
 import { estimatedMinutesAt } from '../lib/plan';
 import { niceTicks, pointAtKm } from '../lib/track';
 
@@ -52,6 +52,8 @@ export function ElevationProfile({ track, markers, plan, hoverKm, onHover }: Pro
     const km = ((e.clientX - rect.left - M.left) / innerW) * scales.maxKm;
     onHover(km < 0 || km > scales.maxKm ? null : km);
   }
+
+  const nights = useMemo(() => nightSpans(plan, markers), [plan, markers]);
 
   const hover = hoverKm === null ? null : pointAtKm(track.profile, hoverKm);
   const hoverTime = hover ? estimatedMinutesAt(hover.km, plan, markers) : null;
@@ -115,6 +117,14 @@ export function ElevationProfile({ track, markers, plan, hoverKm, onHover }: Pro
             <text key={`x${v}`} className="axis" x={scales.x(v)} y={HEIGHT - 8} textAnchor="middle">{v} km</text>
           ))}
 
+          {nights.map(([from, to]) => (
+            <rect key={from} className="night-band" x={scales.x(from)} y={M.top - 4} width={Math.max(0, scales.x(to) - scales.x(from))}
+              height={innerH + 4} />
+          ))}
+          {nights[0] && (
+            <text className="night-label" x={scales.x(nights[0][0]) + 4} y={M.top + 10}>☾ de nuit</text>
+          )}
+
           <path d={paths.area} fill="url(#profile-fill)" />
           <path d={paths.line} fill="none" stroke={TRACK_COLOR} strokeWidth={1.8} strokeLinejoin="round" />
 
@@ -160,6 +170,30 @@ export function ElevationProfile({ track, markers, plan, hoverKm, onHover }: Pro
       </div>
     </div>
   );
+}
+
+/**
+ * Portions de la trace courues de nuit (km de la trace), d'après la part de nuit de chaque tronçon : une nuit
+ * qui commence en fin de tronçon, ou qui finit en début de tronçon. Les tronçons voisins de nuit sont fusionnés.
+ */
+export function nightSpans(plan: RacePlan, markers: Marker[]): [number, number][] {
+  const spans: [number, number][] = [];
+  plan.checkpoints.forEach((eta, i) => {
+    const from = markers[i - 1]?.trackKm;
+    const to = markers[i]?.trackKm;
+    if (i === 0 || from === undefined || to === undefined || !eta.legNightDuration) return;
+    const night = durationMinutes(eta.legNightDuration);
+    const total = durationMinutes(eta.legDuration);
+    if (night < 1 || total <= 0) return;
+    const share = Math.min(1, night / total);
+    // Nuit qui tombe pendant le tronçon : le tronçon d'avant était de jour.
+    const prevNight = durationMinutes(plan.checkpoints[i - 1]?.legNightDuration ?? 'PT0M') > 0;
+    const span: [number, number] = share >= 0.999 || prevNight ? [from, from + (to - from) * share] : [to - (to - from) * share, to];
+    const last = spans[spans.length - 1];
+    if (last && Math.abs(last[1] - span[0]) < 0.05) last[1] = span[1];
+    else spans.push(span);
+  });
+  return spans;
 }
 
 function useWidth(ref: React.RefObject<HTMLElement>): number {

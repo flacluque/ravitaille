@@ -34,6 +34,19 @@ export function tightestCutoff(plan: RacePlan): { eta: CheckpointEta; cutoff: Cu
 }
 
 /**
+ * La barrière la plus serrée tous scénarios confondus : ce qui arrive si la journée tourne mal.
+ * null si aucune barrière.
+ */
+export function worstCutoff(plans: RacePlan[]): { scenario: number; eta: CheckpointEta; cutoff: Cutoff } | null {
+  let worst: { scenario: number; eta: CheckpointEta; cutoff: Cutoff } | null = null;
+  plans.forEach((plan, scenario) => {
+    const t = tightestCutoff(plan);
+    if (t && (!worst || t.cutoff.marginMinutes < worst.cutoff.marginMinutes)) worst = { scenario, ...t };
+  });
+  return worst;
+}
+
+/**
  * Heure de passage estimée à un km de la trace, en minutes "locales" (cf. localMinutes).
  * Interpolation linéaire entre le départ d'un ravito et l'arrivée au suivant : c'est une
  * approximation (le plan ne détaille pas l'allure dans un tronçon), suffisante pour le survol.
