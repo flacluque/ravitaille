@@ -24,6 +24,7 @@ import { ReferenceInsights } from './components/ReferenceInsights';
 import { TrainingCard } from './components/TrainingCard';
 import { AlgorithmPage } from './components/AlgorithmPage';
 import { PlanHero } from './components/PlanHero';
+import { Roadbook } from './components/Roadbook';
 import { RavitosView } from './components/RavitosView';
 import { TrainingLine } from './components/TrainingLine';
 import { draftSignature, draftToRace, emptyDraft, type RaceDraft } from './lib/draft';
@@ -80,6 +81,10 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   const [status, setStatus] = useState<Status>({ kind: 'loading' });
   const [scenarioIndex, setScenarioIndex] = useState(1); // Réaliste
   const [hoverKm, setHoverKm] = useState<number | null>(null);
+  // Sur petit écran, la carte se replie sous le profil : on ne la charge qu'à la demande.
+  const [mapOpen, setMapOpen] = useState(false);
+  const narrow = useMediaQuery('(max-width: 1100px)');
+  const showMap = !narrow || mapOpen;
 
   const [mode, setMode] = useState<Mode>(initial?.sampleId === CUSTOM_ID ? 'custom' : 'demo');
   const [draft, setDraft] = useState<RaceDraft>(() => loadDraft() ?? emptyDraft());
@@ -316,6 +321,33 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     }
   }
 
+  // Course (exemple ou la mienne) et références : seulement dans Mon plan, à droite du roadbook (en haut sur mobile).
+  const side = (
+    <>
+      <div className="card mode-switch" role="radiogroup" aria-label="Course">
+        <button type="button" role="radio" aria-checked={mode === 'demo'} className={mode === 'demo' ? 'active' : ''}
+          onClick={() => switchMode('demo')}>
+          Exemple
+        </button>
+        <button type="button" role="radio" aria-checked={mode === 'custom'} className={mode === 'custom' ? 'active' : ''}
+          onClick={() => switchMode('custom')}>
+          Ma course
+        </button>
+      </div>
+      <ReferenceForm
+        initialReferences={references}
+        initialSource={source}
+        loading={status.kind === 'loading'}
+        onSubmit={(refs, src) => void compute(refs, src)}
+        target={plan && !otherRace ? { km: plan.totalDistanceKm, gainM: plan.totalGainM, date: course?.race.start?.slice(0, 10) ?? null } : null}
+        training={training}
+        onTrainingChange={changeTraining}
+      />
+      {plan && <SourceNote source={plan.elevationSource} hasTrack={!!course?.track} />}
+    </>
+  );
+  const planReady = !!plan && !!course && !otherRace;
+
   return (
     <div className="app">
       <header className="topbar">
@@ -406,29 +438,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
         : <p className="muted race-empty">Calcule d'abord le plan de ta course dans « Mon plan » : cette page te guidera point
           par point le jour J.</p>)}
 
-      <main className="layout" hidden={tab === 'algo' || tab === 'accueil' || tab === 'course'}>
-        <aside className="side no-print">
-          <div className="card mode-switch" role="radiogroup" aria-label="Course">
-            <button type="button" role="radio" aria-checked={mode === 'demo'} className={mode === 'demo' ? 'active' : ''}
-              onClick={() => switchMode('demo')}>
-              Exemple
-            </button>
-            <button type="button" role="radio" aria-checked={mode === 'custom'} className={mode === 'custom' ? 'active' : ''}
-              onClick={() => switchMode('custom')}>
-              Ma course
-            </button>
-          </div>
-          <ReferenceForm
-            initialReferences={references}
-            initialSource={source}
-            loading={status.kind === 'loading'}
-            onSubmit={(refs, src) => void compute(refs, src)}
-            target={plan && !otherRace ? { km: plan.totalDistanceKm, gainM: plan.totalGainM, date: course?.race.start?.slice(0, 10) ?? null } : null}
-            training={training}
-            onTrainingChange={changeTraining}
-          />
-          {plan && <SourceNote source={plan.elevationSource} hasTrack={!!course?.track} />}
-        </aside>
+      <main className="layout single" hidden={tab === 'algo' || tab === 'accueil' || tab === 'course'}>
 
         <section className="content">
           {tab !== 'plan' ? null : mode === 'custom' && (editorOpen || !shown) ? (
@@ -452,6 +462,8 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
             </div>
           )}
 
+          {tab === 'plan' && !planReady && <div className="plan-refs plan-refs-alone no-print">{side}</div>}
+
           {otherRace ? (
             <div className="banner warn stale-banner" role="status">
               Le plan de « {draftName} » n'est pas encore calculé :
@@ -465,31 +477,42 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           )}
 
           {!otherRace && <div className={stale ? 'results stale' : 'results'} aria-hidden={stale || undefined}>
-          {tab === 'plan' && <>
-            {plans.length > 0 && <PlanHero plans={plans} selected={scenarioIndex} onSelect={setScenarioIndex} />}
+          {tab === 'plan' && plan && course && (
+            <div className="plan-page">
+              {plans.length > 0 && <PlanHero plans={plans} selected={scenarioIndex} onSelect={setScenarioIndex} />}
 
-            {plan?.training && <TrainingLine plan={plan} onDetails={() => goTab('analyse')} />}
-
-            {plan?.warnings.length ? (
-              <ul className="warnings">
-                {plan.warnings.map((w) => <li key={w}>{w}</li>)}
-              </ul>
-            ) : null}
-
-            {course?.track && plan && (
-              <div className="card course-visuals">
-                <div className="map-wrap no-print">
-                  <CourseMap track={course.track} markers={course.markers} plan={plan} hoverKm={hoverKm} onHover={setHoverKm} />
-                </div>
-                <ElevationProfile track={course.track} markers={course.markers} plan={plan} hoverKm={hoverKm} onHover={setHoverKm} />
+              <div className="plan-notes">
+                {plan.training && <TrainingLine plan={plan} onDetails={() => goTab('analyse')} />}
+                {plan.warnings.length > 0 && (
+                  <ul className="warnings">
+                    {plan.warnings.map((w) => <li key={w}>{w}</li>)}
+                  </ul>
+                )}
               </div>
-            )}
 
-            {plan && course && (
-              <PassageTable plan={plan} markers={course.markers} services={services} onHover={setHoverKm}
+              {course.track && (
+                <section className="plan-profile plan-rule" aria-label="Profil">
+                  <ElevationProfile track={course.track} markers={course.markers} plan={plan} hoverKm={hoverKm} onHover={setHoverKm} />
+                </section>
+              )}
+
+              <Roadbook plan={plan} markers={course.markers} services={services} crew={crew} onHover={setHoverKm}
                 onDetails={() => goTab('analyse')} />
-            )}
-          </>}
+
+              {course.track && (
+                <section className="plan-map plan-rule no-print" aria-label="Carte">
+                  <div className="roadbook-head">
+                    <span className="overline">Carte</span>
+                    <button type="button" className="link-btn plan-map-toggle" aria-expanded={showMap}
+                      onClick={() => setMapOpen(!mapOpen)}>{mapOpen ? 'Masquer la carte' : 'Voir la carte'}</button>
+                  </div>
+                  {showMap && <CourseMap track={course.track} markers={course.markers} plan={plan} hoverKm={hoverKm} onHover={setHoverKm} />}
+                </section>
+              )}
+
+              <div className="plan-refs no-print">{side}</div>
+            </div>
+          )}
 
           {tab === 'ravitos' && plan && course && (
             <RavitosView plan={plan} services={services} profile={nutritionProfile} onProfileChange={changeNutritionProfile}
@@ -540,4 +563,15 @@ function SourceNote({ source, hasTrack }: { source: ElevationSource; hasTrack: b
         : 'Distances et D+ : mesurés sur la trace GPX.'}
     </p>
   );
+}
+
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const list = window.matchMedia(query);
+    const update = () => setMatches(list.matches);
+    list.addEventListener('change', update);
+    return () => list.removeEventListener('change', update);
+  }, [query]);
+  return matches;
 }

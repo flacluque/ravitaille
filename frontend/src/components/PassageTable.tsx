@@ -105,7 +105,7 @@ export function PassageTable({ plan, markers, services, onHover, onDetails }: Pr
 }
 
 /** Services du point : chaque icône avec son mot, pour qu'on n'ait pas à chercher la légende. */
-function ServiceIcons({ services }: { services: Service[] }) {
+export function ServiceIcons({ services }: { services: Service[] }) {
   if (services.length === 0) return null;
   return (
     <span className="service-icons">
