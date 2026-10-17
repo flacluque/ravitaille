@@ -43,6 +43,7 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
   const gpxInput = useRef<HTMLInputElement>(null);
   const scanInput = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [exportHint, setExportHint] = useState(false);
   const scan = useRoadbookScan();
   // Fichier choisi alors que l'éditeur contient déjà une course : on demande avant d'écraser.
   const [pendingScan, setPendingScan] = useState<File | null>(null);
@@ -52,7 +53,7 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
   const fields = draftFieldErrors(draft, gpx !== null);
   const [touched, setTouched] = useState<Set<string>>(() => new Set());
   const touch = (key: string) => setTouched((t) => (t.has(key) ? t : new Set(t).add(key)));
-  const err = (key: string) => (touched.has(key) || errors.length > 0 ? fields[key] : undefined);
+  const err = (key: string) => (touched.has(key) || errors.length > 0 || exportHint ? fields[key] : undefined);
   // Brouillon vide : on propose d'abord de lire le roadbook, la saisie à la main en second.
   const [manual, setManual] = useState(false);
   const aiAvailable = scan.status?.enabled !== false;
@@ -135,14 +136,18 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
           <input ref={scanInput} type="file" accept="image/*,.pdf,application/pdf" hidden onChange={chooseScan} />
           <button type="button" className="ghost" onClick={() => roadbookInput.current?.click()}
             title="Recharger un roadbook exporté en JSON">Importer</button>
-          <button type="button" className="ghost" onClick={exportRoadbook} disabled={!exported}
-            title={exported ? 'Télécharger le roadbook en JSON, pour le garder ou le partager' : 'Complète la saisie pour pouvoir exporter'}>
+          <button type="button" className="ghost" onClick={() => (exported ? exportRoadbook() : setExportHint(true))}
+            aria-disabled={!exported || undefined} title="Télécharger le roadbook en JSON, pour le garder ou le partager">
             Exporter
           </button>
           <input ref={roadbookInput} type="file" accept=".json,application/json" hidden onChange={importRoadbook} />
         </div>
       </div>
       {importError && <p className="field-error">{importError}</p>}
+      {exportHint && !exported && (
+        <p className="scan-hint" role="status">Pour exporter le roadbook, complète d'abord la saisie : nom, départ et km de chaque point
+          (les erreurs s'affichent sous les champs).</p>
+      )}
       {pendingScan && (
         <ConfirmBar
           message={`Remplacer « ${draft.name.trim() || 'la saisie actuelle'} » par la lecture de ${pendingScan.name} ?`}

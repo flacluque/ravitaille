@@ -1,4 +1,5 @@
 import type { RacePlan } from '../api/types';
+import { BackpackIcon, BarrierIcon, BottleIcon, StopwatchIcon } from './Icons';
 import { durationMinutes, formatClock, formatHm, formatKm, formatMeters } from '../lib/format';
 
 interface Props {
@@ -12,10 +13,10 @@ interface Props {
 }
 
 const USES = [
-  { icon: '⏱️', title: 'Tes heures de passage', text: 'À chaque ravito et pointage, selon trois scénarios : optimiste, réaliste, prudent. Avec la nuit, les arrêts et la fatigue qui s\'accumule.' },
-  { icon: '🚧', title: 'Tes marges sur les barrières', text: 'Combien d\'avance tu as sur chaque barrière horaire, et la plus serrée en un coup d\'œil.' },
-  { icon: '🍌', title: 'Ta nutrition, ravito par ravito', text: 'Quoi prendre et quand, selon tes produits, tes flasques et l\'endroit où t\'attend ton assistance.' },
-  { icon: '🎒', title: 'Ton sac', text: 'Le matériel obligatoire lu dans le règlement, à cocher la veille.' },
+  { icon: <StopwatchIcon size={26} />, title: 'Tes heures de passage', text: 'À chaque ravito et pointage, selon trois scénarios : optimiste, réaliste, prudent. Avec la nuit, les arrêts et la fatigue qui s\'accumule.' },
+  { icon: <BarrierIcon size={26} />, title: 'Tes marges sur les barrières', text: 'Combien d\'avance tu as sur chaque barrière horaire, et la plus serrée en un coup d\'œil.' },
+  { icon: <BottleIcon size={26} />, title: 'Ta nutrition, ravito par ravito', text: 'Quoi prendre et quand, selon tes produits, tes flasques et l\'endroit où t\'attend ton assistance.' },
+  { icon: <BackpackIcon size={26} />, title: 'Ton sac', text: 'Le matériel obligatoire lu dans le règlement, à cocher la veille.' },
 ];
 
 const STEPS = [
@@ -49,10 +50,12 @@ export function WelcomePage({ plan, isExample, onExample, onMyRace, onAlgorithm,
         <h2 id="welcome-uses">À quoi ça sert</h2>
         <ul className="welcome-uses">
           {USES.map((u) => (
-            <li key={u.title} className="card">
-              <span className="welcome-icon" aria-hidden>{u.icon}</span>
-              <h3>{u.title}</h3>
-              <p>{u.text}</p>
+            <li key={u.title}>
+              <span className="welcome-icon">{u.icon}</span>
+              <div>
+                <h3>{u.title}</h3>
+                <p>{u.text}</p>
+              </div>
             </li>
           ))}
         </ul>

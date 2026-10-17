@@ -24,7 +24,6 @@ import { AlgorithmPage } from './components/AlgorithmPage';
 import { PlanHero } from './components/PlanHero';
 import { RavitosView } from './components/RavitosView';
 import { TrainingLine } from './components/TrainingLine';
-import { ScenarioCards } from './components/ScenarioCards';
 import { draftSignature, draftToRace, emptyDraft, type RaceDraft } from './lib/draft';
 import { formatClock, formatKm, formatMeters } from './lib/format';
 import { defaultServices } from './lib/services';
@@ -279,6 +278,10 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   };
 
   const [savingPdf, setSavingPdf] = useState(false);
+  // Pourquoi le PDF n'est pas disponible, dit au coureur plutôt qu'un bouton grisé muet.
+  const pdfBlocked = !plan
+    ? "Le PDF se télécharge une fois le plan calculé : complète ta course et clique sur « Calculer mon plan »."
+    : stale ? "Ta course a changé depuis le dernier calcul : clique sur « Calculer mon plan » pour un PDF à jour." : null;
   const [pdfMenu, setPdfMenu] = useState(false);
   useEffect(() => {
     if (!pdfMenu) return;
@@ -333,12 +336,16 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           </a>
         )}
         <div className="pdf-menu no-print" hidden={tab === 'accueil'}>
-          <button type="button" className="ghost" onClick={() => setPdfMenu((m) => !m)} disabled={!plan || savingPdf || stale}
-            aria-expanded={pdfMenu} aria-haspopup="menu"
+          <button type="button" className="ghost" onClick={() => setPdfMenu((m) => !m)} disabled={savingPdf}
+            aria-disabled={pdfBlocked ? true : undefined} aria-expanded={pdfMenu} aria-haspopup="menu"
             title="Télécharger le plan de course en PDF (fonctionne aussi hors ligne)">
             {savingPdf ? 'PDF…' : 'Télécharger le PDF ▾'}
           </button>
-          {pdfMenu && (
+          {pdfMenu && (pdfBlocked ? (
+            <div className="pdf-menu-list" role="status">
+              <p className="pdf-blocked">{pdfBlocked}</p>
+            </div>
+          ) : (
             <div className="pdf-menu-list" role="menu">
               <button type="button" role="menuitem" onClick={() => void savePdf('summary')}>
                 <strong>Résumé · 1 page</strong>
@@ -349,7 +356,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
                 <span className="muted small">Tout le plan : profil, références, préparation, nutrition, matériel</span>
               </button>
             </div>
-          )}
+          ))}
         </div>
       </header>
 
@@ -483,10 +490,18 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           {tab === 'sac' && course && <GearCard raceName={course.race.name} plan={plan} profile={nutritionProfile} />}
 
           {tab === 'analyse' && <>
-            <p className="muted tab-intro">Tout ce qui sert au calcul, pour qui veut regarder de près.</p>
-            {plans.length > 0 && <ScenarioCards plans={plans} selected={scenarioIndex} onSelect={setScenarioIndex} />}
+            <p className="muted tab-intro">Ce que « Mon plan » résume : le poids de chaque référence, ta préparation, le tableau
+              complet (tronçons, allures, arrêts) et les trois scénarios côte à côte.</p>
             {plan && <ReferenceInsights plan={plan} />}
             {plan?.training && <TrainingCard plan={plan} />}
+            {plans.length > 1 && (
+              <div className="segmented analyse-scenario" role="group" aria-label="Scénario du tableau détaillé">
+                {plans.map((p, i) => (
+                  <button key={p.scenario.name} type="button" aria-pressed={i === scenarioIndex}
+                    className={i === scenarioIndex ? 'active' : ''} onClick={() => setScenarioIndex(i)}>{p.scenario.name}</button>
+                ))}
+              </div>
+            )}
             {plan && course && <PassageTable plan={plan} markers={course.markers} services={services} onHover={setHoverKm} />}
             {plans.length > 1 && <CompareTable plans={plans} />}
           </>}
@@ -500,7 +515,8 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
         </section>
       </main>
       {(tab === 'plan' || tab === 'ravitos' || tab === 'analyse') && <Legend />}
-      <MobileNav tab={tab} hrefs={TAB_HASH} onPdf={(v) => void savePdf(v)} pdfDisabled={!plan || savingPdf || stale}
+      <MobileNav tab={tab} hrefs={TAB_HASH} onPdf={(v) => void savePdf(v)} pdfDisabled={savingPdf || !!pdfBlocked}
+        pdfReason={pdfBlocked}
         feedbackUrl={feedbackUrl} />
     </div>
   );

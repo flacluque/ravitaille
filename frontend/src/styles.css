@@ -568,7 +568,12 @@ button.legend-btn[aria-expanded='true'] { background: var(--accent); color: var(
 .algo h1 { margin: 0 0 6px; }
 .algo h2 { margin: 0 0 8px; font-size: var(--fs-lead); }
 .algo section { scroll-margin-top: 12px; }
-.algo-toc { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: var(--fs-small); margin-top: 8px; }
+.algo-toc { position: sticky; top: 0; z-index: 10; display: flex; gap: 4px 16px; overflow-x: auto; scrollbar-width: none;
+  margin: 0 -20px; padding: 10px 20px; font-size: var(--fs-small); white-space: nowrap;
+  background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--border); }
+.algo-toc a { padding: 2px 0; border-bottom: 2px solid transparent; }
+.algo-toc a[aria-current='location'] { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.algo section { scroll-margin-top: 56px; }
 .algo .formula { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--surface-2); padding: 8px 12px;
   border-radius: 6px; overflow-x: auto; margin: 8px 0; }
 .algo .cite { font-size: 0.8em; vertical-align: super; text-decoration: none; margin-left: 2px; }
@@ -598,6 +603,10 @@ button.legend-btn[aria-expanded='true'] { background: var(--accent); color: var(
   display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: center; padding: 18px 22px; border-radius: var(--radius);
   background: var(--hero-bg); color: var(--hero-fg); transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .plan-hero.tight { --hero-bg: var(--hero-tight); --hero-fg: #ffffff; }
+/* En sombre, un vert profond plutôt que l'accent clair : le hero ne doit pas éblouir de nuit. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .plan-hero:not(.tight):not(.missed) { --hero-bg: #24563f; --hero-fg: #f0f7f3; }
+}
 .plan-hero.missed { --hero-bg: var(--hero-missed); --hero-fg: #ffffff; }
 .plan-hero-main { flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px; }
 .plan-hero-label { font-size: var(--fs-small); opacity: 0.85; }
@@ -802,10 +811,13 @@ a.brand { text-decoration: none; }
 .welcome-preview td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .welcome-tight { color: var(--muted); }
 .welcome-preview .link-btn { align-self: flex-start; }
-.welcome-uses { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-.welcome-uses li { display: flex; flex-direction: column; gap: 6px; }
-.welcome-uses p { color: var(--muted); font-size: var(--fs-small); }
-.welcome-icon { font-size: var(--fs-title); }
+.welcome-uses { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 40px;
+  border-top: 3px solid var(--text); }
+.welcome-uses li { display: flex; gap: 14px; align-items: flex-start; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.welcome-uses h3 { font-size: var(--fs-lead); margin-bottom: 4px; }
+.welcome-uses p { color: var(--muted); }
+.welcome-icon { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); }
 .welcome-steps { list-style: none; margin: 0 0 16px; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; counter-reset: none; }
 .welcome-steps li { display: flex; gap: 12px; align-items: flex-start; }
 .welcome-steps p { color: var(--muted); font-size: var(--fs-small); }
@@ -817,7 +829,7 @@ a.brand { text-decoration: none; }
 .welcome-more .link-btn { align-self: flex-start; }
 @media (max-width: 900px) {
   .welcome-hero { grid-template-columns: 1fr; }
-  .welcome-uses, .welcome-steps { grid-template-columns: 1fr 1fr; }
+  .welcome-steps { grid-template-columns: 1fr 1fr; }
   .welcome-more { grid-template-columns: 1fr; }
 }
 @media (max-width: 560px) {
@@ -911,3 +923,6 @@ button.ravitos-done { align-self: flex-start; }
 .example-tag { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--tight-bg); color: var(--tight-fg);
   font-size: var(--fs-micro); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
 .example-note { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--tight-bg); color: var(--text); }
+@media (max-width: 640px) { .algo-toc { margin: 0 -16px; padding: 10px 16px; } }
+button[aria-disabled='true'] { opacity: 0.55; }
+.pdf-blocked { margin: 0; padding: 8px 10px; font-size: var(--fs-small); }

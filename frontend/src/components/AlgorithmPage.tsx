@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { RacePlan } from '../api/types';
 import { formatDuration, formatKm } from '../lib/format';
 import { formEffect } from '../lib/training';
@@ -46,17 +47,8 @@ export function AlgorithmPage({ plan }: { plan: RacePlan | undefined }) {
           viennent d'études publiées (numéros entre crochets, sources en bas de page) ; ce sont des ordres de
           grandeur, pas des lois exactes.
         </p>
-        <nav className="algo-toc" aria-label="Sommaire">
-          <a href="#algo-effort">1. Kilomètre-effort</a>
-          <a href="#algo-riegel">2. Loi de fatigue</a>
-          <a href="#algo-references">3. Références</a>
-          <a href="#algo-forme">4. Forme d'entraînement</a>
-          <a href="#algo-simulation">5. Simulation</a>
-          <a href="#algo-nutrition">6. Nutrition</a>
-          <a href="#algo-limites">7. Limites</a>
-          <a href="#algo-sources">Sources</a>
-        </nav>
       </header>
+      <AlgoToc />
 
       {plan && (
         <section className="card algo-mine">
@@ -228,5 +220,32 @@ export function AlgorithmPage({ plan }: { plan: RacePlan | undefined }) {
         </ol>
       </section>
     </article>
+  );
+}
+
+const TOC: [string, string][] = [
+  ['algo-effort', '1. Kilomètre-effort'], ['algo-riegel', '2. Loi de fatigue'], ['algo-references', '3. Références'],
+  ['algo-forme', "4. Forme d'entraînement"], ['algo-simulation', '5. Simulation'], ['algo-nutrition', '6. Nutrition'],
+  ['algo-limites', '7. Limites'], ['algo-sources', 'Sources'],
+];
+
+/** Sommaire collé en haut de l'écran, qui suit la lecture : la section en cours est soulignée. */
+function AlgoToc() {
+  const [current, setCurrent] = useState<string | null>(null);
+  useEffect(() => {
+    const sections = TOC.map(([id]) => document.getElementById(id)).filter((el): el is HTMLElement => el !== null);
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      if (visible[0]) setCurrent(visible[0].target.id);
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    sections.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <nav className="algo-toc" aria-label="Sommaire">
+      {TOC.map(([id, label]) => (
+        <a key={id} href={`#${id}`} aria-current={current === id ? 'location' : undefined}>{label}</a>
+      ))}
+    </nav>
   );
 }
