@@ -15,7 +15,7 @@ interface Props {
 }
 
 const HEIGHT = 240;
-const M = { top: 30, right: 12, bottom: 26, left: 44 };
+const M = { top: 36, right: 14, bottom: 26, left: 44 };
 
 /** Profil altimétrique en SVG : ravitos, barrières, et heure de passage estimée au survol. */
 export function ElevationProfile({ track, markers, plan, hoverKm, onHover }: Props) {
@@ -123,14 +123,14 @@ export function ElevationProfile({ track, markers, plan, hoverKm, onHover }: Pro
             const x = scales.x(m.trackKm);
             const status = eta?.status ?? 'NONE';
             const color = STATUS_COLORS[status];
-            const r = m.aid === 'FULL' ? 9 : 7.5;
+            const r = m.aid === 'FULL' ? 11.5 : 10;
             const { fill, stroke } = statusShapePaint(status);
             return (
               <g key={m.code} className={`cp cp-${status.toLowerCase()}`}>
                 <line x1={x} x2={x} y1={M.top - 6} y2={M.top + innerH} stroke={color} strokeDasharray="3 3" opacity={0.6} />
-                <path d={statusShapePath(status, x, M.top - 12, r)} fill={fill}
+                <path d={statusShapePath(status, x, M.top - 15, r)} fill={fill}
                   stroke={status === 'NONE' ? stroke : 'none'} strokeWidth={1.6} strokeLinejoin="round" />
-                <text x={x} y={M.top - 12 + statusTextOffset(status, r)} dy="0.34em" textAnchor="middle" className="cp-code">
+                <text x={x} y={M.top - 15 + statusTextOffset(status, r)} dy="0.34em" textAnchor="middle" className="cp-code">
                   {m.code}
                 </text>
                 <title>{`${m.code} · ${m.name} (km ${m.km})`}</title>
