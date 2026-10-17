@@ -6,6 +6,7 @@ import { formatClockFromMinutes, formatDuration, formatKm, localMinutes } from '
 import { computeNutrition, describeActions, describeFill, describeRhythm, type NutritionProfile } from '../lib/nutrition';
 import { adjustedArrival, adjustedMargin, formatDelay, nowMinutes, offsetMinutes, raceProgress, type Fix } from '../lib/race';
 import { StatusBadge } from './StatusBadge';
+import type { ShareResult } from '../lib/crewShare';
 
 interface Props {
   plan: RacePlan;
@@ -13,6 +14,8 @@ interface Props {
   services: Service[][];
   profile: NutritionProfile;
   crew: string[];
+  /** Renvoie le lien de suivi à l'assistance, avec le recalage (absent sans assistance). */
+  onShareCrew?: (fix: Fix | null, message: string) => Promise<ShareResult>;
 }
 
 const clock = (minutes: number) => formatClockFromMinutes(minutes);
@@ -21,7 +24,7 @@ const clock = (minutes: number) => formatClockFromMinutes(minutes);
  * « En course » : une page par point, comme un roadbook qu'on feuillette au téléphone. Pilotée par
  * l'horloge ; « Je suis à ce point » recale la suite sur l'heure réelle.
  */
-export function RaceView({ plan, course, services, profile, crew }: Props) {
+export function RaceView({ plan, course, services, profile, crew, onShareCrew }: Props) {
   const raceName = course.race.name;
   const [fix, setFix] = useState<Fix | null>(() => loadFix(raceName, plan.start));
   const [now, setNow] = useState(nowMinutes);
@@ -38,11 +41,22 @@ export function RaceView({ plan, course, services, profile, crew }: Props) {
   const last = plan.checkpoints.length - 1;
   const offset = offsetMinutes(plan, fix);
 
+  const [crewNotice, setCrewNotice] = useState<ShareResult | null>(null);
   function arrived(at: number) {
     const next = { index, atMinutes: Math.round(at) };
     setFix(next);
     saveFix(raceName, plan.start, next);
     setShown(null);
+    setCrewNotice(null);
+  }
+  async function notifyCrew() {
+    if (!fix || !onShareCrew) return;
+    const late = offsetMinutes(plan, fix);
+    const where = plan.checkpoints[fix.index].name;
+    const message = `Je suis passé à ${where} à ${clock(fix.atMinutes)}`
+      + (Math.abs(late) < 2 ? ", pile à l'heure du plan." : `, ${formatDelay(late)} ${late < 0 ? "d'avance" : 'de retard'}.`)
+      + ' Mes heures mises à jour :';
+    setCrewNotice(await onShareCrew(fix, message));
   }
   function clearFix() {
     setFix(null);
@@ -140,6 +154,11 @@ export function RaceView({ plan, course, services, profile, crew }: Props) {
             {fix?.index === index ? `Je suis à ${eta.name} (mettre à jour)` : `Je suis à ${eta.name}`}
           </button>
           <span className="muted small">Ton heure réelle recale la suite du plan et tes marges.</span>
+          {fix && onShareCrew && (
+            <button type="button" className="ghost" onClick={() => void notifyCrew()}>Prévenir mon assistance (lien à jour)</button>
+          )}
+          {crewNotice && <span className="small" role="status">{crewNotice === 'copied' ? 'Lien copié : colle-le dans WhatsApp.'
+            : crewNotice === 'shared' ? 'Assistance prévenue.' : "Le lien n'a pas pu être partagé."}</span>}
         </div>
       )}
     </article>

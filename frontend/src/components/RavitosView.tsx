@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
 import { UndoToast, useUndo } from './UndoToast';
+import type { ShareResult } from '../lib/crewShare';
+import { loadRunnerName, saveRunnerName } from '../api/storage';
 import type { RacePlan, Service } from '../api/types';
 import { formatClock, formatDuration, formatKm } from '../lib/format';
 import {
@@ -17,12 +19,14 @@ interface Props {
   /** Codes des points où l'assistance attend le coureur. */
   crew: string[];
   onCrewChange: (codes: string[]) => void;
+  /** Envoie le lien de suivi à l'assistance (absent : partage indisponible). */
+  onShareCrew?: (runner: string | null) => Promise<ShareResult>;
 }
 
 const hour = (iso: string) => formatClock(iso).replace(/^\S+ /, '');
 
 /** L'onglet Ravitos : le profil en quelques clics, l'assistance, puis la course tronçon par tronçon. */
-export function RavitosView({ plan, services, profile, onProfileChange, crew, onCrewChange }: Props) {
+export function RavitosView({ plan, services, profile, onProfileChange, crew, onCrewChange, onShareCrew }: Props) {
   const n = computeNutrition(plan, services, profile, crew);
   const etas = plan.checkpoints;
   const last = etas.length - 1;
@@ -50,7 +54,7 @@ export function RavitosView({ plan, services, profile, onProfileChange, crew, on
 
       {part === 'reglages' ? <>
         <ProfileCard profile={profile} onChange={onProfileChange} />
-        <CrewCard plan={plan} services={services} crew={crew} onChange={onCrewChange} />
+        <CrewCard plan={plan} services={services} crew={crew} onChange={onCrewChange} onShare={onShareCrew} />
         <button type="button" className="ravitos-done" onClick={() => choose('deroule')}>Voir le déroulé</button>
       </> : <>
       <p className="muted small ravitos-basis">
@@ -210,7 +214,16 @@ function CrewSheet({ plan, n, profile }: { plan: RacePlan; n: NutritionPlan; pro
   );
 }
 
-function CrewCard({ plan, services, crew, onChange }: { plan: RacePlan; services: Service[][]; crew: string[]; onChange: (c: string[]) => void }) {
+function CrewCard({ plan, services, crew, onChange, onShare }: {
+  plan: RacePlan; services: Service[][]; crew: string[]; onChange: (c: string[]) => void;
+  onShare?: (runner: string | null) => Promise<ShareResult>;
+}) {
+  const [runner, setRunner] = useState(loadRunnerName);
+  const [result, setResult] = useState<ShareResult | null>(null);
+  async function share() {
+    saveRunnerName(runner);
+    setResult(await onShare!(runner.trim() || null));
+  }
   const etas = plan.checkpoints;
   const candidates = etas.map((eta, i) => ({ eta, i })).filter(({ eta, i }) =>
     i > 0 && i < etas.length - 1 && ((services[i] ?? []).length > 0 || crew.includes(eta.code)));
@@ -233,6 +246,20 @@ function CrewCard({ plan, services, crew, onChange }: { plan: RacePlan; services
           );
         })}
       </div>
+      {onShare && crew.length > 0 && (
+        <div className="crew-share">
+          <label>Ton prénom, pour ton assistance
+            <input value={runner} onChange={(e) => setRunner(e.target.value)} placeholder="Facultatif" autoComplete="given-name" />
+          </label>
+          <button type="button" onClick={() => void share()}>Envoyer le lien à mon assistance</button>
+          <p className="muted small" role="status">
+            {result === 'copied' ? 'Lien copié : colle-le dans WhatsApp ou un mail.'
+              : result === 'shared' ? 'Lien envoyé.'
+                : result === 'failed' ? "Le lien n'a pas pu être partagé ni copié : réessaie."
+                  : "Un seul lien pour toute ton équipe, à envoyer par mail ou WhatsApp : tes heures, tes rendez-vous et ce qu'il faut te préparer. Pas de compte, rien n'est gardé sur le serveur."}
+          </p>
+        </div>
+      )}
     </section>
   );
 }

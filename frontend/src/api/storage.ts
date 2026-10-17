@@ -179,3 +179,22 @@ export function saveFix(raceName: string, start: string, fix: { index: number; a
     // stockage indisponible : le recalage vaut pour la session
   }
 }
+
+const RUNNER_KEY = 'trail-planner:prenom';
+
+/** Prénom du coureur, montré à son assistance. */
+export function loadRunnerName(): string {
+  try {
+    return localStorage.getItem(RUNNER_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+export function saveRunnerName(name: string): void {
+  try {
+    localStorage.setItem(RUNNER_KEY, name.trim());
+  } catch {
+    // stockage indisponible
+  }
+}

@@ -3,6 +3,7 @@ import { ApiError, fetchCourse, fetchCustomPlans, fetchPlans, loadSnapshot, save
 import {
   loadCrew, loadDraft, loadGear, loadGpx, loadNutrition, loadTrainingOptions, saveCrew, saveDraft, saveGpx, saveNutrition,
   saveTrainingOptions,
+  loadFix, loadRunnerName,
 } from './api/storage';
 import type { ElevationSource, Reference } from './api/types';
 import { CompareTable } from './components/CompareTable';
@@ -17,7 +18,8 @@ import { ReferenceForm } from './components/ReferenceForm';
 import { WelcomePage } from './components/WelcomePage';
 import { MobileNav } from './components/MobileNav';
 import { RaceView } from './components/RaceView';
-import { isRaceWindow, nowMinutes } from './lib/race';
+import { isRaceWindow, nowMinutes, type Fix } from './lib/race';
+import { shareWithCrew, type ShareResult } from './lib/crewShare';
 import { ReferenceInsights } from './components/ReferenceInsights';
 import { TrainingCard } from './components/TrainingCard';
 import { AlgorithmPage } from './components/AlgorithmPage';
@@ -277,6 +279,12 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     if (crewRace) saveCrew(crewRace, codes);
   };
 
+  // Lien de suivi pour l'assistance : le plan (les trois scénarios) voyage dans le lien.
+  const shareCrew = (fix: Fix | null, runner: string | null, update?: string): Promise<ShareResult> =>
+    !course ? Promise.resolve('failed')
+      : shareWithCrew({ plans, likely: Math.min(1, plans.length - 1), course, services, profile: nutritionProfile, crew, fix,
+        runner: runner ?? loadRunnerName(), update });
+
   const [savingPdf, setSavingPdf] = useState(false);
   // Pourquoi le PDF n'est pas disponible, dit au coureur plutôt qu'un bouton grisé muet.
   const pdfBlocked = !plan
@@ -393,7 +401,8 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
       )}
 
       {tab === 'course' && (plan && course
-        ? <RaceView plan={plan} course={course} services={services} profile={nutritionProfile} crew={crew} />
+        ? <RaceView plan={plan} course={course} services={services} profile={nutritionProfile} crew={crew}
+          onShareCrew={crew.length > 0 ? (fix, message) => shareCrew(fix, null, message) : undefined} />
         : <p className="muted race-empty">Calcule d'abord le plan de ta course dans « Mon plan » : cette page te guidera point
           par point le jour J.</p>)}
 
@@ -484,6 +493,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
 
           {tab === 'ravitos' && plan && course && (
             <RavitosView plan={plan} services={services} profile={nutritionProfile} onProfileChange={changeNutritionProfile}
+              onShareCrew={(runner) => shareCrew(loadFix(course.race.name, plan.start), runner)}
               crew={crew} onCrewChange={changeCrew} />
           )}
 
