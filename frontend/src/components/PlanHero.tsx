@@ -16,8 +16,10 @@ export function PlanHero({ plans, selected, onSelect }: Props) {
   const tightest = tightestCutoff(plan);
   const first = plans[0];
   const last = plans[plans.length - 1];
+  // Le hero change de teinte quand la marge la plus serrée passe sous 1 h, ou qu'une barrière saute.
+  const alert = tightest?.eta.status === 'MISSED' ? 'missed' : tightest?.eta.status === 'TIGHT' ? 'tight' : '';
   return (
-    <section className="plan-hero" aria-label="Arrivée prévue">
+    <section className={`plan-hero ${alert}`} aria-label="Arrivée prévue">
       <div className="plan-hero-main">
         <span className="plan-hero-label">Arrivée prévue · scénario {plan.scenario.name.toLowerCase()}</span>
         <span className="plan-hero-finish scenario-finish">{formatClock(plan.finish)}</span>
