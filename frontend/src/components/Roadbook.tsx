@@ -3,6 +3,7 @@ import type { Marker, RacePlan, Service } from '../api/types';
 import { durationMinutes, formatClock, formatDuration, formatKm, formatPace } from '../lib/format';
 import { bindingCutoff } from '../lib/plan';
 import { codesNote, ServiceIcons } from './PassageTable';
+import { Legend } from './Legend';
 import { StatusBadge } from './StatusBadge';
 
 interface Props {
@@ -32,7 +33,10 @@ export function Roadbook({ plan, markers, services, crew, onHover, onDetails }: 
     <section className="roadbook" aria-label={`Heures de passage, scénario ${plan.scenario.name.toLowerCase()}`}>
       <div className="roadbook-head">
         <h2>Heures de passage</h2>
-        <button type="button" className="link-btn" onClick={onDetails}>Tableau détaillé</button>
+        <span className="roadbook-tools">
+          <button type="button" className="link-btn" onClick={onDetails}>Tableau détaillé</button>
+          <Legend />
+        </span>
       </div>
       <div className="roadbook-cols" aria-hidden>
         <span>Point</span><span className="num">km</span><span className="num">Arrivée</span><span className="num">Barrière</span>

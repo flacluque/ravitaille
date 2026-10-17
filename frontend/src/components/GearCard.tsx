@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { extractGear, fetchExtractorStatus } from '../api/client';
+import { extractGear, fetchExtractorStatus, humanError } from '../api/client';
 import { loadGear, saveGear } from '../api/storage';
 import { ConfirmBar } from './ConfirmBar';
 import { UndoToast, useUndo } from './UndoToast';
@@ -87,7 +87,7 @@ export function GearCard({ raceName, plan, profile }: Props) {
         ...gear.warnings,
       ]);
     } catch (err) {
-      setReadError(err instanceof Error ? err.message : String(err));
+      setReadError(humanError(err));
     } finally {
       setReading(false);
     }
@@ -112,15 +112,16 @@ export function GearCard({ raceName, plan, profile }: Props) {
           </p>
         </div>
         <div className="editor-actions">
-          {extractor?.enabled !== false && (
+          {(!extractor || (extractor.enabled && extractor.ready)) && (
             <button type="button" onClick={() => fileInput.current?.click()} disabled={reading}
-              title={extractor && !extractor.ready ? extractor.message ?? '' : "Une IA lit la liste du matériel dans le règlement (image ou PDF)"}>
+              title="Une IA lit la liste du matériel dans le règlement (image ou PDF)">
               {reading ? 'Lecture…' : 'Lire le règlement'}
             </button>
           )}
           <input ref={fileInput} type="file" accept="image/*,.pdf,application/pdf" hidden onChange={chooseRules} />
           {items.length === 0 && (
-            <button type="button" className="ghost" onClick={() => update(templateItems())}>Liste type</button>
+            <button type="button" className={extractor && !(extractor.enabled && extractor.ready) ? '' : 'ghost'}
+              onClick={() => update(templateItems())}>Liste type</button>
           )}
         </div>
       </div>

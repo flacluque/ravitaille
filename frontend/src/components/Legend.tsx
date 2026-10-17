@@ -11,7 +11,7 @@ const STATUSES: { status: CutoffStatus; label: string }[] = [
 ];
 
 /**
- * Légende à la demande : un « ? » en bas de l'écran. Les icônes et les badges portent déjà leur
+ * Légende à la demande : un bouton « ? Légende » posé dans la page (plus de bouton flottant qui masque le contenu). Les icônes et les badges portent déjà leur
  * mot ; elle rappelle les formes de la carte et du profil, et le sens des codes du roadbook.
  */
 export function Legend() {
@@ -41,6 +41,8 @@ export function Legend() {
 
   return (
     <div className="legend-help no-print">
+      <button ref={button} type="button" className="legend-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open}
+        title="Formes, icônes et codes des points"><span aria-hidden>?</span> Légende</button>
       {open && (
         <div ref={panel} className="legend-panel" role="dialog" aria-label="Légende">
           <h2>Légende</h2>
@@ -64,8 +66,6 @@ export function Legend() {
           </p>
         </div>
       )}
-      <button ref={button} type="button" className="legend-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open}
-        aria-label="Légende : formes, icônes et codes" title="Légende">?</button>
     </div>
   );
 }

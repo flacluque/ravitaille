@@ -9,7 +9,8 @@ import { StatusShape } from './StatusShape';
 interface Pass { index: number; at: number }
 interface Saved { pass: Pass | null; margin: number; checked: Record<string, boolean> }
 
-const MARGINS = [0, 10, 15, 20, 30, 45, 60];
+/** Avance à prendre sur l'arrivée la plus tôt : court, confortable, large. */
+const MARGINS = [15, 30, 60];
 
 function storageKey(share: CrewShare) {
   return `trail-planner:assistance-suivi:${share.race}:${share.start}`;
@@ -51,7 +52,9 @@ export function CrewView({ share }: { share: CrewShare }) {
   const offset = crewOffset(share, pass);
   const nextIndex = nextMeeting(share, pass, now);
   const [sheet, setSheet] = useState(false);
-  const [from, setFrom] = useState(() => pass?.index ?? 0);
+  // Temps de route : par défaut depuis le rendez-vous précédent (là où est l'assistance), sinon le dernier passage.
+  const previousMeeting = (next: number | null) => [...share.crew].reverse().find((i) => next !== null && i < next);
+  const [from, setFrom] = useState(() => previousMeeting(nextIndex) ?? pass?.index ?? 0);
   const [to, setTo] = useState(() => nextIndex ?? share.points.length - 1);
   const who = share.runner ?? 'ton coureur';
 
@@ -64,6 +67,9 @@ export function CrewView({ share }: { share: CrewShare }) {
       </header>
 
       <main className="cv-main">
+        {nextIndex !== null && <NextMeeting share={share} index={nextIndex} pass={pass} now={now} saved={saved} save={save}
+          clock={clock} onRoute={() => { setFrom(previousMeeting(nextIndex) ?? pass?.index ?? 0); setTo(nextIndex); document.getElementById('cv-route')?.scrollIntoView({ behavior: 'smooth' }); }} />}
+
         <section className="cv-card" aria-label="Dernier passage">
           <span className="cv-label">Dernier passage connu</span>
           <strong className="cv-pass">
@@ -78,9 +84,6 @@ export function CrewView({ share }: { share: CrewShare }) {
           <button type="button" className="cv-primary" onClick={() => setSheet(true)}>Saisir un passage</button>
           <p className="cv-note">Recopie l'heure vue sur le suivi en direct de l'organisation : les rendez-vous se recalent.</p>
         </section>
-
-        {nextIndex !== null && <NextMeeting share={share} index={nextIndex} pass={pass} now={now} saved={saved} save={save}
-          clock={clock} onRoute={() => { setFrom(pass?.index ?? 0); setTo(nextIndex); document.getElementById('cv-route')?.scrollIntoView({ behavior: 'smooth' }); }} />}
 
         {share.crew.length > 1 && (
           <section aria-label="Tous les rendez-vous" className="cv-list">
@@ -106,11 +109,13 @@ export function CrewView({ share }: { share: CrewShare }) {
         <RouteCard share={share} from={from} to={to} setFrom={setFrom} setTo={setTo} pass={pass} margin={saved.margin} clock={clock} />
 
         <section className="cv-card" aria-label="Réglage">
-          <label className="cv-field">Être sur place avant son arrivée la plus tôt
-            <select value={saved.margin} onChange={(e) => save({ ...saved, margin: Number(e.target.value) })}>
-              {MARGINS.map((m) => <option key={m} value={m}>{m === 0 ? 'pile à l\'heure' : `${m} min avant`}</option>)}
-            </select>
-          </label>
+          <span className="cv-field" id="cv-margin">Être sur place avant son arrivée la plus tôt</span>
+          <div className="segmented" role="group" aria-labelledby="cv-margin">
+            {MARGINS.map((m) => (
+              <button key={m} type="button" aria-pressed={saved.margin === m} className={saved.margin === m ? 'active' : ''}
+                onClick={() => save({ ...saved, margin: m })}>{m === 60 ? '1 h avant' : `${m} min avant`}</button>
+            ))}
+          </div>
         </section>
 
         <p className="cv-note">

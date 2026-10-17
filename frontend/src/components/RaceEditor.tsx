@@ -1,7 +1,7 @@
 import { DatePicker } from './DatePicker';
 import { todayIso } from '../lib/dates';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { extractRoadbook, fetchExtractorStatus } from '../api/client';
+import { extractRoadbook, fetchExtractorStatus, humanError } from '../api/client';
 import type { AidLevel, ExtractorStatus } from '../api/types';
 import {
   draftToFile,
@@ -56,7 +56,8 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
   const err = (key: string) => (touched.has(key) || errors.length > 0 || exportHint ? fields[key] : undefined);
   // Brouillon vide : on propose d'abord de lire le roadbook, la saisie à la main en second.
   const [manual, setManual] = useState(false);
-  const aiAvailable = scan.status?.enabled !== false;
+  // Lecture par l'IA proposée seulement si le service est prêt (statut inconnu : on la laisse, l'erreur dira pourquoi).
+  const aiAvailable = !scan.status || (scan.status.enabled && scan.status.ready);
   const empty = aiAvailable && !manual && !hasContent(draft) && !scan.reading && !scan.preview && !pendingScan;
 
   const set = (patch: Partial<RaceDraft>) => onChange({ ...draft, ...patch });
@@ -340,7 +341,7 @@ function useRoadbookScan() {
     try {
       return await extractRoadbook(file);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(humanError(e));
       refreshStatus();
       return null;
     } finally {
@@ -359,8 +360,9 @@ function ScanPanel({ scan, onRetryStatus }: { scan: ReturnType<typeof useRoadboo
     <div className="scan">
       {notReady && (
         <p className="scan-hint">
-          Lecture automatique pas encore prête : {status?.message}{' '}
-          <button type="button" className="link-btn" onClick={onRetryStatus}>Revérifier</button>
+          {status?.message ?? "La lecture automatique n'est pas disponible : saisis le roadbook à la main."}
+          {/* Un modèle local (Ollama) finit de se charger : ça vaut la peine de revérifier. Une clé absente, non. */}
+          {status?.provider === 'ollama' && <>{' '}<button type="button" className="link-btn" onClick={onRetryStatus}>Revérifier</button></>}
         </p>
       )}
       {reading && (

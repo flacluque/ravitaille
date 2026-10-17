@@ -321,19 +321,9 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     }
   }
 
-  // Course (exemple ou la mienne) et références : seulement dans Mon plan, à droite du roadbook (en haut sur mobile).
+  // Références : seulement dans Mon plan, à droite du roadbook (en haut sur mobile).
   const side = (
     <>
-      <div className="card mode-switch" role="radiogroup" aria-label="Course">
-        <button type="button" role="radio" aria-checked={mode === 'demo'} className={mode === 'demo' ? 'active' : ''}
-          onClick={() => switchMode('demo')}>
-          Exemple
-        </button>
-        <button type="button" role="radio" aria-checked={mode === 'custom'} className={mode === 'custom' ? 'active' : ''}
-          onClick={() => switchMode('custom')}>
-          Ma course
-        </button>
-      </div>
       <ReferenceForm
         initialReferences={references}
         initialSource={source}
@@ -347,6 +337,8 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     </>
   );
   const planReady = !!plan && !!course && !otherRace;
+  // Les barrières serrées ou dépassées sont déjà dans le bandeau et le roadbook : on ne les répète pas en avertissement.
+  const planWarnings = (plan?.warnings ?? []).filter((w) => !/^(Barrière horaire dépassée|Marge de moins d'1 h)/.test(w));
 
   return (
     <div className="app">
@@ -421,13 +413,16 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
         </div>
       )}
       {status.kind === 'rejected' && (
-        <div className="banner error" role="alert">Calcul impossible : {status.error}</div>
+        <div className="banner error" role="alert">
+          Le plan n'a pas pu être calculé : {status.error.charAt(0).toLowerCase() + status.error.slice(1)}{' '}
+          <button type="button" className="link-btn" onClick={() => void compute(references, source)}>Réessayer</button>
+        </div>
       )}
 
       {tab === 'algo' && <AlgorithmPage plan={plan} />}
       {tab === 'accueil' && (
         <WelcomePage plan={plan} isExample={mode === 'demo'} feedbackUrl={feedbackUrl}
-          onExample={() => { switchMode('demo'); goTab('plan'); }}
+          onOpenPlan={() => goTab('plan')}
           onMyRace={() => { switchMode('custom'); goTab('plan'); }}
           onAlgorithm={() => goTab('algo')} />
       )}
@@ -462,6 +457,13 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
             </div>
           )}
 
+          {tab === 'plan' && mode === 'demo' && (
+            <div className="example-banner no-print" role="note">
+              <span>Tu regardes <strong>un exemple</strong> : {course?.race.name ?? 'une course type'}, avec des références types.</span>
+              <button type="button" onClick={() => switchMode('custom')}>Préparer ma course</button>
+            </div>
+          )}
+
           {tab === 'plan' && !planReady && <div className="plan-refs plan-refs-alone no-print">{side}</div>}
 
           {otherRace ? (
@@ -483,9 +485,9 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
 
               <div className="plan-notes">
                 {plan.training && <TrainingLine plan={plan} onDetails={() => goTab('analyse')} />}
-                {plan.warnings.length > 0 && (
+                {planWarnings.length > 0 && (
                   <ul className="warnings">
-                    {plan.warnings.map((w) => <li key={w}>{w}</li>)}
+                    {planWarnings.map((w) => <li key={w}>{w}</li>)}
                   </ul>
                 )}
               </div>
@@ -514,6 +516,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
             </div>
           )}
 
+          {tab === 'ravitos' && plan && course && <div className="tab-tools"><Legend /></div>}
           {tab === 'ravitos' && plan && course && (
             <RavitosView plan={plan} services={services} profile={nutritionProfile} onProfileChange={changeNutritionProfile}
               onShareCrew={(runner) => shareCrew(loadFix(course.race.name, plan.start), runner)}
@@ -523,12 +526,13 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           {tab === 'sac' && course && <GearCard raceName={course.race.name} plan={plan} profile={nutritionProfile} />}
 
           {tab === 'analyse' && <>
+            <div className="tab-tools"><Legend /></div>
             <p className="muted tab-intro">Ce que « Mon plan » résume : le poids de chaque référence, ta préparation, le tableau
               complet (tronçons, allures, arrêts) et les trois scénarios côte à côte.</p>
             {plan && <ReferenceInsights plan={plan} />}
             {plan?.training && <TrainingCard plan={plan} />}
             {plans.length > 1 && (
-              <div className="segmented analyse-scenario" role="group" aria-label="Scénario du tableau détaillé">
+              <div className="plan-hero-scenarios analyse-scenario" role="group" aria-label="Scénario du tableau détaillé">
                 {plans.map((p, i) => (
                   <button key={p.scenario.name} type="button" aria-pressed={i === scenarioIndex}
                     className={i === scenarioIndex ? 'active' : ''} onClick={() => setScenarioIndex(i)}>{p.scenario.name}</button>
@@ -547,7 +551,6 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           {status.kind === 'loading' && !shown && mode === 'demo' && <p className="muted">Calcul en cours…</p>}
         </section>
       </main>
-      {(tab === 'plan' || tab === 'ravitos' || tab === 'analyse') && <Legend />}
       <MobileNav tab={tab} hrefs={TAB_HASH} onPdf={(v) => void savePdf(v)} pdfDisabled={savingPdf || !!pdfBlocked}
         pdfReason={pdfBlocked}
         feedbackUrl={feedbackUrl} />

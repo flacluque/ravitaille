@@ -94,6 +94,6 @@ class PlanningServiceTest {
         RacePlan plan = new PlanningService(TODAY).plan(request(new PlanRequest.TrainingOptions(true, false)), null, source).get(1);
 
         assertNull(plan.training());
-        assertTrue(plan.warnings().get(0).startsWith("Historique Strava indisponible (Strava ne répond pas)"), plan.warnings().toString());
+        assertTrue(plan.warnings().get(0).startsWith("Historique Strava indisponible pour le moment"), plan.warnings().toString());
     }
 }

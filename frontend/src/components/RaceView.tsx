@@ -98,12 +98,16 @@ export function RaceView({ plan, course, services, profile, crew, onShareCrew }:
         {progress.phase === 'before'
           ? `Départ dans ${formatDelay(localMinutes(plan.start) - now)}, à ${clock(localMinutes(plan.start))}.`
           : progress.phase === 'finished'
-            ? 'Course terminée. Bravo !'
+            ? 'Course terminée'
             : fix
               ? offset > 1 ? `${formatDelay(offset)} de retard sur le plan` : offset < -1 ? `${formatDelay(offset)} d'avance sur le plan` : "Pile à l'heure du plan"
               : "Heures du plan : tu n'as pas encore pointé"}
         {fix && <> · <button type="button" className="link-btn" onClick={clearFix}>annuler le recalage</button></>}
       </p>
+
+      {fix?.index === last && shown === null && (
+        <FinishLine plan={plan} fix={fix} raceName={raceName} />
+      )}
 
       <nav className="race-nav" aria-label="Points">
         <button type="button" className="ghost" onClick={() => setShown(Math.max(0, index - 1))} disabled={index === 0}
@@ -192,6 +196,24 @@ export function RaceView({ plan, course, services, profile, crew, onShareCrew }:
       )}
       <UndoToast undo={undo} />
     </article>
+  );
+}
+
+/** Le moment de l'arrivée, une fois pointée : l'heure, le temps de course et l'écart au plan, en grand. */
+function FinishLine({ plan, fix, raceName }: { plan: RacePlan; fix: Fix | null; raceName: string }) {
+  const last = plan.checkpoints.length - 1;
+  const start = localMinutes(plan.checkpoints[0].departure);
+  const finish = fix?.atMinutes ?? adjustedArrival(plan, last, fix);
+  const gap = finish - localMinutes(plan.checkpoints[last].arrival);
+  return (
+    <section className="race-finish" aria-label="Arrivée">
+      <span className="race-finish-title">Finisher !</span>
+      <strong className="race-finish-time">{formatDuration(`PT${Math.round(finish - start)}M`)}</strong>
+      <p>{raceName}, arrivée à {clock(finish)}
+        {(Math.abs(gap) < 2 ? ", pile à l'heure du plan." : `, ${formatDelay(gap)} ${gap < 0 ? 'plus tôt' : 'plus tard'} que prévu.`)}
+      </p>
+      <p className="muted small">Récupère bien. Tu peux ajouter ce temps à tes références pour affiner ton prochain plan.</p>
+    </section>
   );
 }
 

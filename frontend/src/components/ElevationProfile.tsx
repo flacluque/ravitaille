@@ -15,7 +15,7 @@ interface Props {
 }
 
 const HEIGHT = 240;
-const M = { top: 36, right: 14, bottom: 26, left: 44 };
+const M = { top: 36, right: 14, bottom: 26, left: 54 };
 
 /** Profil altimétrique en SVG : ravitos, barrières, et heure de passage estimée au survol. */
 export function ElevationProfile({ track, markers, plan, hoverKm, onHover }: Props) {
@@ -86,7 +86,7 @@ export function ElevationProfile({ track, markers, plan, hoverKm, onHover }: Pro
           height={HEIGHT}
           role="slider"
           tabIndex={0}
-          aria-label={`Profil altimétrique : ${formatKm(track.distanceKm)} km, ${track.gainM} m D+. Flèches pour avancer d'un km, Page suivante pour le point suivant`}
+          aria-label={`Profil altimétrique : ${formatKm(plan.totalDistanceKm)} km, ${Math.round(plan.totalGainM)} m D+. Flèches pour avancer d'un km, Page suivante pour le point suivant`}
           aria-valuemin={0}
           aria-valuemax={Math.round(scales.maxKm)}
           aria-valuenow={hover ? Math.round(hover.km * 10) / 10 : 0}
@@ -110,7 +110,7 @@ export function ElevationProfile({ track, markers, plan, hoverKm, onHover }: Pro
           {niceTicks(scales.yMin, scales.yMax, 4).map((v) => (
             <g key={`y${v}`} className="grid">
               <line x1={M.left} x2={M.left + innerW} y1={scales.y(v)} y2={scales.y(v)} />
-              <text x={M.left - 6} y={scales.y(v)} dy="0.32em" textAnchor="end">{v}</text>
+              <text x={M.left - 6} y={scales.y(v)} dy="0.32em" textAnchor="end">{v} m</text>
             </g>
           ))}
           {niceTicks(0, scales.maxKm, Math.max(2, Math.floor(innerW / 70))).map((v) => (

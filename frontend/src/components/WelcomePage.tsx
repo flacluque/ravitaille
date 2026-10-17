@@ -6,7 +6,8 @@ interface Props {
   /** Plan affiché (l'exemple au premier passage), pour l'aperçu ; absent pendant le calcul. */
   plan: RacePlan | undefined;
   isExample: boolean;
-  onExample: () => void;
+  /** Ouvre le plan affiché dans l'aperçu (l'exemple au premier passage). */
+  onOpenPlan: () => void;
   onMyRace: () => void;
   onAlgorithm: () => void;
   feedbackUrl: string | null;
@@ -27,7 +28,7 @@ const STEPS = [
 ];
 
 /** Page d'arrivée : à quoi sert Trail Planner et comment s'en servir. */
-export function WelcomePage({ plan, isExample, onExample, onMyRace, onAlgorithm, feedbackUrl }: Props) {
+export function WelcomePage({ plan, isExample, onOpenPlan, onMyRace, onAlgorithm, feedbackUrl }: Props) {
   return (
     <article className="welcome">
       <section className="welcome-hero">
@@ -39,11 +40,10 @@ export function WelcomePage({ plan, isExample, onExample, onMyRace, onAlgorithm,
           </p>
           <div className="welcome-cta">
             <button type="button" onClick={onMyRace}>Préparer ma course</button>
-            <button type="button" className="ghost" onClick={onExample}>Voir un exemple</button>
           </div>
           <p className="muted small">Gratuit, sans compte : tout reste dans ton navigateur.</p>
         </div>
-        <PlanPreview plan={plan} isExample={isExample} onOpen={isExample ? onExample : onMyRace} />
+        <PlanPreview plan={plan} isExample={isExample} onOpen={onOpenPlan} />
       </section>
 
       <section aria-labelledby="welcome-uses">
@@ -110,7 +110,7 @@ export function WelcomePage({ plan, isExample, onExample, onMyRace, onAlgorithm,
 /** Extrait du plan affiché : ce que le coureur obtiendra. */
 function PlanPreview({ plan, isExample, onOpen }: { plan: RacePlan | undefined; isExample: boolean; onOpen: () => void }) {
   if (!plan) {
-    return <div className="welcome-preview card" aria-hidden><p className="muted">Calcul de l'exemple…</p></div>;
+    return <div className="welcome-preview card" aria-hidden><p className="muted">{isExample ? "Calcul de l'exemple…" : 'Ton plan apparaîtra ici une fois ta course saisie.'}</p></div>;
   }
   const points = plan.checkpoints;
   const rows = points.length <= 5 ? points : [...points.slice(1, 4), points[points.length - 1]];
