@@ -40,7 +40,13 @@ export interface NightWindow {
 
 export type DraftResult =
   | { ok: true; race: RaceDefinition; night: NightWindow }
-  | { ok: false; errors: string[] };
+  | { ok: false; errors: string[]; fields: FieldErrors };
+
+/**
+ * Erreur de chaque champ, pour l'afficher à côté : "name", "start", "night", ou "<id du point>.<champ>"
+ * (km, gainM, lossM, cutoffIn, cutoffOut, code).
+ */
+export type FieldErrors = Record<string, string>;
 
 let nextId = 0;
 export function newId(): string {
@@ -137,19 +143,28 @@ export function resolveCutoffs(draft: RaceDraft): { cutoffIn: string | null; cut
 /** Valide la saisie et la convertit pour l'API. `hasTrack` : sans trace GPX, le D+ est obligatoire partout. */
 export function draftToRace(draft: RaceDraft, hasTrack: boolean): DraftResult {
   const errors: string[] = [];
+  const fields: FieldErrors = {};
+  // Le message complet va dans la liste ; à côté du champ, une version courte suffit (le champ dit déjà où).
+  const fail = (key: string | null, message: string, short = message) => {
+    errors.push(message);
+    if (key && !(key in fields)) fields[key] = short;
+  };
   const cps = draft.checkpoints;
 
-  if (!draft.name.trim()) errors.push('Donne un nom à la course.');
-  if (toMinutes(draft.start) === null) errors.push("Indique la date et l'heure de départ.");
+  if (!draft.name.trim()) fail('name', 'Donne un nom à la course.');
+  if (toMinutes(draft.start) === null) fail('start', "Indique la date et l'heure de départ.");
   if (parseClock(draft.nightStart) === null || parseClock(draft.nightEnd) === null) {
-    errors.push('Plage de nuit illisible (format 19h00).');
+    fail('night', 'Plage de nuit illisible (format 19h00).');
   }
-  if (cps.length < 2) errors.push('Il faut au moins un départ et une arrivée.');
+  if (cps.length < 2) fail(null, 'Il faut au moins un départ et une arrivée.');
 
   const label = (cp: DraftCheckpoint, i: number) => `« ${cp.name.trim() || cp.code.trim() || `point ${i + 1}`} »`;
   const codes = cps.map((cp, i) => cp.code.trim() || String(i + 1));
   const duplicates = codes.filter((c, i) => codes.indexOf(c) !== i);
-  if (duplicates.length) errors.push(`Codes en double : ${[...new Set(duplicates)].join(', ')}.`);
+  if (duplicates.length) {
+    fail(null, `Codes en double : ${[...new Set(duplicates)].join(', ')}.`);
+    cps.forEach((cp, i) => { if (duplicates.includes(codes[i])) fields[`${cp.id}.code`] ??= 'Code en double.'; });
+  }
 
   const resolved = resolveCutoffs(draft);
   const checkpoints: Checkpoint[] = [];
@@ -167,20 +182,20 @@ export function draftToRace(draft: RaceDraft, hasTrack: boolean): DraftResult {
     }
 
     if (km === null || Number.isNaN(km)) {
-      errors.push(`Kilométrage manquant pour ${label(cp, i)}.`);
+      fail(`${cp.id}.km`, `Kilométrage manquant pour ${label(cp, i)}.`, cp.km.trim() ? 'Nombre attendu' : 'Km manquant');
     } else if (i === 0 && km !== 0) {
-      errors.push('Le départ doit être au km 0.');
+      fail(`${cp.id}.km`, 'Le départ doit être au km 0.', 'Le départ est au km 0');
     } else if (km <= previousKm) {
-      errors.push(`Le km de ${label(cp, i)} doit être supérieur à celui du point précédent.`);
+      fail(`${cp.id}.km`, `Le km de ${label(cp, i)} doit être supérieur à celui du point précédent.`, 'Plus que le point d\'avant');
     }
-    if (Number.isNaN(gain)) errors.push(`D+ illisible pour ${label(cp, i)}.`);
-    else if (gain === null && !hasTrack) errors.push(`D+ manquant pour ${label(cp, i)} (obligatoire sans trace GPX).`);
-    else if (gain !== null && gain < previousGain) errors.push(`Le D+ cumulé de ${label(cp, i)} est inférieur au précédent.`);
-    if (Number.isNaN(loss)) errors.push(`D- illisible pour ${label(cp, i)}.`);
-    else if (loss !== null && loss < previousLoss) errors.push(`Le D- cumulé de ${label(cp, i)} est inférieur au précédent.`);
+    if (Number.isNaN(gain)) fail(`${cp.id}.gainM`, `D+ illisible pour ${label(cp, i)}.`, 'Nombre attendu');
+    else if (gain === null && !hasTrack) fail(`${cp.id}.gainM`, `D+ manquant pour ${label(cp, i)} (obligatoire sans trace GPX).`, 'D+ manquant');
+    else if (gain !== null && gain < previousGain) fail(`${cp.id}.gainM`, `Le D+ cumulé de ${label(cp, i)} est inférieur au précédent.`, 'Moins que le point d\'avant');
+    if (Number.isNaN(loss)) fail(`${cp.id}.lossM`, `D- illisible pour ${label(cp, i)}.`, 'Nombre attendu');
+    else if (loss !== null && loss < previousLoss) fail(`${cp.id}.lossM`, `Le D- cumulé de ${label(cp, i)} est inférieur au précédent.`, 'Moins que le point d\'avant');
 
-    if (cp.cutoffIn.trim() && parseClock(cp.cutoffIn) === null) errors.push(`Barrière d'entrée illisible pour ${label(cp, i)} (format 14h30).`);
-    if (cp.cutoffOut.trim() && parseClock(cp.cutoffOut) === null) errors.push(`Barrière de sortie illisible pour ${label(cp, i)} (format 14h30).`);
+    if (cp.cutoffIn.trim() && parseClock(cp.cutoffIn) === null) fail(`${cp.id}.cutoffIn`, `Barrière d'entrée illisible pour ${label(cp, i)} (format 14h30).`, 'Format 14h30');
+    if (cp.cutoffOut.trim() && parseClock(cp.cutoffOut) === null) fail(`${cp.id}.cutoffOut`, `Barrière de sortie illisible pour ${label(cp, i)} (format 14h30).`, 'Format 14h30');
 
     if (typeof km === 'number' && !Number.isNaN(km)) previousKm = km;
     if (typeof gain === 'number' && !Number.isNaN(gain)) previousGain = gain;
@@ -199,7 +214,7 @@ export function draftToRace(draft: RaceDraft, hasTrack: boolean): DraftResult {
     });
   });
 
-  if (errors.length) return { ok: false, errors };
+  if (errors.length) return { ok: false, errors, fields };
   return {
     ok: true,
     race: { name: draft.name.trim(), start: fromMinutes(toMinutes(draft.start)!), maxDuration: null, checkpoints },
@@ -210,6 +225,12 @@ export function draftToRace(draft: RaceDraft, hasTrack: boolean): DraftResult {
 /** 870 → "14:30" (format LocalTime attendu par l'API). */
 function formatClockInput(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+}
+
+/** Erreurs champ par champ (vide si la saisie est valide). */
+export function draftFieldErrors(draft: RaceDraft, hasTrack: boolean): FieldErrors {
+  const result = draftToRace(draft, hasTrack);
+  return result.ok ? {} : result.fields;
 }
 
 /** "2026-10-23T14:30:00" → "14h30" (champ de saisie d'une barrière). */

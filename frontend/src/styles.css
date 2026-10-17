@@ -300,7 +300,20 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .icon-btn { padding: 6px 0; width: 32px; color: var(--muted); }
 .add-btn { align-self: flex-start; }
 .editor-errors { margin: 0; padding: 10px 14px 10px 32px; background: var(--missed-bg); border-radius: 8px; color: var(--missed-fg); }
-.editor-footer { display: flex; justify-content: flex-end; gap: 8px; }
+.editor-footer { display: flex; justify-content: flex-end; gap: 8px; position: sticky; bottom: 0; z-index: 5;
+  margin: 0 -16px -16px; padding: 12px 16px; background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border-top: 1px solid var(--border); border-radius: 0 0 var(--radius) var(--radius); backdrop-filter: blur(6px); }
+.editor-footer button:last-child { min-width: 180px; }
+.req { color: var(--missed-fg); font-weight: 700; margin-left: 2px; }
+.required-note { margin: -6px 0 0; }
+.editor input[aria-invalid='true'], .editor select[aria-invalid='true'] { border-color: var(--missed-fg); }
+.cp-cell .field-error, .editor-fields .field-error { font-size: var(--fs-micro); line-height: 1.25; }
+.editor-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 32px 16px;
+  border: 2px dashed var(--border); border-radius: var(--radius); color: var(--text); }
+.editor-empty svg { color: var(--accent); }
+.editor-empty h3 { font-size: var(--fs-lead); }
+.editor-empty p { margin: 0; max-width: 46ch; color: var(--muted); }
+button.editor-empty-cta { min-height: 52px; padding: 12px 22px; font-size: var(--fs-lead); }
 
 @media (max-width: 1100px) {
   /* Chaque point devient une fiche : saisie confortable au doigt. */
@@ -375,7 +388,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 
 /* ---------- Légende (toujours visible) ---------- */
 .app { padding-bottom: 64px; }   /* la barre de légende ne cache pas le bas de la page */
-.legend-help { position: fixed; right: 16px; bottom: 16px; z-index: 1000; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.legend-help { position: fixed; left: 16px; bottom: 16px; z-index: 1000; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 button.legend-btn { width: 40px; height: 40px; padding: 0; border-radius: 50%; background: var(--surface); color: var(--accent);
   border: 1px solid var(--border); font-size: var(--fs-lead); font-weight: 700; box-shadow: 0 4px 12px rgb(0 0 0 / 0.15); }
 button.legend-btn[aria-expanded='true'] { background: var(--accent); color: var(--accent-contrast); }
@@ -880,6 +893,7 @@ button.ravitos-done { align-self: flex-start; }
   .legend-help { bottom: calc(80px + env(safe-area-inset-bottom)); }
   .undo-toast { bottom: calc(132px + env(safe-area-inset-bottom)); }
   .race-actions { bottom: calc(80px + env(safe-area-inset-bottom)); }
+  .editor-footer { bottom: calc(68px + env(safe-area-inset-bottom)); margin: 0 -12px -12px; padding: 10px 12px; }
   /* Le tableau d'abord, la carte et le profil ensuite. */
   .results > .course-visuals { order: 1; }
   /* Synthèse des ravitos : trois chiffres sur une ligne. */
@@ -894,3 +908,6 @@ button.ravitos-done { align-self: flex-start; }
   table.passages .badge { white-space: normal; text-align: left; line-height: 1.2; padding: 3px 8px; border-radius: 8px; }
   table.passages td:first-child { min-width: 9.5em; }
 }
+.example-tag { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--tight-bg); color: var(--tight-fg);
+  font-size: var(--fs-micro); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.example-note { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--tight-bg); color: var(--text); }
