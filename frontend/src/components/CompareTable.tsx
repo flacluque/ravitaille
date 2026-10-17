@@ -1,5 +1,5 @@
 import type { RacePlan } from '../api/types';
-import { formatClock, formatHm, formatKm } from '../lib/format';
+import { formatClock, formatKm } from '../lib/format';
 import { bindingCutoff } from '../lib/plan';
 import { StatusBadge } from './StatusBadge';
 
@@ -38,7 +38,7 @@ export function CompareTable({ plans }: { plans: RacePlan[] }) {
                     return (
                       <td key={p.scenario.name} className="num">
                         <span className="strong">{formatClock(e.arrival)}</span>
-                        {c && <> <StatusBadge status={e.status}>{formatHm(c.marginMinutes)}</StatusBadge></>}
+                        {c && <> <StatusBadge status={e.status} minutes={c.marginMinutes} /></>}
                       </td>
                     );
                   })}

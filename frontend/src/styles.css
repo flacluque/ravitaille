@@ -349,40 +349,28 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   background: transparent; color: var(--muted); border: 1px dashed var(--border);
 }
 .chip.on { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--text); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
-.service-icons { margin-left: 6px; font-size: 0.8rem; letter-spacing: 1px; white-space: nowrap; }
+.service-icons { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 2px; font-size: 0.8rem; color: var(--muted); }
+.service-icons .service { white-space: nowrap; }
+.table-note { margin: 8px 0 0; }
+.cp-help { margin: 0 0 6px; }
+.badge { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 @media (max-width: 1100px) {
   .cp-services { margin: 2px 0 0; }
 }
 
 /* ---------- Légende (toujours visible) ---------- */
 .app { padding-bottom: 64px; }   /* la barre de légende ne cache pas le bas de la page */
-.legend {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000;
-  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 24px;
-  padding: 8px 48px 8px 20px;
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
-  backdrop-filter: blur(6px);
-  border-top: 1px solid var(--border);
-  box-shadow: 0 -2px 8px rgb(0 0 0 / 0.05);
-  font-size: 0.8rem;
-}
-.legend-group { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
-.legend-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-.legend-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-.legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.legend .short { display: none; }
-.legend-close { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 2px 8px; }
-.legend-pill {
-  position: fixed; right: 12px; bottom: 12px; z-index: 1000;
-  padding: 6px 12px; border-radius: 999px; font-size: 0.8rem;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
-}
-@media (max-width: 860px) {
-  .app { padding-bottom: 80px; }
-  .legend { padding: 6px 40px 6px 12px; gap: 4px 14px; font-size: 0.74rem; }
-  .legend .long { display: none; }
-  .legend .short { display: inline; }
-}
+.legend-help { position: fixed; right: 16px; bottom: 16px; z-index: 1000; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+button.legend-btn { width: 40px; height: 40px; padding: 0; border-radius: 50%; background: var(--surface); color: var(--accent);
+  border: 1px solid var(--border); font-size: 1.1rem; font-weight: 700; box-shadow: 0 4px 12px rgb(0 0 0 / 0.15); }
+button.legend-btn[aria-expanded='true'] { background: var(--accent); color: var(--accent-contrast); }
+.legend-panel { width: min(320px, calc(100vw - 32px)); max-height: min(70vh, 520px); overflow: auto; padding: 14px 16px;
+  border-radius: 12px; background: var(--surface); border: 1px solid var(--border); box-shadow: 0 12px 32px rgb(0 0 0 / 0.18); }
+.legend-panel h2 { font-size: 1rem; margin-bottom: 6px; }
+.legend-panel h3 { font-size: 0.85rem; margin: 12px 0 4px; }
+.legend-panel ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
+.legend-panel li { display: flex; align-items: center; gap: 8px; }
+.legend-panel p { margin: 0; }
 
 /* ---------- Nutrition ---------- */
 .nutrition { display: flex; flex-direction: column; gap: 12px; }

@@ -31,7 +31,7 @@ interface Props {
 }
 
 const AIDS: { value: AidLevel; label: string }[] = [
-  { value: 'NONE', label: 'Pointage' },
+  { value: 'NONE', label: 'Pointage (sans ravito)' },
   { value: 'LIGHT', label: 'Ravito' },
   { value: 'FULL', label: 'Base de vie' },
 ];
@@ -184,6 +184,10 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
         <input ref={gpxInput} type="file" accept=".gpx,application/gpx+xml" hidden onChange={chooseGpx} />
       </div>
 
+      <p className="muted small cp-help">
+        Type de point : <strong>pointage</strong> = contrôle de passage sans ravitaillement, <strong>ravito</strong> = eau et
+        de quoi manger, <strong>base de vie</strong> = repas chaud, souvent le sac de délestage.
+      </p>
       <div className="cp-grid" role="table" aria-label="Points du roadbook">
         <div className="cp-row cp-header" role="row">
           <span role="columnheader">Code</span>

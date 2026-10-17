@@ -1,5 +1,5 @@
 import type { RacePlan } from '../api/types';
-import { formatClock, formatDuration, formatHm } from '../lib/format';
+import { formatClock, formatDuration } from '../lib/format';
 import { tightestCutoff } from '../lib/plan';
 import { StatusBadge } from './StatusBadge';
 
@@ -31,7 +31,7 @@ export function ScenarioCards({ plans, selected, onSelect }: Props) {
             {tightest && (
               <span className="scenario-detail">
                 Barrière la plus serrée : {tightest.eta.name}{' '}
-                <StatusBadge status={tightest.eta.status}>{formatHm(tightest.cutoff.marginMinutes)}</StatusBadge>
+                <StatusBadge status={tightest.eta.status} minutes={tightest.cutoff.marginMinutes} />
               </span>
             )}
           </button>
