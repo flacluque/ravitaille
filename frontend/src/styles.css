@@ -261,9 +261,6 @@ tbody tr:hover { background: var(--surface-2); }
 }
 
 /* ---------- Choix de la course ---------- */
-.mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; }
-.mode-switch button { background: transparent; color: var(--muted); }
-.mode-switch button.active { background: var(--accent); color: var(--accent-contrast); }
 
 .editor-summary {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -1095,3 +1092,5 @@ button.cv-secondary { width: 100%; min-height: 48px; background: var(--surface);
 .race-finish-time { font-family: var(--font-display); font-size: 3.815rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
 .race-finish p { margin: 0; font-size: var(--fs-lead); }
 .race-finish p.small { font-size: var(--fs-small); }
+.example-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
+  padding: 10px 14px; border-left: 4px solid var(--text); background: var(--surface-2); }

@@ -321,19 +321,9 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     }
   }
 
-  // Course (exemple ou la mienne) et références : seulement dans Mon plan, à droite du roadbook (en haut sur mobile).
+  // Références : seulement dans Mon plan, à droite du roadbook (en haut sur mobile).
   const side = (
     <>
-      <div className="card mode-switch" role="radiogroup" aria-label="Course">
-        <button type="button" role="radio" aria-checked={mode === 'demo'} className={mode === 'demo' ? 'active' : ''}
-          onClick={() => switchMode('demo')}>
-          Exemple
-        </button>
-        <button type="button" role="radio" aria-checked={mode === 'custom'} className={mode === 'custom' ? 'active' : ''}
-          onClick={() => switchMode('custom')}>
-          Ma course
-        </button>
-      </div>
       <ReferenceForm
         initialReferences={references}
         initialSource={source}
@@ -432,7 +422,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
       {tab === 'algo' && <AlgorithmPage plan={plan} />}
       {tab === 'accueil' && (
         <WelcomePage plan={plan} isExample={mode === 'demo'} feedbackUrl={feedbackUrl}
-          onExample={() => { switchMode('demo'); goTab('plan'); }}
+          onOpenPlan={() => goTab('plan')}
           onMyRace={() => { switchMode('custom'); goTab('plan'); }}
           onAlgorithm={() => goTab('algo')} />
       )}
@@ -464,6 +454,13 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
                 {gpx ? `Trace : ${gpx.name}` : 'Sans trace GPX : calcul sur le D+ du roadbook.'}
               </span>
               <button type="button" className="ghost" onClick={() => setEditorOpen(true)}>Modifier ma course</button>
+            </div>
+          )}
+
+          {tab === 'plan' && mode === 'demo' && (
+            <div className="example-banner no-print" role="note">
+              <span>Tu regardes <strong>un exemple</strong> : {course?.race.name ?? 'une course type'}, avec des références types.</span>
+              <button type="button" onClick={() => switchMode('custom')}>Préparer ma course</button>
             </div>
           )}
 
