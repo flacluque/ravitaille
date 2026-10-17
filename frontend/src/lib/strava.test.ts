@@ -34,10 +34,12 @@ describe('import Strava', () => {
     expect(filterActivities([cathares, footing, longue], { minKm: 0, racesOnly: true }).map((a) => a.id)).toEqual([1]);
   });
 
-  it('fait une référence, temps arrêts compris', () => {
+  it('fait une référence avec le temps de déplacement', () => {
     expect(activityToReference(cathares, 'RACE')).toEqual({
-      label: 'Sortie 1', date: '2026-04-12', kind: 'RACE', km: 60.4, gainM: 3210, time: 'PT8H48M',
+      label: 'Sortie 1', date: '2026-04-12', kind: 'RACE', km: 60.4, gainM: 3210, time: 'PT8H10M',
     });
+    // Activité saisie à la main, sans temps de déplacement : on garde le temps écoulé.
+    expect(activityToReference({ ...cathares, movingTime: 'PT0S' }, 'RACE').time).toBe('PT8H48M');
     expect(activityToReference({ ...footing, name: '' }, 'TRAINING').label).toBe('Trail du 2026-09-30');
   });
 
