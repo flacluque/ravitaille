@@ -56,46 +56,46 @@ export function CrewView({ share }: { share: CrewShare }) {
   const who = share.runner ?? 'ton coureur';
 
   return (
-    <div className="crew">
-      <header className="crew-head">
-        <span className="crew-brand">Trail Planner · Assistance</span>
+    <div className="cv">
+      <header className="cv-head">
+        <span className="cv-brand">Trail Planner · Assistance</span>
         <h1>Suivre {share.runner ?? 'la course'}</h1>
         <p>{share.race} · départ {clock(0)}</p>
       </header>
 
-      <main className="crew-main">
+      <main className="cv-main">
         <section className="cv-card" aria-label="Dernier passage">
-          <span className="crew-label">Dernier passage connu</span>
-          <strong className="crew-pass">
+          <span className="cv-label">Dernier passage connu</span>
+          <strong className="cv-pass">
             {pass ? `${share.points[pass.index].name} à ${clock(pass.at)}` : now < 0 ? `Départ dans ${formatDelay(-now)}` : "Aucun pour l'instant : heures du plan"}
           </strong>
           {pass && (
-            <span className={offset > 1 ? 'crew-offset late' : 'crew-offset'}>
+            <span className={offset > 1 ? 'cv-offset late' : 'cv-offset'}>
               {Math.abs(offset) < 2 ? "Pile à l'heure du plan" : `${formatDelay(offset)} ${offset < 0 ? "d'avance" : 'de retard'} sur le plan`}
               {share.fix && pass === share.fix && ' (envoyé par le coureur)'}
             </span>
           )}
-          <button type="button" className="crew-primary" onClick={() => setSheet(true)}>Saisir un passage</button>
-          <p className="crew-note">Recopie l'heure vue sur le suivi en direct de l'organisation : les rendez-vous se recalent.</p>
+          <button type="button" className="cv-primary" onClick={() => setSheet(true)}>Saisir un passage</button>
+          <p className="cv-note">Recopie l'heure vue sur le suivi en direct de l'organisation : les rendez-vous se recalent.</p>
         </section>
 
         {nextIndex !== null && <NextMeeting share={share} index={nextIndex} pass={pass} now={now} saved={saved} save={save}
-          clock={clock} onRoute={() => { setFrom(pass?.index ?? 0); setTo(nextIndex); document.getElementById('crew-route')?.scrollIntoView({ behavior: 'smooth' }); }} />}
+          clock={clock} onRoute={() => { setFrom(pass?.index ?? 0); setTo(nextIndex); document.getElementById('cv-route')?.scrollIntoView({ behavior: 'smooth' }); }} />}
 
         {share.crew.length > 1 && (
-          <section aria-label="Tous les rendez-vous" className="crew-list">
+          <section aria-label="Tous les rendez-vous" className="cv-list">
             <h2>Tous les rendez-vous</h2>
             {share.crew.map((i) => {
               const m = meeting(share, i, pass, saved.margin);
               return (
-                <div key={i} className={m.passed ? 'crew-meet passed' : 'crew-meet'}>
+                <div key={i} className={m.passed ? 'cv-meet passed' : 'cv-meet'}>
                   <div>
                     <strong>{share.points[i].name}</strong>
-                    <span className="crew-note">km {share.points[i].km} · {m.passed ? 'passé' : i === nextIndex ? 'prochain' : 'ensuite'}</span>
+                    <span className="cv-note">km {share.points[i].km} · {m.passed ? 'passé' : i === nextIndex ? 'prochain' : 'ensuite'}</span>
                   </div>
-                  <div className="crew-meet-time">
+                  <div className="cv-meet-time">
                     <strong>{clock(m.likely)}</strong>
-                    <span className="crew-note">{clock(m.early)} – {clock(m.late)}</span>
+                    <span className="cv-note">{clock(m.early)} – {clock(m.late)}</span>
                   </div>
                 </div>
               );
@@ -106,14 +106,14 @@ export function CrewView({ share }: { share: CrewShare }) {
         <RouteCard share={share} from={from} to={to} setFrom={setFrom} setTo={setTo} pass={pass} margin={saved.margin} clock={clock} />
 
         <section className="cv-card" aria-label="Réglage">
-          <label className="crew-field">Être sur place avant son arrivée la plus tôt
+          <label className="cv-field">Être sur place avant son arrivée la plus tôt
             <select value={saved.margin} onChange={(e) => save({ ...saved, margin: Number(e.target.value) })}>
               {MARGINS.map((m) => <option key={m} value={m}>{m === 0 ? 'pile à l\'heure' : `${m} min avant`}</option>)}
             </select>
           </label>
         </section>
 
-        <p className="crew-note">
+        <p className="cv-note">
           Plan envoyé par {who} le {new Date(share.sentAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}.
           Tout est dans le lien : rien n'est stocké sur un serveur, et la page marche sans réseau une fois ouverte.
           S'il t'envoie un lien plus récent, ouvre-le.
@@ -135,18 +135,18 @@ function NextMeeting({ share, index, pass, now, saved, save, clock, onRoute }: {
   const m = meeting(share, index, pass, saved.margin);
   const status = m.margin === null ? 'NONE' : m.margin < 0 ? 'MISSED' : m.margin < 60 ? 'TIGHT' : 'OK';
   return (
-    <section aria-label="Prochain rendez-vous" className="crew-next-wrap">
+    <section aria-label="Prochain rendez-vous" className="cv-next-wrap">
       <h2>{m.passed ? 'Dernier rendez-vous' : 'Prochain rendez-vous'}</h2>
-      <div className="crew-next">
-        <div className="crew-next-head">
+      <div className="cv-next">
+        <div className="cv-next-head">
           <span className="code">{p.code}</span>
           <strong>{p.name}</strong>
         </div>
-        <div className="crew-next-body">
-          <span className="crew-label">{m.passed ? 'Passé à' : 'Sois là avant'}</span>
-          <strong className="crew-big">{clock(m.passed ? m.likely : m.beThere)}</strong>
+        <div className="cv-next-body">
+          <span className="cv-label">{m.passed ? 'Passé à' : 'Sois là avant'}</span>
+          <strong className="cv-big">{clock(m.passed ? m.likely : m.beThere)}</strong>
           {!m.passed && (
-            <span className="crew-countdown">
+            <span className="cv-countdown">
               {m.beThere > now ? `dans ${formatDelay(m.beThere - now)}` : "Il peut arriver d'une minute à l'autre"}
             </span>
           )}
@@ -155,7 +155,7 @@ function NextMeeting({ share, index, pass, now, saved, save, clock, onRoute }: {
               vers <strong>{clock(m.likely)}</strong>.</span>
           )}
           {p.cutoff !== null && m.margin !== null && (
-            <span className="crew-cutoff">Barrière {p.cutoffOut ? 'en sortie ' : ''}{clock(p.cutoff)}
+            <span className="cv-cutoff">Barrière {p.cutoffOut ? 'en sortie ' : ''}{clock(p.cutoff)}
               <span className={`badge status-${status.toLowerCase()}`}>
                 {status !== 'OK' && <StatusShape status={status} size={11} />}{statusText(status, m.margin)}
               </span>
@@ -163,13 +163,13 @@ function NextMeeting({ share, index, pass, now, saved, save, clock, onRoute }: {
           )}
         </div>
         {p.prepare.length > 0 && (
-          <div className="crew-next-prep">
+          <div className="cv-next-prep">
             <h3>À préparer</h3>
             {p.prepare.map((item, k) => {
               const key = `${index}:${k}`;
               const done = !!saved.checked[key];
               return (
-                <label key={key} className={done ? 'crew-check done' : 'crew-check'}>
+                <label key={key} className={done ? 'cv-check done' : 'cv-check'}>
                   <input type="checkbox" checked={done}
                     onChange={() => save({ ...saved, checked: { ...saved.checked, [key]: !done } })} />
                   <span>{item}</span>
@@ -179,11 +179,11 @@ function NextMeeting({ share, index, pass, now, saved, save, clock, onRoute }: {
           </div>
         )}
         {p.nightAfter && (
-          <p className="race-night crew-night">La suite passe de nuit : frontale chargée, piles de rechange et couche chaude prêtes.</p>
+          <p className="race-night cv-night">La suite passe de nuit : frontale chargée, piles de rechange et couche chaude prêtes.</p>
         )}
         {p.lat !== null && !m.passed && (
-          <div className="crew-next-prep">
-            <button type="button" className="crew-secondary" onClick={onRoute}>Combien de route pour y aller ?</button>
+          <div className="cv-next-prep">
+            <button type="button" className="cv-secondary" onClick={onRoute}>Combien de route pour y aller ?</button>
           </div>
         )}
       </div>
@@ -212,9 +212,9 @@ function RouteCard({ share, from, to, setFrom, setTo, pass, margin, clock }: {
 
   if (located.length < 2) {
     return (
-      <section id="crew-route" className="cv-card" aria-label="Temps de route">
+      <section id="cv-route" className="cv-card" aria-label="Temps de route">
         <h2>Temps de route entre deux points</h2>
-        <p className="crew-note">Le coureur n'a pas ajouté la trace GPX de la course : les points n'ont pas de position, le temps
+        <p className="cv-note">Le coureur n'a pas ajouté la trace GPX de la course : les points n'ont pas de position, le temps
           de route ne peut pas être calculé.</p>
       </section>
     );
@@ -222,21 +222,21 @@ function RouteCard({ share, from, to, setFrom, setTo, pass, margin, clock }: {
   const arrival = meeting(share, to, pass, margin);
   const leaveBy = result ? arrival.early - margin - result.minutes : null;
   return (
-    <section id="crew-route" className="cv-card" aria-label="Temps de route">
+    <section id="cv-route" className="cv-card" aria-label="Temps de route">
       <h2>Temps de route entre deux points</h2>
-      <label className="crew-field">De
+      <label className="cv-field">De
         <select value={from} onChange={(e) => setFrom(Number(e.target.value))}>
           {located.map(({ p, i }) => <option key={i} value={i}>{p.code} · {p.name}</option>)}
         </select>
       </label>
-      <label className="crew-field">À
+      <label className="cv-field">À
         <select value={to} onChange={(e) => setTo(Number(e.target.value))}>
           {located.map(({ p, i }) => <option key={i} value={i}>{p.code} · {p.name}</option>)}
         </select>
       </label>
-      {from === to ? <p className="crew-note">Choisis deux points différents.</p> : (
+      {from === to ? <p className="cv-note">Choisis deux points différents.</p> : (
         <>
-          <div className="crew-route-result" aria-live="polite">
+          <div className="cv-route-result" aria-live="polite">
             <strong>{loading || !result ? '…' : formatDelay(result.minutes)}</strong>
             <span>{result && !loading ? `de route · ${result.km} km` : 'calcul de l\'itinéraire'}</span>
           </div>
@@ -244,9 +244,9 @@ function RouteCard({ share, from, to, setFrom, setTo, pass, margin, clock }: {
             <p>Il peut arriver à {b.name} dès {clock(arrival.early)} : pars de {a.name} avant <strong>{clock(leaveBy)}</strong>
               {margin > 0 ? ` pour y être ${margin} min avant.` : '.'}</p>
           )}
-          <a className="crew-primary crew-link" href={mapsLink({ lat: a.lat!, lon: a.lon! }, { lat: b.lat!, lon: b.lon! })}
+          <a className="cv-primary cv-link" href={mapsLink({ lat: a.lat!, lon: a.lon! }, { lat: b.lat!, lon: b.lon! })}
             target="_blank" rel="noreferrer">Ouvrir l'itinéraire dans Maps</a>
-          <p className="crew-note">
+          <p className="cv-note">
             {result?.source === 'estimate'
               ? 'Pas de réseau : estimation approximative (à vol d\'oiseau). '
               : 'Itinéraire OpenStreetMap (OSRM), sans le trafic, 5 min comptées pour se garer. '}
@@ -279,7 +279,7 @@ function PassSheet({ share, pass, clock, start, onCancel, onSave }: {
     <div className="cv-sheet-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
       <div className="cv-sheet" role="dialog" aria-label="Saisir un passage">
         <h2>Saisir un passage</h2>
-        <label className="crew-field">Point
+        <label className="cv-field">Point
           <select value={index} onChange={(e) => {
             const i = Number(e.target.value);
             setIndex(i);
@@ -288,10 +288,10 @@ function PassSheet({ share, pass, clock, start, onCancel, onSave }: {
             {share.points.map((p, i) => i > 0 && <option key={i} value={i}>{p.code} · {p.name} (prévu {clock(p.arrivals[share.likely])})</option>)}
           </select>
         </label>
-        <label className="crew-field">Heure de passage
+        <label className="cv-field">Heure de passage
           <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
         </label>
-        <p className="crew-note">
+        <p className="cv-note">
           {at === null ? '' : Math.abs(delta) < 2 ? "Pile à l'heure du plan." : `${formatDelay(delta)} ${delta < 0 ? "d'avance" : 'de retard'} : les rendez-vous suivants se décalent d'autant.`}
         </p>
         <div className="cv-sheet-actions">

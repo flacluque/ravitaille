@@ -18,7 +18,7 @@ export function CrewApp() {
   if (share === undefined) return null;
   if (share === null) {
     return (
-      <main className="crew-broken">
+      <main className="cv-broken">
         <h1>Lien incomplet</h1>
         <p>Ce lien d'assistance est abîmé (souvent coupé par une messagerie). Demande au coureur de te le renvoyer par mail ou
           WhatsApp, puis ouvre-le en entier.</p>
