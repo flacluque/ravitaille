@@ -6,7 +6,7 @@ import type { Reference, ReferenceKind, StravaActivity, StravaStatus, TrainingOp
 import { durationMinutes, formatHm, formatKm, formatMeters } from '../lib/format';
 import { StravaLogo } from './StravaLogo';
 import {
-  activityToReference, blockSummary, closest, connectionMessage, isAlreadyReference, keySessions, sortActivities,
+  activityTime, activityToReference, blockSummary, closest, connectionMessage, isAlreadyReference, keySessions, sortActivities,
   splitByBlock, SPORT_LABELS, yearsAgo, type Target,
 } from '../lib/strava';
 import { addDays, isIsoDate, prepWindow, todayIso } from '../lib/dates';
@@ -148,7 +148,8 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
         <span className="strava-figures">
           <span>{formatKm(a.distanceKm)} km</span>
           <span>{formatMeters(a.elevationGainM)} D+</span>
-          <span title={`En mouvement : ${formatHm(durationMinutes(a.movingTime))}`}>{formatHm(durationMinutes(a.elapsedTime))}</span>
+          <span title={`Temps écoulé, pauses comprises : ${formatHm(durationMinutes(a.elapsedTime))}`}>
+            {formatHm(durationMinutes(activityTime(a)))}</span>
         </span>
         {kind && (
           <select value={kind} onChange={(e) => setKind(a, e.target.value as ReferenceKind)} aria-label={`Type de ${a.name}`}>
@@ -283,7 +284,7 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
             </>}
 
             <div className="modal-foot">
-              <span className="muted small">Temps écoulé, arrêts compris, comme le veut le calcul.</span>
+              <span className="muted small">Temps de déplacement Strava (pauses exclues).</span>
               <button type="button" className="strava-btn" onClick={add} disabled={selected.size === 0}>
                 {selected.size > 1 ? `Ajouter ${selected.size} références` : 'Ajouter la référence'}
               </button>

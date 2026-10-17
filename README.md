@@ -50,8 +50,8 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
   tableau de « Ma course » ; tu vérifies ligne par ligne, le roadbook d'origine affiché au-dessus.
   Voir « Lecture automatique des roadbooks » plus bas.
 - **Importer depuis Strava** : dans « Tes références », choisis tes courses et sorties de course à
-  pied ou de trail ; distance, D+, date et temps écoulé (arrêts compris) sont repris tels quels. Les
-  sorties les plus proches de ta course sont signalées. Voir « Import des activités Strava » plus bas.
+  pied ou de trail ; distance, D+, date et temps de déplacement (pauses exclues, le temps écoulé à
+  défaut) sont repris tels quels. Les sorties les plus proches de ta course sont signalées. Voir « Import des activités Strava » plus bas.
 - **Ta préparation** : avec Strava connecté, le calcul tient compte de ton entraînement. La carte
   montre ton volume semaine par semaine, ta plus longue sortie et ta régularité, et de combien le
   temps de chaque référence est corrigé selon l'écart avec ta préparation actuelle.

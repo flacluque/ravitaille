@@ -1,4 +1,5 @@
 import type { Reference, ReferenceKind, StravaActivity } from '../api/types';
+import { durationMinutes } from './format';
 
 /** Distance et D+ de la course préparée, pour repérer les sorties qui lui ressemblent. */
 export interface Target {
@@ -46,6 +47,14 @@ export function isAlreadyReference(a: StravaActivity, refs: Reference[]): boolea
   return refs.some((r) => r.date === a.date && Math.abs(r.km - a.distanceKm) < 0.5);
 }
 
+/**
+ * Temps retenu d'une sortie : le temps de déplacement (pauses exclues), ou le temps écoulé quand Strava
+ * n'en a pas (activité saisie à la main).
+ */
+export function activityTime(a: StravaActivity): string {
+  return a.movingTime && durationMinutes(a.movingTime) > 0 ? a.movingTime : a.elapsedTime;
+}
+
 export function activityToReference(a: StravaActivity, kind: ReferenceKind): Reference {
   return {
     label: a.name || `${SPORT_LABELS[a.sportType] ?? 'Sortie'} du ${a.date}`,
@@ -53,7 +62,7 @@ export function activityToReference(a: StravaActivity, kind: ReferenceKind): Ref
     kind,
     km: a.distanceKm,
     gainM: Math.round(a.elevationGainM),
-    time: a.elapsedTime,
+    time: activityTime(a),
   };
 }
 
