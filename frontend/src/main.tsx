@@ -11,9 +11,14 @@ import 'leaflet/dist/leaflet.css';
 import './styles.css';
 import { App } from './App';
 import { AccessGate } from './components/AccessGate';
+import { CrewApp } from './components/CrewApp';
+import { isCrewLink } from './lib/crew';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AccessGate>{(info) => <App feedbackUrl={info?.feedbackUrl ?? null} />}</AccessGate>
+    {/* Lien envoyé à l'assistance : sa propre page, sans code d'invitation (tout est dans le lien). */}
+    {isCrewLink(window.location.hash)
+      ? <CrewApp />
+      : <AccessGate>{(info) => <App feedbackUrl={info?.feedbackUrl ?? null} />}</AccessGate>}
   </StrictMode>,
 );

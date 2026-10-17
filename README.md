@@ -253,6 +253,26 @@ date souvent d'une édition précédente. La trace sert alors au profil et au co
 Pour le dénivelé mesuré sur la trace, on filtre le bruit altimétrique (hystérésis de 3 m) : sans
 ce filtre, la trace des Bogomiles donne ~4 500 m D+ au lieu de ~3 770 m.
 
+## Mode assistance
+
+Pour l'équipe qui suit le coureur : dans **Ravitos › Réglages › Mon assistance**, choisis les points où
+elle t'attend, puis **Envoyer le lien à mon assistance** (WhatsApp, mail…). Un seul lien pour toute
+l'équipe, sans compte ni code d'invitation : le plan (les trois scénarios, les points, ce qu'il faut
+préparer) est compressé dans le lien lui-même (`/#assistance=…`), rien n'est stocké sur le serveur.
+
+Sur son téléphone, l'assistance voit :
+
+- le **prochain rendez-vous** : « sois là avant 17h20 » (heure au plus tôt moins une marge qu'elle règle),
+  le créneau d'arrivée (optimiste → prudent), la barrière et la marge, ce qu'il faut préparer (à cocher),
+  le rappel frontale si la suite passe de nuit ;
+- **tous les rendez-vous**, et le **temps de route entre deux points** au choix, calculé par OSRM
+  (itinéraires OpenStreetMap, sans le trafic ; estimation à vol d'oiseau sans réseau), avec l'heure de
+  départ conseillée et un lien vers Maps (il faut la trace GPX pour connaître la position des points) ;
+- **Saisir un passage** : l'heure vue sur le suivi en direct de l'organisation recale les rendez-vous.
+
+Le jour J, après un « Je suis à … » dans « En course », **Prévenir mon assistance** renvoie un lien à
+jour avec ton avance ou ton retard. Envoie le lien par mail ou WhatsApp : un SMS peut le couper.
+
 ## Mettre le site en ligne (Render)
 
 Pour faire tester l'appli à des amis : un seul serveur (l'API sert aussi le front), décrit par le
@@ -322,4 +342,5 @@ et pourra être réutilisé tel quel (CLI, appli mobile via une API, batch de ca
 - [x] **v0.4** : appli allégée : cinq onglets par thème (Mon plan, Ravitos, Sac, Analyse, Comment ça marche),
   références repliées, PDF résumé d'une page
 - [ ] Plus tard : calibration par tranche de pente (montée/descente) à partir des flux d'activité Strava
-- [ ] **v0.5** : mode assistance (crew) : où et quand retrouver le coureur
+- [x] **v0.4.x** : lisibilité « roadbook terrain », vue « En course », onglets en bas sur téléphone
+- [x] **v0.5** : mode assistance : lien de suivi pour l'équipe, rendez-vous recalés, temps de route (OSRM)
