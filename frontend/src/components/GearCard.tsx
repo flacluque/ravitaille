@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { extractGear, fetchExtractorStatus } from '../api/client';
 import { loadGear, saveGear } from '../api/storage';
 import { ConfirmBar } from './ConfirmBar';
+import { UndoToast, useUndo } from './UndoToast';
 import type { ExtractorStatus, RacePlan } from '../api/types';
 import {
   GEAR_STATUS_LABEL,
@@ -49,6 +50,18 @@ export function GearCard({ raceName, plan, profile }: Props) {
     setItems(next);
     saveGear(raceName, next);
   };
+  const latest = useRef(items);
+  latest.current = items;
+  const undo = useUndo();
+  function remove(item: GearItem) {
+    const index = items.findIndex((i) => i.id === item.id);
+    update(items.filter((i) => i.id !== item.id));
+    undo.offer(`« ${item.name} » retiré du sac.`, () => {
+      const next = [...latest.current];
+      next.splice(Math.min(index, next.length), 0, item);
+      update(next);
+    });
+  }
   const patch = (id: string, change: Partial<GearItem>) => update(items.map((i) => (i.id === id ? { ...i, ...change } : i)));
   const add = (name: string, status: GearStatus = 'PERSONAL') => {
     if (name.trim()) update([...items, { id: gearId(), name: name.trim(), status, packed: false }]);
@@ -157,7 +170,7 @@ export function GearCard({ raceName, plan, profile }: Props) {
                     {GROUPS.map((g) => <option key={g} value={g}>{GEAR_STATUS_LABEL[g]}</option>)}
                   </select>
                   <button type="button" className="ghost icon-btn" aria-label={`Supprimer ${item.name}`}
-                    onClick={() => update(items.filter((i) => i.id !== item.id))}>✕</button>
+                    onClick={() => remove(item)}>✕</button>
                 </li>
               ))}
             </ul>
@@ -169,6 +182,7 @@ export function GearCard({ raceName, plan, profile }: Props) {
         <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ajouter un élément (ex. bâtons, crème anti-frottements)" aria-label="Nouvel élément" />
         <button type="submit" className="ghost" disabled={!newName.trim()}>Ajouter</button>
       </form>
+      <UndoToast undo={undo} />
     </div>
   );
 }

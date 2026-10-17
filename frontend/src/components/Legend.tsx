@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CutoffStatus } from '../api/types';
-import { STATUS_COLORS } from '../lib/colors';
+import { StatusShape } from './StatusShape';
 import { SERVICE_INFO, SERVICES } from '../lib/services';
 
 const STATUSES: { status: CutoffStatus; label: string; short: string }[] = [
@@ -61,7 +61,7 @@ export function Legend() {
         <span className="legend-title">Marges</span>
         {STATUSES.map(({ status, label, short }) => (
           <span key={status} className="legend-item">
-            <span className="legend-dot" style={{ background: STATUS_COLORS[status] }} aria-hidden />
+            <StatusShape status={status} />
             <span className="long">{label}</span>
             <span className="short" aria-hidden>{short}</span>
           </span>

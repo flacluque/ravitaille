@@ -59,6 +59,10 @@
 }
 
 * { box-sizing: border-box; }
+/* Focus clavier visible partout ; sur les surfaces colorées (hero), il prend la couleur du texte. */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.plan-hero :focus-visible { outline-color: currentColor; }
+.tabs a:focus-visible { outline-offset: -3px; border-radius: 6px; }
 body { margin: 0; background: var(--bg); color: var(--text); }
 h1, h2 { margin: 0; line-height: 1.2; }
 h1 { font-size: 1.25rem; }
@@ -168,6 +172,11 @@ button.ghost { background: transparent; color: var(--accent); border: 1px solid 
 .profile .hover-line { stroke: var(--accent); }
 .profile .hover-dot { fill: var(--surface); stroke: var(--accent); stroke-width: 2; }
 .profile .cp-code { fill: #fff; font-size: 9px; font-weight: 700; }
+.profile .cp-none .cp-code { fill: #475569; }
+.profile svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.map-cp { background: none; border: 0; }
+.map-cp svg { display: block; filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.35)); }
+.status-shape { display: inline-block; flex: none; vertical-align: -1px; }
 .profile-readout { display: flex; flex-wrap: wrap; gap: 4px 16px; min-height: 1.5em; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
 
 /* ---------- Tableaux ---------- */
@@ -800,3 +809,10 @@ a.brand { text-decoration: none; }
   .welcome-uses, .welcome-steps { grid-template-columns: 1fr; }
   .welcome-cta button { flex: 1 1 auto; }
 }
+
+/* ---------- Annulation ---------- */
+.undo-toast { position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%); z-index: 2500; display: flex; align-items: center;
+  gap: 12px; max-width: calc(100vw - 32px); padding: 8px 8px 8px 16px; border-radius: 10px; background: var(--text); color: var(--bg);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25); font-size: 0.92rem; }
+.undo-toast .link-btn { color: inherit; }
+.undo-toast .icon-btn { color: inherit; border-color: transparent; }

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { UndoToast, useUndo } from './UndoToast';
 import type { RacePlan, Service } from '../api/types';
 import { formatClock, formatDuration, formatKm } from '../lib/format';
 import {
@@ -204,6 +205,20 @@ function CrewCard({ plan, services, crew, onChange }: { plan: RacePlan; services
 function ProfileCard({ profile, onChange }: { profile: NutritionProfile; onChange: (p: NutritionProfile) => void }) {
   const [draft, setDraft] = useState<{ name: string; carbs: string; kind: ProductKind }>({ name: '', carbs: '', kind: 'SOLID' });
   const set = (patch: Partial<NutritionProfile>) => onChange({ ...profile, ...patch });
+  // Le profil le plus récent, pour qu'une annulation remette le produit dans la liste du moment.
+  const latest = useRef(profile);
+  latest.current = profile;
+  const undo = useUndo();
+  function removeProduct(id: string) {
+    const index = profile.products.findIndex((q) => q.id === id);
+    const removed = profile.products[index];
+    set({ products: profile.products.filter((q) => q.id !== id) });
+    undo.offer(`« ${removed.name} » retiré de tes produits.`, () => {
+      const products = [...latest.current.products];
+      products.splice(Math.min(index, products.length), 0, removed);
+      onChange({ ...latest.current, products });
+    });
+  }
   const setProduct = (id: string, patch: Partial<Product>) =>
     set({ products: profile.products.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
   const drink = profile.products.find((p) => p.enabled && p.kind === 'DRINK');
@@ -275,7 +290,7 @@ function ProfileCard({ profile, onChange }: { profile: NutritionProfile; onChang
               <span className={`kind-tag ${p.kind.toLowerCase()}`}>{KIND_LABELS[p.kind]}</span>
               <span className="muted small">{p.carbsG} g de glucides{p.kind === 'DRINK' ? ' par flasque' : ''}</span>
               <button type="button" className="ghost icon-btn" aria-label={`Retirer ${p.name}`}
-                onClick={() => set({ products: profile.products.filter((q) => q.id !== p.id) })}>✕</button>
+                onClick={() => removeProduct(p.id)}>✕</button>
             </li>
           ))}
         </ul>
@@ -308,6 +323,7 @@ function ProfileCard({ profile, onChange }: { profile: NutritionProfile; onChang
               onChange={(e) => set({ flaskMl: Math.max(100, Number(e.target.value) || 500) })} /></label>
         </div>
       </details>
+      <UndoToast undo={undo} />
     </section>
   );
 }

@@ -1,8 +1,10 @@
 import { useEffect, useMemo } from 'react';
-import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet';
+import { CircleMarker, MapContainer, Marker as MapMarker, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet';
+import { divIcon } from 'leaflet';
 import type { LatLngBoundsExpression, LatLngExpression, LeafletMouseEvent } from 'leaflet';
 import type { Marker, RacePlan, TrackSummary } from '../api/types';
-import { ACCENT_COLOR, STATUS_COLORS, TRACK_COLOR } from '../lib/colors';
+import { ACCENT_COLOR, TRACK_COLOR } from '../lib/colors';
+import { statusShapeSvg } from '../lib/markerShape';
 import { formatClock } from '../lib/format';
 import { nearestPoint, pointAtKm } from '../lib/track';
 
@@ -13,6 +15,8 @@ interface Props {
   hoverKm: number | null;
   onHover: (trackKm: number | null) => void;
 }
+
+const STATUS_LABELS = { OK: "plus d'1 h de marge", TIGHT: "moins d'1 h de marge", MISSED: 'barrière dépassée' } as const;
 
 export function CourseMap({ track, markers, plan, hoverKm, onHover }: Props) {
   const line = useMemo<LatLngExpression[]>(() => track.profile.map((p) => [p.lat, p.lon]), [track]);
@@ -43,24 +47,23 @@ export function CourseMap({ track, markers, plan, hoverKm, onHover }: Props) {
       <Polyline positions={line} pathOptions={{ color: TRACK_COLOR, weight: 4, opacity: 0.9 }} interactive={false} />
       {markers.map((m, i) => {
         const eta = plan.checkpoints[i];
+        const status = eta?.status ?? 'NONE';
+        const r = m.aid === 'FULL' ? 8 : 6;
+        const size = Math.ceil(r * 3.2);
         return (
-          <CircleMarker
+          <MapMarker
             key={m.code}
-            center={[m.lat, m.lon]}
-            radius={m.aid === 'FULL' ? 8 : 6}
-            pathOptions={{
-              color: '#fff',
-              weight: 2,
-              fillOpacity: 1,
-              fillColor: STATUS_COLORS[eta?.status ?? 'NONE'],
-            }}
+            position={[m.lat, m.lon]}
+            keyboard={false}
+            icon={divIcon({ html: statusShapeSvg(status, r), className: 'map-cp', iconSize: [size, size], iconAnchor: [size / 2, size / 2] })}
           >
-            <Tooltip direction="top" offset={[0, -6]}>
+            <Tooltip direction="top" offset={[0, -size / 2]}>
               <strong>{m.code} · {m.name}</strong>
               <br />
               km {m.km}{eta && <> · {formatClock(eta.arrival)}</>}
+              {status !== 'NONE' && <><br />{STATUS_LABELS[status]}</>}
             </Tooltip>
-          </CircleMarker>
+          </MapMarker>
         );
       })}
       {hover && (

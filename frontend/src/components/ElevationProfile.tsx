@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { Marker, RacePlan, TrackSummary } from '../api/types';
 import { STATUS_COLORS, TRACK_COLOR } from '../lib/colors';
+import { statusShapePaint, statusShapePath, statusTextOffset } from '../lib/markerShape';
 import { formatClockFromMinutes, formatKm } from '../lib/format';
 import { estimatedMinutesAt } from '../lib/plan';
 import { niceTicks, pointAtKm } from '../lib/track';
@@ -55,14 +56,44 @@ export function ElevationProfile({ track, markers, plan, hoverKm, onHover }: Pro
   const hover = hoverKm === null ? null : pointAtKm(track.profile, hoverKm);
   const hoverTime = hover ? estimatedMinutesAt(hover.km, plan, markers) : null;
 
+  // Lecture au clavier : flèches = 1 km (Maj : 10 km), Page préc./suiv. = point précédent/suivant, Début/Fin.
+  function handleKey(e: KeyboardEvent<SVGSVGElement>) {
+    const at = hoverKm ?? 0;
+    const step = e.shiftKey ? 10 : 1;
+    const stops = markers.map((m) => m.trackKm);
+    const moves: Record<string, () => number> = {
+      ArrowRight: () => at + step,
+      ArrowUp: () => at + step,
+      ArrowLeft: () => at - step,
+      ArrowDown: () => at - step,
+      PageDown: () => stops.find((k) => k > at + 0.05) ?? scales.maxKm,
+      PageUp: () => [...stops].reverse().find((k) => k < at - 0.05) ?? 0,
+      Home: () => 0,
+      End: () => scales.maxKm,
+    };
+    if (!(e.key in moves)) return;
+    e.preventDefault();
+    onHover(Math.min(scales.maxKm, Math.max(0, moves[e.key]())));
+  }
+
   return (
     <div className="profile" ref={ref}>
       {width > 0 && paths && (
         <svg
           width={width}
           height={HEIGHT}
-          role="img"
-          aria-label={`Profil altimétrique : ${formatKm(track.distanceKm)} km, ${track.gainM} m D+`}
+          role="slider"
+          tabIndex={0}
+          aria-label={`Profil altimétrique : ${formatKm(track.distanceKm)} km, ${track.gainM} m D+. Flèches pour avancer d'un km, Page suivante pour le point suivant`}
+          aria-valuemin={0}
+          aria-valuemax={Math.round(scales.maxKm)}
+          aria-valuenow={hover ? Math.round(hover.km * 10) / 10 : 0}
+          aria-valuetext={hover
+            ? `km ${formatKm(hover.km)}, ${Math.round(hover.elevationM)} m${hoverTime !== null ? `, passage vers ${formatClockFromMinutes(hoverTime)}` : ''}`
+            : 'départ'}
+          onKeyDown={handleKey}
+          onFocus={() => { if (hoverKm === null) onHover(0); }}
+          onBlur={() => onHover(null)}
           onPointerMove={handlePointer}
           onPointerDown={handlePointer}
           onPointerLeave={() => onHover(null)}
@@ -90,12 +121,16 @@ export function ElevationProfile({ track, markers, plan, hoverKm, onHover }: Pro
           {markers.map((m, i) => {
             const eta = plan.checkpoints[i];
             const x = scales.x(m.trackKm);
-            const color = STATUS_COLORS[eta?.status ?? 'NONE'];
+            const status = eta?.status ?? 'NONE';
+            const color = STATUS_COLORS[status];
+            const r = m.aid === 'FULL' ? 9 : 7.5;
+            const { fill, stroke } = statusShapePaint(status);
             return (
-              <g key={m.code} className="cp">
+              <g key={m.code} className={`cp cp-${status.toLowerCase()}`}>
                 <line x1={x} x2={x} y1={M.top - 6} y2={M.top + innerH} stroke={color} strokeDasharray="3 3" opacity={0.6} />
-                <circle cx={x} cy={M.top - 12} r={m.aid === 'FULL' ? 9 : 7.5} fill={color} />
-                <text x={x} y={M.top - 12} dy="0.34em" textAnchor="middle" className="cp-code">
+                <path d={statusShapePath(status, x, M.top - 12, r)} fill={fill}
+                  stroke={status === 'NONE' ? stroke : 'none'} strokeWidth={1.6} strokeLinejoin="round" />
+                <text x={x} y={M.top - 12 + statusTextOffset(status, r)} dy="0.34em" textAnchor="middle" className="cp-code">
                   {m.code}
                 </text>
                 <title>{`${m.code} · ${m.name} (km ${m.km})`}</title>
@@ -120,7 +155,7 @@ export function ElevationProfile({ track, markers, plan, hoverKm, onHover }: Pro
             {hoverTime !== null && <span>passage ≈ {formatClockFromMinutes(hoverTime)}</span>}
           </>
         ) : (
-          <span className="muted">Survole le profil ou la carte pour voir l'heure de passage estimée.</span>
+          <span className="muted">Survole le profil ou la carte (ou parcours le profil au clavier) pour voir l'heure de passage estimée.</span>
         )}
       </div>
     </div>

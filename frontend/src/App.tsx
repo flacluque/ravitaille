@@ -353,13 +353,16 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
 
       {status.kind === 'unreachable' && hasData.current && (
         <div className="banner warn no-print" role="status">
-          Hors ligne : affichage du dernier plan calculé
+          Pas de connexion : voici ton dernier plan calculé
           {data && <> (le {new Date(data.savedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })})</>}.
+          Il se mettra à jour dès que le réseau revient.{' '}
+          <button type="button" className="link-btn" onClick={() => void compute(references, source)}>Réessayer</button>
         </div>
       )}
       {status.kind === 'unreachable' && !hasData.current && (
         <div className="banner error" role="alert">
-          Impossible de joindre l'API : {status.error}. Vérifie que <code>mvn spring-boot:run</code> tourne.
+          Le serveur ne répond pas. Vérifie ta connexion ; s'il dormait, il met environ une minute à se réveiller.{' '}
+          <button type="button" className="link-btn" onClick={() => void compute(references, source)}>Réessayer</button>
         </div>
       )}
       {status.kind === 'rejected' && (
