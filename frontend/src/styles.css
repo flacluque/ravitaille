@@ -850,3 +850,47 @@ a.brand { text-decoration: none; }
 .ravitos-parts { align-self: stretch; display: grid; grid-template-columns: 1fr 1fr; }
 .ravitos-basis { margin: 0; }
 button.ravitos-done { align-self: flex-start; }
+
+/* ---------- Téléphone : onglets en bas ---------- */
+.mobile-nav, .more-sheet, .sheet-backdrop { display: none; }
+@media (max-width: 860px) {
+  .tabs { display: none; }
+  .topbar { flex-wrap: nowrap; gap: 10px; }
+  .topbar .pdf-menu, .topbar a.feedback { display: none; }
+  .race-title h1 { font-size: var(--fs-lead); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .race-title p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-micro); }
+  .app { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .mobile-nav { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 1200;
+    padding: 4px 4px calc(4px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 16px rgb(0 0 0 / 0.06); }
+  .mobile-nav a, .mobile-nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    min-height: 56px; padding: 4px 2px; border: 0; border-radius: 10px; background: transparent; color: var(--muted);
+    font-size: var(--fs-micro); font-weight: 600; text-decoration: none; }
+  .mobile-nav [aria-current='page'] { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .sheet-backdrop { display: block; position: fixed; inset: 0; z-index: 1190; background: rgb(0 0 0 / 0.35); }
+  .more-sheet { display: flex; flex-direction: column; gap: 2px; position: fixed; left: 8px; right: 8px; z-index: 1195;
+    bottom: calc(72px + env(safe-area-inset-bottom)); padding: 8px; border-radius: 16px; background: var(--surface);
+    box-shadow: 0 12px 40px rgb(0 0 0 / 0.25); }
+  .more-sheet a, .more-sheet button { display: flex; flex-direction: column; align-items: flex-start; min-height: 48px; justify-content: center;
+    padding: 8px 12px; border-radius: 10px; color: var(--text); background: transparent; text-decoration: none; font-weight: 600;
+    font-size: var(--fs-body); text-align: left; }
+  .more-sheet a[aria-current='page'] { color: var(--accent); }
+  .more-sheet hr { width: 100%; border: 0; border-top: 1px solid var(--border); margin: 4px 0; }
+  .more-sheet p { margin: 0 12px 4px; }
+  .legend-help { bottom: calc(80px + env(safe-area-inset-bottom)); }
+  .undo-toast { bottom: calc(132px + env(safe-area-inset-bottom)); }
+  .race-actions { bottom: calc(80px + env(safe-area-inset-bottom)); }
+  /* Le tableau d'abord, la carte et le profil ensuite. */
+  .results > .course-visuals { order: 1; }
+  /* Synthèse des ravitos : trois chiffres sur une ligne. */
+  .ravitos-totals { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .ravitos-totals .stat { padding: 8px; }
+  .ravitos-totals .stat-value { font-size: var(--fs-lead); }
+  .ravitos-totals .stat > .muted { display: none; }
+}
+@media (max-width: 860px) {
+  .barrier-col { display: none; }
+  table.passages td.num.strong { font-size: var(--fs-body); white-space: nowrap; }
+  table.passages .badge { white-space: normal; text-align: left; line-height: 1.2; padding: 3px 8px; border-radius: 8px; }
+  table.passages td:first-child { min-width: 9.5em; }
+}

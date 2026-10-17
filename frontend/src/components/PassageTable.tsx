@@ -42,7 +42,7 @@ export function PassageTable({ plan, markers, services, onHover, onDetails }: Pr
                 <th className="num opt">Arrêt</th>
               </>}
               <th className="num">Arrivée</th>
-              <th className="num">Barrière</th>
+              <th className="num barrier-col">Barrière</th>
               <th className="num">Marge</th>
             </tr>
           </thead>
@@ -78,8 +78,11 @@ export function PassageTable({ plan, markers, services, onHover, onDetails }: Pr
                     <td className="num opt">{i > 0 && formatPace(eta.legPaceMinPerKm)}</td>
                     <td className="num opt">{stop > 0 ? `${Math.round(stop)} min` : ''}</td>
                   </>}
-                  <td className="num strong">{formatClock(eta.arrival)}</td>
-                  <td className="num">
+                  <td className="num strong">
+                    {formatClock(eta.arrival)}
+                    {cutoff && <small className="muted mobile-only">barrière {formatClock(cutoff.at).replace(/^\S+ /, '')}{cutoff.out ? ' (sortie)' : ''}</small>}
+                  </td>
+                  <td className="num barrier-col">
                     {cutoff && (
                       <>
                         {formatClock(cutoff.at)}

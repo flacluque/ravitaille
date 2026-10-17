@@ -15,6 +15,7 @@ import { PassageTable } from './components/PassageTable';
 import { RaceEditor } from './components/RaceEditor';
 import { ReferenceForm } from './components/ReferenceForm';
 import { WelcomePage } from './components/WelcomePage';
+import { MobileNav } from './components/MobileNav';
 import { RaceView } from './components/RaceView';
 import { isRaceWindow, nowMinutes } from './lib/race';
 import { ReferenceInsights } from './components/ReferenceInsights';
@@ -499,6 +500,8 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
         </section>
       </main>
       {(tab === 'plan' || tab === 'ravitos' || tab === 'analyse') && <Legend />}
+      <MobileNav tab={tab} hrefs={TAB_HASH} onPdf={(v) => void savePdf(v)} pdfDisabled={!plan || savingPdf || stale}
+        feedbackUrl={feedbackUrl} />
     </div>
   );
 }
