@@ -1,6 +1,6 @@
 import type { Marker, RacePlan, Service } from '../api/types';
 import { SERVICE_INFO } from '../lib/services';
-import { durationMinutes, formatClock, formatDuration, formatHm, formatKm, formatPace } from '../lib/format';
+import { durationMinutes, formatClock, formatDuration, formatKm, formatPace } from '../lib/format';
 import { bindingCutoff } from '../lib/plan';
 import { StatusBadge } from './StatusBadge';
 
@@ -42,7 +42,7 @@ export function PassageTable({ plan, markers, services, onHover, onDetails }: Pr
                 <th className="num opt">Arrêt</th>
               </>}
               <th className="num">Arrivée</th>
-              <th className="num">Barrière</th>
+              <th className="num barrier-col">Barrière</th>
               <th className="num">Marge</th>
             </tr>
           </thead>
@@ -59,7 +59,8 @@ export function PassageTable({ plan, markers, services, onHover, onDetails }: Pr
                   onMouseLeave={() => onHover(null)}
                 >
                   <td>
-                    <span className="code">{eta.code}</span> {eta.name}
+                    <span className="code" title={i === 0 ? 'Départ (code du roadbook)' : i === plan.checkpoints.length - 1
+                      ? 'Arrivée (code du roadbook)' : 'Code du point dans le roadbook'}>{eta.code}</span> {eta.name}
                     <ServiceIcons services={services[i] ?? []} />
                     <small className="muted mobile-only">km {formatKm(eta.km)}</small>
                   </td>
@@ -77,8 +78,11 @@ export function PassageTable({ plan, markers, services, onHover, onDetails }: Pr
                     <td className="num opt">{i > 0 && formatPace(eta.legPaceMinPerKm)}</td>
                     <td className="num opt">{stop > 0 ? `${Math.round(stop)} min` : ''}</td>
                   </>}
-                  <td className="num strong">{formatClock(eta.arrival)}</td>
-                  <td className="num">
+                  <td className="num strong">
+                    {formatClock(eta.arrival)}
+                    {cutoff && <small className="muted mobile-only">barrière {formatClock(cutoff.at).replace(/^\S+ /, '')}{cutoff.out ? ' (sortie)' : ''}</small>}
+                  </td>
+                  <td className="num barrier-col">
                     {cutoff && (
                       <>
                         {formatClock(cutoff.at)}
@@ -87,7 +91,7 @@ export function PassageTable({ plan, markers, services, onHover, onDetails }: Pr
                     )}
                   </td>
                   <td className="num">
-                    {cutoff && <StatusBadge status={eta.status}>{formatHm(cutoff.marginMinutes)}</StatusBadge>}
+                    {cutoff && <StatusBadge status={eta.status} minutes={cutoff.marginMinutes} />}
                   </td>
                 </tr>
               );
@@ -95,16 +99,29 @@ export function PassageTable({ plan, markers, services, onHover, onDetails }: Pr
           </tbody>
         </table>
       </div>
+      {codesNote(plan) && <p className="muted small table-note">{codesNote(plan)}</p>}
     </div>
   );
 }
 
+/** Services du point : chaque icône avec son mot, pour qu'on n'ait pas à chercher la légende. */
 function ServiceIcons({ services }: { services: Service[] }) {
   if (services.length === 0) return null;
-  const label = services.map((s) => SERVICE_INFO[s].label).join(', ');
   return (
-    <span className="service-icons" title={label} aria-label={label}>
-      {services.map((s) => <span key={s} aria-hidden>{SERVICE_INFO[s].icon}</span>)}
+    <span className="service-icons">
+      {services.map((s) => (
+        <span key={s} className="service" title={SERVICE_INFO[s].label}>
+          <span aria-hidden>{SERVICE_INFO[s].icon}</span> {SERVICE_INFO[s].short}
+        </span>
+      ))}
     </span>
   );
+}
+
+/** Les codes du roadbook (1P, 1D…) ne parlent qu'à qui l'a lu : on dit lesquels sont le départ et l'arrivée. */
+export function codesNote(plan: RacePlan): string | null {
+  const first = plan.checkpoints[0]?.code;
+  const last = plan.checkpoints[plan.checkpoints.length - 1]?.code;
+  if (!first || !last || (/^\d+$/.test(first) && /^\d+$/.test(last))) return null;
+  return `Codes du roadbook officiel : ${first} = départ, ${last} = arrivée.`;
 }

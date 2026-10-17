@@ -23,6 +23,8 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api\//],
         // Dépendances optionnelles de jsPDF (export HTML), jamais chargées ici : inutile de les garder hors ligne.
         globIgnores: ['**/html2canvas*', '**/purify*'],
+        // Polices gardées hors ligne : alphabet latin seulement (les autres jeux se chargent à la demande).
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}', '**/*-latin-[0-9]*-normal*.woff2', '**/*-latin-ext-[0-9]*-normal*.woff2'],
         runtimeCaching: [
           {
             // Strava : jamais de cache (connexion, jetons, activités toujours à jour).

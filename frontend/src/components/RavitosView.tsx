@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { UndoToast, useUndo } from './UndoToast';
 import type { RacePlan, Service } from '../api/types';
 import { formatClock, formatDuration, formatKm } from '../lib/format';
 import {
@@ -28,11 +29,35 @@ export function RavitosView({ plan, services, profile, onProfileChange, crew, on
   const firstCrew = n.points.find((p) => p.index > 0 && (p.crew || p.dropBag));
   const startCount = Object.values(n.points[0].take).reduce((s, v) => s + v, 0) + n.points[0].takeDrinkDoses;
   const raceHours = n.legs.reduce((s, l) => s + l.minutes, 0) / 60;
+  const [part, setPart] = useState<'deroule' | 'reglages'>(readPart);
+  const choose = (next: 'deroule' | 'reglages') => {
+    setPart(next);
+    try {
+      localStorage.setItem(PART_KEY, next);
+    } catch {
+      // stockage indisponible
+    }
+  };
 
   return (
     <div className="ravitos">
-      <ProfileCard profile={profile} onChange={onProfileChange} />
-      <CrewCard plan={plan} services={services} crew={crew} onChange={onCrewChange} />
+      <div className="segmented ravitos-parts" role="tablist" aria-label="Ravitos">
+        <button type="button" role="tab" aria-selected={part === 'deroule'} className={part === 'deroule' ? 'active' : ''}
+          onClick={() => choose('deroule')}>Déroulé</button>
+        <button type="button" role="tab" aria-selected={part === 'reglages'} className={part === 'reglages' ? 'active' : ''}
+          onClick={() => choose('reglages')}>Réglages</button>
+      </div>
+
+      {part === 'reglages' ? <>
+        <ProfileCard profile={profile} onChange={onProfileChange} />
+        <CrewCard plan={plan} services={services} crew={crew} onChange={onCrewChange} />
+        <button type="button" className="ravitos-done" onClick={() => choose('deroule')}>Voir le déroulé</button>
+      </> : <>
+      <p className="muted small ravitos-basis">
+        Calculé pour {profile.carbsPerHour} g de glucides par heure, {profile.flasks} flasques de {profile.flaskMl} ml
+        {crew.length > 0 ? `, assistance à ${crew.length} point${crew.length > 1 ? 's' : ''}` : ', sans assistance'}.{' '}
+        <button type="button" className="link-btn" onClick={() => choose('reglages')}>Modifier</button>
+      </p>
 
       <section className="ravitos-totals" aria-label="Sur toute la course">
         <div className="stat">
@@ -115,8 +140,19 @@ export function RavitosView({ plan, services, profile, onProfileChange, crew, on
         Un quart de glucides en moins la première heure (l'estomac se met en route) et 10 % de moins la nuit (digestion plus
         lente). Le sodium vient de ta boisson énergétique. Repères courants en ultra, à ajuster : pas un conseil médical.
       </p>
+      </>}
     </div>
   );
+}
+
+const PART_KEY = 'trail-planner:ravitos-partie';
+
+function readPart(): 'deroule' | 'reglages' {
+  try {
+    return localStorage.getItem(PART_KEY) === 'reglages' ? 'reglages' : 'deroule';
+  } catch {
+    return 'deroule';
+  }
 }
 
 function ArrivalBox({ plan, n, profile, index }: { plan: RacePlan; n: NutritionPlan; profile: NutritionProfile; index: number }) {
@@ -204,6 +240,20 @@ function CrewCard({ plan, services, crew, onChange }: { plan: RacePlan; services
 function ProfileCard({ profile, onChange }: { profile: NutritionProfile; onChange: (p: NutritionProfile) => void }) {
   const [draft, setDraft] = useState<{ name: string; carbs: string; kind: ProductKind }>({ name: '', carbs: '', kind: 'SOLID' });
   const set = (patch: Partial<NutritionProfile>) => onChange({ ...profile, ...patch });
+  // Le profil le plus récent, pour qu'une annulation remette le produit dans la liste du moment.
+  const latest = useRef(profile);
+  latest.current = profile;
+  const undo = useUndo();
+  function removeProduct(id: string) {
+    const index = profile.products.findIndex((q) => q.id === id);
+    const removed = profile.products[index];
+    set({ products: profile.products.filter((q) => q.id !== id) });
+    undo.offer(`« ${removed.name} » retiré de tes produits.`, () => {
+      const products = [...latest.current.products];
+      products.splice(Math.min(index, products.length), 0, removed);
+      onChange({ ...latest.current, products });
+    });
+  }
   const setProduct = (id: string, patch: Partial<Product>) =>
     set({ products: profile.products.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
   const drink = profile.products.find((p) => p.enabled && p.kind === 'DRINK');
@@ -275,7 +325,7 @@ function ProfileCard({ profile, onChange }: { profile: NutritionProfile; onChang
               <span className={`kind-tag ${p.kind.toLowerCase()}`}>{KIND_LABELS[p.kind]}</span>
               <span className="muted small">{p.carbsG} g de glucides{p.kind === 'DRINK' ? ' par flasque' : ''}</span>
               <button type="button" className="ghost icon-btn" aria-label={`Retirer ${p.name}`}
-                onClick={() => set({ products: profile.products.filter((q) => q.id !== p.id) })}>✕</button>
+                onClick={() => removeProduct(p.id)}>✕</button>
             </li>
           ))}
         </ul>
@@ -308,6 +358,7 @@ function ProfileCard({ profile, onChange }: { profile: NutritionProfile; onChang
               onChange={(e) => set({ flaskMl: Math.max(100, Number(e.target.value) || 500) })} /></label>
         </div>
       </details>
+      <UndoToast undo={undo} />
     </section>
   );
 }

@@ -15,13 +15,15 @@ import { PassageTable } from './components/PassageTable';
 import { RaceEditor } from './components/RaceEditor';
 import { ReferenceForm } from './components/ReferenceForm';
 import { WelcomePage } from './components/WelcomePage';
+import { MobileNav } from './components/MobileNav';
+import { RaceView } from './components/RaceView';
+import { isRaceWindow, nowMinutes } from './lib/race';
 import { ReferenceInsights } from './components/ReferenceInsights';
 import { TrainingCard } from './components/TrainingCard';
 import { AlgorithmPage } from './components/AlgorithmPage';
 import { PlanHero } from './components/PlanHero';
 import { RavitosView } from './components/RavitosView';
 import { TrainingLine } from './components/TrainingLine';
-import { ScenarioCards } from './components/ScenarioCards';
 import { draftSignature, draftToRace, emptyDraft, type RaceDraft } from './lib/draft';
 import { formatClock, formatKm, formatMeters } from './lib/format';
 import { defaultServices } from './lib/services';
@@ -29,11 +31,11 @@ import { defaultServices } from './lib/services';
 // Course d'exemple embarquée (src/main/resources/samples/bogomiles).
 const SAMPLE_ID = 'bogomiles';
 const CUSTOM_ID = 'custom';
-type Tab = 'accueil' | 'plan' | 'ravitos' | 'sac' | 'analyse' | 'algo';
-const TABS: [Tab, string][] = [['accueil', 'Accueil'], ['plan', 'Mon plan'], ['ravitos', 'Ravitos'], ['sac', 'Sac'],
-  ['analyse', 'Analyse'], ['algo', 'Comment ça marche']];
+type Tab = 'accueil' | 'plan' | 'course' | 'ravitos' | 'sac' | 'analyse' | 'algo';
+const TABS: [Tab, string][] = [['accueil', 'Accueil'], ['plan', 'Mon plan'], ['course', 'En course'], ['ravitos', 'Ravitos'],
+  ['sac', 'Sac'], ['analyse', 'Analyse'], ['algo', 'Comment ça marche']];
 const TAB_HASH: Record<Tab, string> = {
-  accueil: '#accueil', plan: '#plan', ravitos: '#ravitos', sac: '#sac', analyse: '#analyse', algo: '#algorithme',
+  accueil: '#accueil', plan: '#plan', course: '#course', ravitos: '#ravitos', sac: '#sac', analyse: '#analyse', algo: '#algorithme',
 };
 const WELCOME_SEEN = 'trail-planner:accueil-vu';
 
@@ -90,7 +92,12 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   const [source, setSource] = useState<ElevationSource>(initial?.source ?? 'AUTO');
   const hasData = useRef(initial !== null);
   // Onglet affiché, avec sa propre adresse (#ravitos, #algorithme…) pour pouvoir partager le lien.
-  const [tab, setTab] = useState<Tab>(initialTab);
+  // Le jour de la course, l'appli s'ouvre sur « En course » (sauf lien vers un autre onglet).
+  const [tab, setTab] = useState<Tab>(() => {
+    const plan = initial?.plans[Math.min(1, initial.plans.length - 1)];
+    const hashless = !window.location.hash && !new URLSearchParams(window.location.search).has('strava');
+    return hashless && plan && isRaceWindow(plan, nowMinutes()) ? 'course' : initialTab();
+  });
   useEffect(() => {
     if (tab !== 'accueil') return;
     try {
@@ -271,6 +278,10 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   };
 
   const [savingPdf, setSavingPdf] = useState(false);
+  // Pourquoi le PDF n'est pas disponible, dit au coureur plutôt qu'un bouton grisé muet.
+  const pdfBlocked = !plan
+    ? "Le PDF se télécharge une fois le plan calculé : complète ta course et clique sur « Calculer mon plan »."
+    : stale ? "Ta course a changé depuis le dernier calcul : clique sur « Calculer mon plan » pour un PDF à jour." : null;
   const [pdfMenu, setPdfMenu] = useState(false);
   useEffect(() => {
     if (!pdfMenu) return;
@@ -325,12 +336,16 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           </a>
         )}
         <div className="pdf-menu no-print" hidden={tab === 'accueil'}>
-          <button type="button" className="ghost" onClick={() => setPdfMenu((m) => !m)} disabled={!plan || savingPdf || stale}
-            aria-expanded={pdfMenu} aria-haspopup="menu"
+          <button type="button" className="ghost" onClick={() => setPdfMenu((m) => !m)} disabled={savingPdf}
+            aria-disabled={pdfBlocked ? true : undefined} aria-expanded={pdfMenu} aria-haspopup="menu"
             title="Télécharger le plan de course en PDF (fonctionne aussi hors ligne)">
             {savingPdf ? 'PDF…' : 'Télécharger le PDF ▾'}
           </button>
-          {pdfMenu && (
+          {pdfMenu && (pdfBlocked ? (
+            <div className="pdf-menu-list" role="status">
+              <p className="pdf-blocked">{pdfBlocked}</p>
+            </div>
+          ) : (
             <div className="pdf-menu-list" role="menu">
               <button type="button" role="menuitem" onClick={() => void savePdf('summary')}>
                 <strong>Résumé · 1 page</strong>
@@ -341,7 +356,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
                 <span className="muted small">Tout le plan : profil, références, préparation, nutrition, matériel</span>
               </button>
             </div>
-          )}
+          ))}
         </div>
       </header>
 
@@ -353,13 +368,16 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
 
       {status.kind === 'unreachable' && hasData.current && (
         <div className="banner warn no-print" role="status">
-          Hors ligne : affichage du dernier plan calculé
+          Pas de connexion : voici ton dernier plan calculé
           {data && <> (le {new Date(data.savedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })})</>}.
+          Il se mettra à jour dès que le réseau revient.{' '}
+          <button type="button" className="link-btn" onClick={() => void compute(references, source)}>Réessayer</button>
         </div>
       )}
       {status.kind === 'unreachable' && !hasData.current && (
         <div className="banner error" role="alert">
-          Impossible de joindre l'API : {status.error}. Vérifie que <code>mvn spring-boot:run</code> tourne.
+          Le serveur ne répond pas. Vérifie ta connexion ; s'il dormait, il met environ une minute à se réveiller.{' '}
+          <button type="button" className="link-btn" onClick={() => void compute(references, source)}>Réessayer</button>
         </div>
       )}
       {status.kind === 'rejected' && (
@@ -374,7 +392,12 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           onAlgorithm={() => goTab('algo')} />
       )}
 
-      <main className="layout" hidden={tab === 'algo' || tab === 'accueil'}>
+      {tab === 'course' && (plan && course
+        ? <RaceView plan={plan} course={course} services={services} profile={nutritionProfile} crew={crew} />
+        : <p className="muted race-empty">Calcule d'abord le plan de ta course dans « Mon plan » : cette page te guidera point
+          par point le jour J.</p>)}
+
+      <main className="layout" hidden={tab === 'algo' || tab === 'accueil' || tab === 'course'}>
         <aside className="side no-print">
           <div className="card mode-switch" role="radiogroup" aria-label="Course">
             <button type="button" role="radio" aria-checked={mode === 'demo'} className={mode === 'demo' ? 'active' : ''}
@@ -467,10 +490,18 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           {tab === 'sac' && course && <GearCard raceName={course.race.name} plan={plan} profile={nutritionProfile} />}
 
           {tab === 'analyse' && <>
-            <p className="muted tab-intro">Tout ce qui sert au calcul, pour qui veut regarder de près.</p>
-            {plans.length > 0 && <ScenarioCards plans={plans} selected={scenarioIndex} onSelect={setScenarioIndex} />}
+            <p className="muted tab-intro">Ce que « Mon plan » résume : le poids de chaque référence, ta préparation, le tableau
+              complet (tronçons, allures, arrêts) et les trois scénarios côte à côte.</p>
             {plan && <ReferenceInsights plan={plan} />}
             {plan?.training && <TrainingCard plan={plan} />}
+            {plans.length > 1 && (
+              <div className="segmented analyse-scenario" role="group" aria-label="Scénario du tableau détaillé">
+                {plans.map((p, i) => (
+                  <button key={p.scenario.name} type="button" aria-pressed={i === scenarioIndex}
+                    className={i === scenarioIndex ? 'active' : ''} onClick={() => setScenarioIndex(i)}>{p.scenario.name}</button>
+                ))}
+              </div>
+            )}
             {plan && course && <PassageTable plan={plan} markers={course.markers} services={services} onHover={setHoverKm} />}
             {plans.length > 1 && <CompareTable plans={plans} />}
           </>}
@@ -484,6 +515,9 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
         </section>
       </main>
       {(tab === 'plan' || tab === 'ravitos' || tab === 'analyse') && <Legend />}
+      <MobileNav tab={tab} hrefs={TAB_HASH} onPdf={(v) => void savePdf(v)} pdfDisabled={savingPdf || !!pdfBlocked}
+        pdfReason={pdfBlocked}
+        feedbackUrl={feedbackUrl} />
     </div>
   );
 }

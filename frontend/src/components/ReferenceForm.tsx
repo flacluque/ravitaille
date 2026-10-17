@@ -20,6 +20,11 @@ interface Props {
   onTrainingChange: (options: TrainingOptions) => void;
 }
 
+/** La référence d'exemple proposée au premier lancement (60 km, 3 200 m D+, 8h48), sans nom ni date. */
+function isExampleReference(ref: Reference): boolean {
+  return !ref.label.trim() && !ref.date && ref.km === 60 && ref.gainM === 3200 && durationMinutes(ref.time) === 528;
+}
+
 const SOURCES: { value: ElevationSource; label: string }[] = [
   { value: 'AUTO', label: 'Automatique' },
   { value: 'ROADBOOK', label: 'Roadbook officiel' },
@@ -132,11 +137,18 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
         <ul className="ref-summary">
           {parsed.map((p, i) => p.ref && (
             <li key={rows[i].id}>
-              <span>{p.ref.label.trim() || `Référence ${i + 1}`}</span>
+              <span>{isExampleReference(p.ref) ? <span className="example-tag">Exemple</span> : p.ref.label.trim() || `Référence ${i + 1}`}</span>
               <span className="muted">{formatKm(p.ref.km)} km · {formatHm(durationMinutes(p.ref.time))}</span>
             </li>
           ))}
         </ul>
+      )}
+      {parsed.some((p) => p.ref && isExampleReference(p.ref)) && (
+        <p className="example-note small">
+          Référence d'exemple, pas la tienne : remplace-la par une course que tu as faite (ou importe-la depuis Strava)
+          pour un plan à ton rythme.{' '}
+          {!expanded && <button type="button" className="link-btn" onClick={() => setExpanded(true)}>Mettre la mienne</button>}
+        </p>
       )}
 
       {expanded && <>

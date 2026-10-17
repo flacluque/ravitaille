@@ -1,5 +1,5 @@
 import type { RacePlan } from '../api/types';
-import { formatClock, formatDuration, formatHm } from '../lib/format';
+import { formatClock, formatDuration } from '../lib/format';
 import { tightestCutoff } from '../lib/plan';
 import { StatusBadge } from './StatusBadge';
 
@@ -16,8 +16,10 @@ export function PlanHero({ plans, selected, onSelect }: Props) {
   const tightest = tightestCutoff(plan);
   const first = plans[0];
   const last = plans[plans.length - 1];
+  // Le hero change de teinte quand la marge la plus serrée passe sous 1 h, ou qu'une barrière saute.
+  const alert = tightest?.eta.status === 'MISSED' ? 'missed' : tightest?.eta.status === 'TIGHT' ? 'tight' : '';
   return (
-    <section className="plan-hero" aria-label="Arrivée prévue">
+    <section className={`plan-hero ${alert}`} aria-label="Arrivée prévue">
       <div className="plan-hero-main">
         <span className="plan-hero-label">Arrivée prévue · scénario {plan.scenario.name.toLowerCase()}</span>
         <span className="plan-hero-finish scenario-finish">{formatClock(plan.finish)}</span>
@@ -40,7 +42,7 @@ export function PlanHero({ plans, selected, onSelect }: Props) {
         {tightest && (
           <span className="plan-hero-tight">
             Barrière la plus serrée : <strong>{tightest.eta.name}</strong>{' '}
-            <StatusBadge status={tightest.eta.status}>{formatHm(tightest.cutoff.marginMinutes)}</StatusBadge>
+            <StatusBadge status={tightest.eta.status} minutes={tightest.cutoff.marginMinutes} />
           </span>
         )}
       </div>

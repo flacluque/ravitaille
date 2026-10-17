@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ExtractedRoadbook, RaceDefinition } from '../api/types';
 import {
+  draftFieldErrors,
   draftSignature,
   draftToFile,
   draftToRace,
@@ -230,5 +231,19 @@ describe('empreinte de la saisie (plan à jour ou périmé)', () => {
     const modifie = { ...draft, checkpoints: draft.checkpoints.map((cp, i) => (i === 1 ? { ...cp, km: '19' } : cp)) };
     expect(draftSignature(modifie, null)).not.toBe(draftSignature(draft, null));
     expect(draftSignature(draft, { name: 'trace.gpx', size: 1000 })).not.toBe(draftSignature(draft, null));
+  });
+});
+
+describe('erreurs champ par champ', () => {
+  it('rattache chaque erreur à son champ', () => {
+    const d = emptyDraft();
+    const [start, finish] = d.checkpoints;
+    const draft = { ...d, name: '', checkpoints: [{ ...start, km: '0' }, { ...finish, km: 'abc', gainM: '', cutoffIn: '25h99' }] };
+    const fields = draftFieldErrors(draft, false);
+    expect(fields.name).toBe('Donne un nom à la course.');
+    expect(fields[`${finish.id}.km`]).toBe('Nombre attendu');
+    expect(fields[`${finish.id}.gainM`]).toBe('D+ manquant');
+    expect(fields[`${finish.id}.cutoffIn`]).toBe('Format 14h30');
+    expect(draftFieldErrors(draft, true)[`${finish.id}.gainM`]).toBeUndefined();
   });
 });

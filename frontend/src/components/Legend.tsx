@@ -1,75 +1,71 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CutoffStatus } from '../api/types';
-import { STATUS_COLORS } from '../lib/colors';
 import { SERVICE_INFO, SERVICES } from '../lib/services';
+import { StatusShape } from './StatusShape';
 
-const STATUSES: { status: CutoffStatus; label: string; short: string }[] = [
-  { status: 'OK', label: "plus d'1 h de marge", short: '> 1 h' },
-  { status: 'TIGHT', label: "moins d'1 h", short: '< 1 h' },
-  { status: 'MISSED', label: 'barrière dépassée', short: 'dépassée' },
-  { status: 'NONE', label: 'pas de barrière', short: 'aucune' },
+const STATUSES: { status: CutoffStatus; label: string }[] = [
+  { status: 'OK', label: "plus d'1 h de marge" },
+  { status: 'TIGHT', label: "moins d'1 h de marge" },
+  { status: 'MISSED', label: 'barrière dépassée' },
+  { status: 'NONE', label: 'pas de barrière' },
 ];
 
-const STORAGE_KEY = 'trail-planner:legende-repliee';
-
-function readCollapsed(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
 /**
- * Légende toujours visible en bas de l'écran : icônes des services des ravitos et couleurs des
- * marges sur les barrières (carte, profil, tableaux). Repliable, surtout pour les petits écrans.
+ * Légende à la demande : un « ? » en bas de l'écran. Les icônes et les badges portent déjà leur
+ * mot ; elle rappelle les formes de la carte et du profil, et le sens des codes du roadbook.
  */
 export function Legend() {
-  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const [open, setOpen] = useState(false);
+  const panel = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
 
-  function toggle() {
-    const next = !collapsed;
-    setCollapsed(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, next ? '1' : '0');
-    } catch {
-      // stockage indisponible : la légende se dépliera au prochain chargement
-    }
-  }
-
-  if (collapsed) {
-    return (
-      <button type="button" className="legend-pill no-print" onClick={toggle} aria-expanded={false}>
-        Légende
-      </button>
-    );
-  }
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!panel.current?.contains(t) && !button.current?.contains(t)) setOpen(false);
+    };
+    const escape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        button.current?.focus();
+      }
+    };
+    document.addEventListener('mousedown', close);
+    window.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      window.removeEventListener('keydown', escape);
+    };
+  }, [open]);
 
   return (
-    <aside className="legend no-print" aria-label="Légende">
-      <div className="legend-group">
-        <span className="legend-title">Ravitos</span>
-        {SERVICES.map((s) => (
-          <span key={s} className="legend-item">
-            <span aria-hidden>{SERVICE_INFO[s].icon}</span>
-            <span className="long">{SERVICE_INFO[s].label}</span>
-            <span className="short" aria-hidden>{SERVICE_INFO[s].short}</span>
-          </span>
-        ))}
-      </div>
-      <div className="legend-group">
-        <span className="legend-title">Marges</span>
-        {STATUSES.map(({ status, label, short }) => (
-          <span key={status} className="legend-item">
-            <span className="legend-dot" style={{ background: STATUS_COLORS[status] }} aria-hidden />
-            <span className="long">{label}</span>
-            <span className="short" aria-hidden>{short}</span>
-          </span>
-        ))}
-      </div>
-      <button type="button" className="ghost legend-close" onClick={toggle} aria-expanded aria-label="Replier la légende" title="Replier">
-        ▾
-      </button>
-    </aside>
+    <div className="legend-help no-print">
+      {open && (
+        <div ref={panel} className="legend-panel" role="dialog" aria-label="Légende">
+          <h2>Légende</h2>
+          <h3>Marges sur les barrières</h3>
+          <p className="muted small">Forme des points sur la carte et le profil :</p>
+          <ul>
+            {STATUSES.map(({ status, label }) => (
+              <li key={status}><StatusShape status={status} size={14} /> {label}</li>
+            ))}
+          </ul>
+          <h3>Ravitos</h3>
+          <ul>
+            {SERVICES.map((s) => (
+              <li key={s}><span aria-hidden>{SERVICE_INFO[s].icon}</span> {SERVICE_INFO[s].label}</li>
+            ))}
+          </ul>
+          <h3>Codes des points</h3>
+          <p className="small">
+            Ce sont ceux du roadbook officiel (par exemple 1P pour le départ, 1D pour l'arrivée). Un pointage est un
+            contrôle de passage, sans ravitaillement.
+          </p>
+        </div>
+      )}
+      <button ref={button} type="button" className="legend-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open}
+        aria-label="Légende : formes, icônes et codes" title="Légende">?</button>
+    </div>
   );
 }
