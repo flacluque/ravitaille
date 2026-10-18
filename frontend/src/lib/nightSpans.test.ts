@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Marker, RacePlan } from '../api/types';
-import { nightSpans } from './ElevationProfile';
+import { nightSpans } from './plan';
 
 const leg = (duration: number, night: number) => ({ legDuration: `PT${duration}M`, legNightDuration: `PT${night}M` });
 

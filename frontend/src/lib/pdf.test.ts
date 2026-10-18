@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { CourseView, RacePlan } from '../api/types';
 import fixture from './__fixtures__/bogomiles-plan.json';
-import { buildPlanPdf, longDateTime, pdfFilename, pdfText } from './pdf';
+import { buildPlanPdf, longDateTime, marginText, pdfFilename, pdfText } from './pdf';
 import type { GearItem } from './gear';
 import { DEFAULT_PROFILE } from './nutrition';
 import { defaultServices } from './services';
@@ -28,7 +28,8 @@ describe('plan de course en PDF', () => {
     expect(doc.getNumberOfPages()).toBeGreaterThanOrEqual(1);
     expect(doc.getNumberOfPages()).toBeLessThanOrEqual(3);
     for (const expected of ['Raid des Bogomiles 2026', 'Heures de passage', 'Comparaison des sc', 'Tes r', 'Profil',
-      'Nutrition et hydratation', 'Au d', 'Sur la course', 'Mat', '1 / 3 pr', 'obligatoires', 'eau ', 'solide']) {
+      'Nutrition et hydratation', 'Au d', 'Sur la course', 'Mat', '1 / 3 pr', 'obligatoires', 'eau ', 'solide',
+      'ARRIV', 'SURVEILLER', 'de marge', 'VENDREDI', 'SAMEDI']) {
       expect(text).toContain(expected);
     }
   });
@@ -48,7 +49,7 @@ describe('plan de course en PDF', () => {
     const doc = await buildPlanPdf({ course, plans, selected: 1, services, nutrition: DEFAULT_PROFILE, gear, variant: 'summary' });
     const text = new TextDecoder('latin1').decode(doc.output('arraybuffer'));
     expect(doc.getNumberOfPages()).toBe(1);
-    for (const expected of ['Raid des Bogomiles 2026', 'Passages et ravitos', 'Au d', 'arriv']) expect(text).toContain(expected);
+    for (const expected of ['Raid des Bogomiles 2026', 'Passages et ravitos', 'Au d', 'arriv', 'SURVEILLER', 'de marge']) expect(text).toContain(expected);
     for (const absent of ['Profil', 'Comparaison des sc', 'Nutrition et hydratation', '1 / 3 pr']) expect(text).not.toContain(absent);
     expect(pdfFilename('Raid des Bogomiles 2026', 'summary')).toBe('plan-raid-des-bogomiles-2026-resume.pdf');
   });
@@ -70,7 +71,7 @@ describe('plan de course en PDF', () => {
     }));
     const doc = await buildPlanPdf({ course, plans: withTraining, selected: 1 });
     const text = new TextDecoder('latin1').decode(doc.output('arraybuffer'));
-    for (const expected of ['Ta préparation', '14 semaines : 52 km-effort par semaine', 'semaines sur 14', 'moyenne 52', 'Temps corrig', '+30 %', '-3,1 %', 'plus longue sortie']) {
+    for (const expected of ['Ta préparation', '14 semaines : 52 km-effort par semaine', 'semaines sur 14', 'moyenne 52', 'TEMPS CORRIG', '+30 %', '-3,1 %', 'plus longue sortie']) {
       expect(text).toContain(expected);
     }
   });
@@ -83,6 +84,12 @@ describe('plan de course en PDF', () => {
 
   it('écrit la date de départ en toutes lettres', () => {
     expect(longDateTime('2026-10-23T11:00:00')).toBe('vendredi 23 octobre 2026 à 11h00');
+  });
+
+  it('écrit la marge comme les badges de l\'appli', () => {
+    expect(marginText('OK', 71)).toBe('1h11 de marge');
+    expect(marginText('TIGHT', 58)).toBe('serré : 0h58 de marge');
+    expect(marginText('MISSED', -20)).toBe('dépassée de 0h20');
   });
 
   it('remplace les caractères que les polices du PDF ne savent pas afficher', () => {
