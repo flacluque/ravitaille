@@ -143,9 +143,9 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
               </div>
             </div>
             <ol>{STEPS[how].map((s) => <li key={s}>{s}</li>)}</ol>
-            <p><strong>Une seule fois, sur la montre :</strong> active l'écran « À venir » (maintiens MENU › Navigation › Écrans de
-              données › À venir). Pendant le parcours, il liste les prochains ravitos avec leur distance, et leur barrière grâce au
-              nom. Sur les Fenix 7, Epix et Forerunner récents ; les menus varient selon les modèles.</p>
+            <p><strong>Une seule fois, sur la montre :</strong> dans les réglages de ton activité Trail, ajoute un écran de données
+              personnalisé avec le champ « Waypoint suivant » (le nom du prochain ravito, avec sa barrière), et les champs de
+              navigation qui t'intéressent, comme la distance jusqu'à ce point. Les noms des champs varient selon les modèles.</p>
             <p className="garmin-dday"><strong>Le jour J :</strong> lance une activité Trail, puis <strong>Navigation › Parcours ›
               {' '}{course.race.name} › Suivre le parcours</strong>.</p>
             <p className="muted small">Tu as recalculé ton plan ? Renvoie le fichier : les heures du partenaire virtuel viennent du plan.</p>
