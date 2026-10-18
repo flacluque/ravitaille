@@ -7,6 +7,8 @@ interface Props {
   tab: string;
   hrefs: Record<string, string>;
   onPdf: (variant: 'summary' | 'full') => void;
+  /** Ouvre l'export du parcours pour montre Garmin. */
+  onGarmin: () => void;
   pdfDisabled: boolean;
   /** Pourquoi le PDF n'est pas disponible (plan pas calculé ou périmé). */
   pdfReason: string | null;
@@ -23,7 +25,7 @@ const MAIN: [MainTab, string][] = [['plan', 'Plan'], ['course', 'En course'], ['
  * Sur téléphone : les onglets en bas, à portée de pouce. « Plus » regroupe le reste : accueil,
  * analyse, explication du calcul, PDF et avis.
  */
-export function MobileNav({ tab, hrefs, onPdf, pdfDisabled, pdfReason, feedbackUrl }: Props) {
+export function MobileNav({ tab, hrefs, onPdf, onGarmin, pdfDisabled, pdfReason, feedbackUrl }: Props) {
   const [open, setOpen] = useState(false);
   const sheet = useRef<HTMLDivElement>(null);
   const moreButton = useRef<HTMLButtonElement>(null);
@@ -64,6 +66,8 @@ export function MobileNav({ tab, hrefs, onPdf, pdfDisabled, pdfReason, feedbackU
             PDF résumé · 1 page<span className="muted small">passages, barrières, ravitos</span></button>
           <button type="button" disabled={pdfDisabled} onClick={() => { setOpen(false); onPdf('full'); }}>
             PDF complet<span className="muted small">tout le plan</span></button>
+          <button type="button" disabled={pdfDisabled} onClick={() => { setOpen(false); onGarmin(); }}>
+            Parcours pour ma Garmin (.fit)<span className="muted small">trace, ravitos et partenaire virtuel</span></button>
           {pdfReason && <p className="muted small">{pdfReason}</p>}
           {feedbackUrl && <><hr /><a href={feedbackUrl} target="_blank" rel="noreferrer">Donner mon avis</a></>}
         </div>

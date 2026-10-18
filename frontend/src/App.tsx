@@ -25,6 +25,7 @@ import { TrainingCard } from './components/TrainingCard';
 import { AlgorithmPage } from './components/AlgorithmPage';
 import { PlanHero } from './components/PlanHero';
 import { Roadbook } from './components/Roadbook';
+import { GarminExport } from './components/GarminExport';
 import { RavitosView } from './components/RavitosView';
 import { TrainingLine } from './components/TrainingLine';
 import { draftSignature, draftToRace, emptyDraft, type RaceDraft } from './lib/draft';
@@ -296,6 +297,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     ? "Le PDF se télécharge une fois le plan calculé : complète ta course et clique sur « Calculer mon plan »."
     : stale ? "Ta course a changé depuis le dernier calcul : clique sur « Calculer mon plan » pour un PDF à jour." : null;
   const [pdfMenu, setPdfMenu] = useState(false);
+  const [garminOpen, setGarminOpen] = useState(false);
   useEffect(() => {
     if (!pdfMenu) return;
     const close = (e: MouseEvent | KeyboardEvent) => {
@@ -370,8 +372,8 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
         <div className="pdf-menu no-print" hidden={tab === 'accueil'}>
           <button type="button" className="ghost" onClick={() => setPdfMenu((m) => !m)} disabled={savingPdf}
             aria-disabled={pdfBlocked ? true : undefined} aria-expanded={pdfMenu} aria-haspopup="menu"
-            title="Télécharger le plan de course en PDF (fonctionne aussi hors ligne)">
-            {savingPdf ? 'PDF…' : 'Télécharger le PDF ▾'}
+            title="Télécharger le plan en PDF, ou le parcours pour ta montre Garmin">
+            {savingPdf ? 'PDF…' : 'Télécharger ▾'}
           </button>
           {pdfMenu && (pdfBlocked ? (
             <div className="pdf-menu-list" role="status">
@@ -386,6 +388,11 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
               <button type="button" role="menuitem" onClick={() => void savePdf('full')}>
                 <strong>Complet</strong>
                 <span className="muted small">Tout le plan : profil, références, préparation, nutrition, matériel</span>
+              </button>
+              <hr />
+              <button type="button" role="menuitem" onClick={() => { setPdfMenu(false); setGarminOpen(true); }}>
+                <strong>Parcours pour ma Garmin (.fit)</strong>
+                <span className="muted small">Trace, ravitos et partenaire virtuel au rythme du plan</span>
               </button>
             </div>
           ))}
@@ -551,7 +558,10 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           {status.kind === 'loading' && !shown && mode === 'demo' && <p className="muted">Calcul en cours…</p>}
         </section>
       </main>
-      <MobileNav tab={tab} hrefs={TAB_HASH} onPdf={(v) => void savePdf(v)} pdfDisabled={savingPdf || !!pdfBlocked}
+      {garminOpen && course && plans.length > 0 && (
+        <GarminExport course={course} plans={plans} selected={scenarioIndex} services={services} onClose={() => setGarminOpen(false)} />
+      )}
+      <MobileNav tab={tab} hrefs={TAB_HASH} onPdf={(v) => void savePdf(v)} onGarmin={() => setGarminOpen(true)} pdfDisabled={savingPdf || !!pdfBlocked}
         pdfReason={pdfBlocked}
         feedbackUrl={feedbackUrl} />
     </div>
