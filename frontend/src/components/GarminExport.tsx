@@ -19,6 +19,11 @@ const HELP = [
 ];
 
 const STEPS = {
+  phone: [
+    'Ouvre le fichier téléchargé (dans tes Téléchargements) avec l\'appli Garmin Connect.',
+    'Enregistre le parcours : tu y vois déjà les ravitos, leurs barrières et le profil.',
+    '« Envoyer vers l\'appareil », puis synchronise ta montre.',
+  ],
   connect: [
     'Sur connect.garmin.com (ordinateur) : Entraînement et planification › Parcours › Importer.',
     'Choisis le fichier, puis « Nouveau parcours » et enregistre.',
@@ -31,6 +36,8 @@ const STEPS = {
   ],
 };
 
+const HOWS: [keyof typeof STEPS, string][] = [['phone', 'Téléphone'], ['connect', 'Ordinateur'], ['usb', 'Câble USB']];
+
 const ICON: Record<FitPointKind, string> = { start: '▶', finish: '⚑', aid: '●', water: '●', checkpoint: '◆' };
 
 /**
@@ -42,7 +49,7 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
   const [scenario, setScenario] = useState(Math.min(selected, plans.length - 1));
   const [cutInName, setCutInName] = useState(true);
   const [checkpoints, setCheckpoints] = useState(true);
-  const [how, setHow] = useState<'connect' | 'usb'>('connect');
+  const [how, setHow] = useState<keyof typeof STEPS>('phone');
   const [state, setState] = useState<'idle' | 'busy' | 'done' | 'failed'>('idle');
   const plan = plans[scenario];
   const options = { cutInName, checkpoints };
@@ -129,13 +136,16 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
             <div className="garmin-next-head">
               <span id="garmin-next" className="overline">Et ensuite</span>
               <div className="plan-hero-scenarios garmin-how" role="group" aria-label="Comment l'envoyer">
-                <button type="button" aria-pressed={how === 'connect'} className={how === 'connect' ? 'active' : ''}
-                  onClick={() => setHow('connect')}>Garmin Connect</button>
-                <button type="button" aria-pressed={how === 'usb'} className={how === 'usb' ? 'active' : ''}
-                  onClick={() => setHow('usb')}>Câble USB</button>
+                {HOWS.map(([id, label]) => (
+                  <button key={id} type="button" aria-pressed={how === id} className={how === id ? 'active' : ''}
+                    onClick={() => setHow(id)}>{label}</button>
+                ))}
               </div>
             </div>
             <ol>{STEPS[how].map((s) => <li key={s}>{s}</li>)}</ol>
+            <p><strong>Une seule fois, sur la montre :</strong> active l'écran « À venir » (maintiens MENU › Navigation › Écrans de
+              données › À venir). Pendant le parcours, il liste les prochains ravitos avec leur distance, et leur barrière grâce au
+              nom. Sur les Fenix 7, Epix et Forerunner récents ; les menus varient selon les modèles.</p>
             <p className="garmin-dday"><strong>Le jour J :</strong> lance une activité Trail, puis <strong>Navigation › Parcours ›
               {' '}{course.race.name} › Suivre le parcours</strong>.</p>
             <p className="muted small">Tu as recalculé ton plan ? Renvoie le fichier : les heures du partenaire virtuel viennent du plan.</p>

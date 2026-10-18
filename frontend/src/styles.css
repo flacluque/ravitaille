@@ -1119,7 +1119,7 @@ button.garmin-close { position: absolute; right: 10px; top: 10px; width: 44px; h
 .garmin-aid, .garmin-water { color: #38bdf8; }
 button.garmin-download { min-height: 52px; font-size: var(--fs-lead); font-weight: 700; }
 .garmin-next-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-.garmin-how { gap: 16px; border-bottom: 0; }
+.garmin-how { gap: 14px; border-bottom: 0; flex-wrap: wrap; }
 .garmin-how button { min-height: 40px; font-size: var(--fs-body); white-space: nowrap; }
 .garmin ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
 .garmin-dday { padding: 10px 12px; background: var(--surface-2); border-left: 4px solid var(--text); }
