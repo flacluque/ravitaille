@@ -1,19 +1,21 @@
 import type { jsPDF } from 'jspdf';
-import type { UserOptions } from 'jspdf-autotable';
+import type { CellHookData, RowInput, UserOptions } from 'jspdf-autotable';
 import type { CourseView, CutoffStatus, RacePlan, Service } from '../api/types';
 import { ACCENT_COLOR, STATUS_COLORS, TRACK_COLOR } from './colors';
-import { durationMinutes, formatClock, formatDuration, formatHm, formatKm, formatPace } from './format';
+import { durationMinutes, formatClock, formatDuration, formatHm, formatKm, formatPace, localMinutes } from './format';
 import { GEAR_STATUS_LABEL, waterCheck, type GearItem, type GearStatus } from './gear';
 import {
   computeNutrition, describeActions, describeFill, describeRhythm, describeTake, describeTotals, type NutritionPlan, type NutritionProfile,
 } from './nutrition';
-import { bindingCutoff, tightestCutoff } from './plan';
+import { bindingCutoff, nightSpans, tightestCutoff, worstCutoff } from './plan';
 import { SERVICE_INFO } from './services';
 import { niceTicks } from './track';
 
 /**
  * Plan de course en PDF A4, généré dans le navigateur : il se télécharge aussi hors ligne, le jour J.
  * jsPDF n'est chargé qu'au premier clic (il pèse plus lourd que le reste de l'appli).
+ * Même grammaire que l'écran « Mon plan » : du papier, des filets noirs, l'heure d'arrivée en grand
+ * et les passages comme un roadbook (un point par ligne, le tronçon entre deux points).
  */
 export interface PdfInput {
   course: CourseView;
@@ -40,7 +42,8 @@ const FOOTER_H = 10;
 
 const TEXT: RGB = [28, 31, 29];
 const MUTED: RGB = [107, 111, 105];
-const BORDER: RGB = [226, 221, 210];
+const BORDER: RGB = [216, 210, 196];
+const NIGHT: RGB = [236, 234, 228];
 const STATUS_BG: Record<CutoffStatus, RGB> = {
   NONE: [255, 255, 255],
   OK: [220, 252, 231],
@@ -68,24 +71,42 @@ export async function buildPlanPdf({ course, plans, selected, services, nutritio
   doc.setProperties({ title: `Plan de course : ${course.race.name}`, creator: 'Trail Planner' });
 
   let y = header(doc, course, plan);
-  y = scenarioBoxes(doc, plans, selected, y + 6);
+  y = hero(doc, plans, selected, y + 7);
 
   if (course.track && variant === 'full') {
-    y = ensureSpace(doc, y + 7, 58);
+    y = ensureSpace(doc, y + 11, 58);
     y = profile(doc, course, plan, y);
   }
 
+  // Tableaux façon roadbook : en-tête en petites capitales grises sur un filet noir, lignes séparées d'un filet fin.
   const table = (title: string, startY: number, options: Parameters<typeof autoTable>[1]) => {
-    let top = ensureSpace(doc, startY + 7, 30);
+    let top = ensureSpace(doc, startY + 9, 30);
     if (title) top = sectionTitle(doc, title, top);
+    const { didParseCell, didDrawCell, columnStyles } = options;
     autoTable(doc, {
       startY: top,
       margin: { left: M, right: M, bottom: M + FOOTER_H },
       theme: 'plain',
       styles: { font: 'helvetica', fontSize: 8.5, cellPadding: { top: 1.6, bottom: 1.6, left: 1.8, right: 1.8 }, textColor: TEXT, lineColor: BORDER },
-      headStyles: { fillColor: rgb(ACCENT_COLOR), textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5 },
+      headStyles: { textColor: MUTED, fontStyle: 'bold', fontSize: 6.5 },
       bodyStyles: { lineWidth: { bottom: 0.2 } },
       ...options,
+      didParseCell: (data) => {
+        if (data.section === 'head') {
+          if (typeof data.cell.raw === 'string') data.cell.text = [data.cell.raw.toUpperCase()];
+          const align = (columnStyles as Record<number, { halign?: string }> | undefined)?.[data.column.index]?.halign;
+          if (align) data.cell.styles.halign = align as 'right';
+        }
+        didParseCell?.(data);
+      },
+      didDrawCell: (data) => {
+        if (data.section === 'head') {
+          doc.setDrawColor(...TEXT);
+          doc.setLineWidth(0.6);
+          doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+        }
+        didDrawCell?.(data);
+      },
     });
     return (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
   };
@@ -113,44 +134,15 @@ export async function buildPlanPdf({ course, plans, selected, services, nutritio
   // --- Préparation (historique Strava) ---
   if (plan.training) y = training(doc, plan, y, table);
 
-  // --- Heures de passage du scénario détaillé ---
-  y = table(`Heures de passage · scénario ${plan.scenario.name.toLowerCase()}`, y, {
-    head: [['Point', 'Km', 'D+', 'Tronçon', 'Allure', 'Arrêt', 'Arrivée', 'Barrière', 'Marge']],
-    body: plan.checkpoints.map((eta, i) => {
-      const cutoff = bindingCutoff(eta);
-      const stop = durationMinutes(eta.stop);
-      const here = servicesText(services?.[i]);
-      return [
-        `${pdfText(eta.code)}  ${pdfText(eta.name)}${here ? `\n${here}` : ''}`,
-        formatKm(eta.km),
-        String(Math.round(eta.cumulativeGainM)),
-        i === 0 ? '' : `${formatDuration(eta.legDuration)}\n${formatKm(eta.legDistanceKm)} km +${Math.round(eta.legGainM)} m`,
-        i === 0 ? '' : formatPace(eta.legPaceMinPerKm).replace('/km', ''),
-        stop > 0 ? `${Math.round(stop)} min` : '',
-        formatClock(eta.arrival),
-        cutoff ? formatClock(cutoff.at) + (cutoff.out ? '\n(sortie)' : '') : '',
-        cutoff ? formatHm(cutoff.marginMinutes) : '',
-      ];
-    }),
-    columnStyles: {
-      0: { cellWidth: 52 },
-      1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' },
-      5: { halign: 'right' }, 6: { halign: 'right', fontStyle: 'bold' }, 7: { halign: 'right' },
-      8: { halign: 'right', fontStyle: 'bold' },
-    },
-    didParseCell: (data) => {
-      if (data.section === 'body' && data.column.index === 8) {
-        colorStatus(data.cell.styles, plan.checkpoints[data.row.index].status);
-      }
-    },
-  });
+  // --- Heures de passage du scénario détaillé, en roadbook ---
+  y = roadbook(doc, plan, y, table, { services, crew });
 
   // --- Nutrition et hydratation du scénario détaillé ---
   if (nutrition && services) {
     const n = computeNutrition(plan, services, nutrition, crew);
     const names = plan.checkpoints.map((c) => pdfText(c.name));
     const last = plan.checkpoints.length - 1;
-    let top = ensureSpace(doc, y + 7, 40);
+    let top = ensureSpace(doc, y + 11, 40);
     top = sectionTitle(doc, `Nutrition et hydratation · scénario ${plan.scenario.name.toLowerCase()}`, top) + 2;
     doc.setFontSize(8.5);
     const intro = [
@@ -237,7 +229,8 @@ export async function buildPlanPdf({ course, plans, selected, services, nutritio
           else if (status !== 'NONE') colorStatus(data.cell.styles, status);
         }
         if (data.section === 'head' && data.column.index - 3 === selected) {
-          data.cell.styles.fillColor = rgb(TRACK_COLOR);
+          data.cell.styles.textColor = TEXT;
+          data.cell.text = [`${plans[selected].scenario.name.toUpperCase()} (DÉTAILLÉ)`];
         }
       },
     });
@@ -249,7 +242,7 @@ export async function buildPlanPdf({ course, plans, selected, services, nutritio
     const sorted = order.flatMap((st) => gear.filter((i) => i.status === st));
     const packed = gear.filter((i) => i.packed).length;
     const water = nutrition ? waterCheck(gear, nutrition) : null;
-    let top = ensureSpace(doc, y + 7, 30);
+    let top = ensureSpace(doc, y + 11, 30);
     top = sectionTitle(doc, `Matériel · ${packed} / ${gear.length} prêts`, top);
     if (water) {
       doc.setFontSize(8.5);
@@ -312,32 +305,170 @@ function summary(doc: jsPDF, plan: RacePlan, y: number, table: (title: string, s
     }
   }
   const last = plan.checkpoints.length - 1;
-  table(`Passages et ravitos · scénario ${plan.scenario.name.toLowerCase()}`, top - 2, {
-    styles: { font: 'helvetica', fontSize: 8, cellPadding: { top: 1.4, bottom: 1.4, left: 1.6, right: 1.6 }, textColor: TEXT, lineColor: BORDER },
-    head: [['Point', 'Km', 'Passage', 'Barrière', 'Marge', 'À faire']],
-    body: plan.checkpoints.map((eta, i) => {
-      const cutoff = bindingCutoff(eta);
+  roadbook(doc, plan, top - 4, table, {
+    services, crew, title: `Passages et ravitos · scénario ${plan.scenario.name.toLowerCase()}`,
+    todo: (i) => {
       const actions = n && nutrition && i > 0 && i < last ? describeActions(n.points[i], n, nutrition, false) : '';
       const next = n && i < last ? describeRhythm(n.legs[i], n, plan) : '';
       const rhythm = next ? `Ensuite : ${next.charAt(0).toLowerCase()}${next.slice(1)}` : '';
       // pdfText ne garde pas les retours à la ligne : on les remet après coup.
-      const todo = [actions, rhythm].filter(Boolean).map(pdfText).join('\n');
-      return [
-        `${pdfText(eta.code)}  ${pdfText(eta.name)}`,
-        formatKm(eta.km),
-        formatClock(eta.arrival),
-        cutoff ? formatClock(cutoff.at) + (cutoff.out ? ' (sortie)' : '') : '',
-        cutoff ? formatHm(cutoff.marginMinutes) : '',
-        i === last ? 'arrivée' : i === 0 ? pdfText(rhythm) : todo,
-      ];
-    }),
-    columnStyles: {
-      0: { cellWidth: 50 }, 1: { halign: 'right', cellWidth: 12 }, 2: { halign: 'right', fontStyle: 'bold', cellWidth: 22 },
-      3: { halign: 'right', cellWidth: 26 }, 4: { halign: 'right', fontStyle: 'bold', cellWidth: 14 },
+      return i === last ? 'arrivée' : [actions, rhythm].filter(Boolean).map(pdfText).join('\n');
     },
+  });
+}
+
+type TableFn = (title: string, startY: number, options: UserOptions) => number;
+type RowKind = 'day' | 'leg' | 'point';
+
+/** « 1h11 de marge », « serré : 0h58 de marge », « dépassée de 0h20 » : comme les badges de l'appli. */
+export function marginText(status: CutoffStatus, minutes: number): string {
+  if (status === 'MISSED') return `dépassée de ${formatHm(Math.abs(minutes))}`;
+  if (status === 'TIGHT') return `serré : ${formatHm(minutes)} de marge`;
+  return `${formatHm(minutes)} de marge`;
+}
+
+/** Jour de la semaine d'une heure locale ISO : « SAMEDI ». */
+function weekday(iso: string): string {
+  const m = LOCAL.exec(iso);
+  if (!m) return '';
+  return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).toLocaleDateString('fr-FR', { timeZone: 'UTC', weekday: 'long' }).toUpperCase();
+}
+
+/**
+ * Les heures de passage comme dans « Mon plan » : un repère par jour, un point par ligne (code encadré,
+ * heure en gras, barrière et marge), et entre deux points le tronçon sur un trait orange.
+ * Avec `todo`, une colonne « À faire » remplace le D+ (résumé d'une page).
+ */
+function roadbook(doc: jsPDF, plan: RacePlan, y: number, table: TableFn,
+  { services, crew = [], todo, title }: { services?: Service[][]; crew?: string[]; todo?: (i: number) => string; title?: string }): number {
+  const head = todo
+    ? ['', 'Point', 'Arrivée', 'Barrière', 'Marge', 'À faire']
+    : ['', 'Point', 'Km', 'D+', 'Arrivée', 'Barrière', 'Marge'];
+  const cols = head.length;
+  const kinds: RowKind[] = [];
+  const status: CutoffStatus[] = [];
+  const body: RowInput[] = [];
+  const last = plan.checkpoints.length - 1;
+  plan.checkpoints.forEach((eta, i) => {
+    const prev = plan.checkpoints[i - 1];
+    if (prev) {
+      const night = !!eta.legNightDuration && durationMinutes(eta.legNightDuration) >= 15;
+      kinds.push('leg');
+      status.push('NONE');
+      body.push(['', {
+        content: `${formatKm(eta.legDistanceKm)} km · +${Math.round(eta.legGainM)} m · ${formatDuration(eta.legDuration)}`
+          + ` · ${formatPace(eta.legPaceMinPerKm)}${night ? ' · de nuit' : ''}`,
+        colSpan: cols - 1,
+      }]);
+    }
+    const time = i === 0 ? eta.departure : eta.arrival;
+    if (!prev || weekday(prev.arrival) !== weekday(time)) {
+      kinds.push('day');
+      status.push('NONE');
+      body.push([{ content: weekday(time), colSpan: cols }]);
+    }
+    const cutoff = bindingCutoff(eta);
+    const stop = Math.round(durationMinutes(eta.stop));
+    // Résumé : le km et l'assistance sous le nom (les services se lisent dans « À faire »).
+    const details = [
+      todo ? `km ${formatKm(eta.km)}` : servicesText(services?.[i]),
+      !todo && stop > 0 && i > 0 && i < last ? `arrêt ${stop} min` : '',
+      crew.includes(eta.code) ? 'ASSISTANCE' : '',
+    ].filter(Boolean).join(' · ');
+    kinds.push('point');
+    status.push(cutoff ? eta.status : 'NONE');
+    body.push([
+      pdfText(eta.code),
+      `${pdfText(eta.name)}${details ? `\n${details}` : ''}`,
+      ...(todo ? [] : [formatKm(eta.km), String(Math.round(eta.cumulativeGainM))]),
+      formatClock(time).replace(/^\S+ /, ''),
+      cutoff ? formatClock(cutoff.at) + (cutoff.out ? '\nen sortie' : '') : '',
+      cutoff ? marginText(eta.status, cutoff.marginMinutes) : '',
+      ...(todo ? [todo(i)] : []),
+    ]);
+  });
+  const timeCol = todo ? 2 : 4;
+  const cutCol = todo ? 3 : 5;
+  const marginCol = todo ? 4 : 6;
+  return table(title ?? `Heures de passage · scénario ${plan.scenario.name.toLowerCase()}`, y, {
+    head: [head],
+    body,
+    rowPageBreak: 'avoid',
+    styles: { font: 'helvetica', fontSize: todo ? 7.5 : 8.5, cellPadding: todo ? { top: 1, bottom: 1, left: 1.4, right: 1.4 } : { top: 1.5, bottom: 1.5, left: 1.6, right: 1.6 },
+      textColor: TEXT, lineColor: BORDER, valign: 'middle' },
+    columnStyles: todo
+      ? { 0: { cellWidth: 10, halign: 'center' }, 1: { cellWidth: 40 }, 2: { cellWidth: 15, halign: 'right' }, 3: { cellWidth: 19, halign: 'right' },
+        4: { cellWidth: 30, halign: 'right' } }
+      : { 0: { cellWidth: 11, halign: 'center' }, 2: { cellWidth: 14, halign: 'right' }, 3: { cellWidth: 14, halign: 'right' },
+        4: { cellWidth: 22, halign: 'right' }, 5: { cellWidth: 28, halign: 'right' }, 6: { cellWidth: 34, halign: 'right' } },
     didParseCell: (data) => {
-      if (data.section === 'head' && data.column.index >= 1 && data.column.index <= 4) data.cell.styles.halign = 'right';
-      if (data.section === 'body' && data.column.index === 4) colorStatus(data.cell.styles, plan.checkpoints[data.row.index].status);
+      if (data.section !== 'body') return;
+      const kind = kinds[data.row.index];
+      const st = data.cell.styles;
+      if (kind === 'leg') {
+        st.lineWidth = 0;
+        st.textColor = MUTED;
+        st.fontSize = 7;
+        st.cellPadding = todo ? { top: 0.6, bottom: 0.6, left: 1.4, right: 1.4 } : { top: 1.2, bottom: 1.2, left: 1.6, right: 1.6 };
+        st.halign = 'left';
+      } else if (kind === 'day') {
+        st.fontStyle = 'bold';
+        st.fontSize = 6.5;
+        st.lineWidth = 0;
+        st.cellPadding = todo ? { top: 1.6, bottom: 0.6, left: 1.4, right: 1.4 } : { top: 2.6, bottom: 0.8, left: 1.6, right: 1.6 };
+        st.halign = 'left';
+      } else {
+        if (data.column.index === 0) { st.fontStyle = 'bold'; st.fontSize = 7.5; }
+        if (data.column.index === timeCol) { st.fontStyle = 'bold'; st.fontSize = todo ? 10.5 : 12; }
+        if (data.column.index === cutCol || (!todo && (data.column.index === 2 || data.column.index === 3))) st.textColor = MUTED;
+        if (data.column.index === marginCol && status[data.row.index] !== 'NONE') {
+          st.fontStyle = 'bold';
+          st.fontSize = 7;
+          st.textColor = rgb(STATUS_COLORS[status[data.row.index]]);
+        }
+        if (todo && data.column.index === 5) st.fontSize = 7;
+      }
+    },
+    // Marge : une pastille derrière le texte, comme les badges de l'appli (dessinée avant le texte).
+    willDrawCell: (data: CellHookData) => {
+      if (data.section !== 'body') return;
+      // Tronçon : trait orange dans la colonne des codes, comme le fil du roadbook à l'écran.
+      if (kinds[data.row.index] === 'leg' && data.column.index === 0) {
+        const { x, y: cy, width, height } = data.cell;
+        doc.setDrawColor(...rgb(TRACK_COLOR));
+        doc.setLineWidth(0.8);
+        doc.line(x + width / 2, cy, x + width / 2, cy + height);
+      }
+      if (kinds[data.row.index] !== 'point' || data.column.index !== marginCol) return;
+      const st = status[data.row.index];
+      const text = data.cell.text.join(' ');
+      if (st === 'NONE' || !text) return;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      const w = doc.getTextWidth(text) + 3;
+      const pad = (data.cell.styles.cellPadding as { right: number }).right;
+      doc.setFillColor(...STATUS_BG[st]);
+      doc.roundedRect(data.cell.x + data.cell.width - pad - w + 1.5, data.cell.y + data.cell.height / 2 - 2.1, w, 4.2, 2, 2, 'F');
+    },
+    didDrawCell: (data: CellHookData) => {
+      if (data.section !== 'body') return;
+      const kind = kinds[data.row.index];
+      const { x, y: cy, width, height } = data.cell;
+      if (kind === 'day' && data.column.index === 0) {
+        doc.setDrawColor(...TEXT);
+        doc.setLineWidth(0.3);
+        doc.line(M, cy + height, PAGE_W - M, cy + height);
+      }
+      // Code du point encadré.
+      if (kind === 'point' && data.column.index === 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        const w = Math.max(6.5, doc.getTextWidth(String(data.cell.raw)) + 2.4);
+        doc.setDrawColor(...TEXT);
+        doc.setLineWidth(0.4);
+        doc.roundedRect(x + (width - w) / 2, cy + height / 2 - 2.4, w, 4.8, 0.8, 0.8, 'S');
+        doc.setFont('helvetica', 'normal');
+      }
     },
   });
 }
@@ -347,7 +478,7 @@ function training(doc: jsPDF, plan: RacePlan, y: number,
   table: (title: string, startY: number, options: UserOptions) => number): number {
   const t = plan.training!;
   const b = t.target;
-  let top = ensureSpace(doc, y + 7, 52);
+  let top = ensureSpace(doc, y + 11, 52);
   top = sectionTitle(doc, 'Ta préparation (Strava)', top) + 2;
   doc.setFontSize(8.5);
   doc.setTextColor(...TEXT);
@@ -422,52 +553,140 @@ function training(doc: jsPDF, plan: RacePlan, y: number,
 }
 
 function header(doc: jsPDF, course: CourseView, plan: RacePlan): number {
-  doc.setFillColor(...rgb(ACCENT_COLOR));
-  doc.rect(0, 0, PAGE_W, 30, 'F');
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(...TEXT);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(17);
-  doc.text(pdfText(course.race.name), M, 13, { maxWidth: CONTENT_W - 32 });
+  doc.setFontSize(18);
+  doc.text(pdfText(course.race.name), M, M + 4, { maxWidth: CONTENT_W - 32 });
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.5);
-  doc.text(`Départ ${longDateTime(course.race.start)}`, M, 20);
-  doc.text(`${formatKm(plan.totalDistanceKm)} km · ${Math.round(plan.totalGainM).toLocaleString('fr-FR').replace(/\s/g, ' ')} m D+ · `
-    + `${Math.round(plan.totalEffortKm)} km-effort · dénivelé : ${plan.elevationSource === 'TRACK' ? 'trace GPX' : 'roadbook officiel'}`, M, 25);
+  doc.setFontSize(9);
+  doc.setTextColor(...MUTED);
+  doc.text(`Départ ${longDateTime(course.race.start)} · ${formatKm(plan.totalDistanceKm)} km · `
+    + `${Math.round(plan.totalGainM).toLocaleString('fr-FR').replace(/\s/g, ' ')} m D+ · ${Math.round(plan.totalEffortKm)} km-effort`
+    + ` · dénivelé : ${plan.elevationSource === 'TRACK' ? 'trace GPX' : 'roadbook officiel'}`, M, M + 10);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.text('TRAIL PLANNER', PAGE_W - M, 9, { align: 'right' });
-  return 30;
+  doc.setFontSize(7);
+  doc.setTextColor(...rgb(ACCENT_COLOR));
+  doc.text('TRAIL PLANNER', PAGE_W - M, M + 1, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setDrawColor(...TEXT);
+  doc.setLineWidth(0.8);
+  doc.line(M, M + 14, PAGE_W - M, M + 14);
+  return M + 14;
 }
 
-function scenarioBoxes(doc: jsPDF, plans: RacePlan[], selected: number, y: number): number {
-  const gap = 4;
-  const w = (CONTENT_W - gap * (plans.length - 1)) / plans.length;
-  const h = 27;
-  plans.forEach((p, i) => {
-    const x = M + i * (w + gap);
-    const isSelected = i === selected;
-    doc.setDrawColor(...(isSelected ? rgb(ACCENT_COLOR) : BORDER));
-    doc.setLineWidth(isSelected ? 0.6 : 0.25);
-    doc.roundedRect(x, y, w, h, 2, 2, 'S');
+/**
+ * Le bandeau de « Mon plan » : l'heure d'arrivée en grand, la frise du départ à la barrière d'arrivée
+ * (fourchette des scénarios), les trois scénarios et ce qu'il faut surveiller.
+ */
+function hero(doc: jsPDF, plans: RacePlan[], selected: number, top: number): number {
+  const plan = plans[Math.min(selected, plans.length - 1)];
+  const first = plans[0];
+  const lastPlan = plans[plans.length - 1];
+  const leftW = CONTENT_W * 0.56;
+  const right = M + leftW + 8;
+  const rightW = PAGE_W - M - right;
+
+  // Gauche : heure d'arrivée
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(...MUTED);
+  doc.text(`ARRIVÉE PRÉVUE · SCÉNARIO ${plan.scenario.name.toUpperCase()}`, M, top + 2);
+  const [day, time] = splitClock(formatClock(plan.finish));
+  doc.setFontSize(15);
+  doc.text(day, M, top + 15);
+  const dayW = doc.getTextWidth(day) + 2.5;
+  doc.setFontSize(34);
+  doc.setTextColor(...TEXT);
+  doc.text(time, M + dayW, top + 15);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  const sameDay = splitClock(formatClock(first.finish))[0] === splitClock(formatClock(lastPlan.finish))[0];
+  const bound = (iso: string) => (sameDay ? splitClock(formatClock(iso))[1] : formatClock(iso));
+  doc.text(`${formatDuration(plan.totalDuration)} de course`
+    + (plans.length > 1 ? ` · entre ${bound(first.finish)} et ${bound(lastPlan.finish)} selon ta journée` : ''), M, top + 21);
+
+  // Frise : départ → barrière d'arrivée, fourchette des scénarios et scénario détaillé.
+  const fy = top + 28;
+  const startMin = localMinutes(plan.start);
+  const finishCut = bindingCutoff(plan.checkpoints[plan.checkpoints.length - 1]);
+  const lastFinish = localMinutes(lastPlan.finish);
+  const endMin = finishCut ? Math.max(localMinutes(finishCut.at), lastFinish) : lastFinish + (lastFinish - startMin) * 0.1;
+  const fx = (iso: string) => M + ((localMinutes(iso) - startMin) / Math.max(1, endMin - startMin)) * leftW;
+  doc.setDrawColor(...TEXT);
+  doc.setLineWidth(0.4);
+  doc.line(M, fy, M + leftW, fy);
+  if (plans.length > 1) {
+    doc.setFillColor(205, 219, 211);
+    doc.roundedRect(fx(first.finish), fy - 1.4, Math.max(1, fx(lastPlan.finish) - fx(first.finish)), 2.8, 1.4, 1.4, 'F');
+  }
+  doc.setFillColor(...rgb(ACCENT_COLOR));
+  doc.circle(fx(plan.finish), fy, 1.6, 'F');
+  doc.setFontSize(6.5);
+  doc.setTextColor(...MUTED);
+  doc.text(`Départ ${formatClock(plan.start)}`, M, fy + 4.5);
+  if (finishCut) {
+    doc.setDrawColor(...rgb(STATUS_COLORS.MISSED));
+    doc.setLineWidth(0.6);
+    doc.line(M + leftW, fy - 2.4, M + leftW, fy + 1.6);
+    doc.setTextColor(...rgb(STATUS_COLORS.MISSED));
+    doc.text(`Barrière d'arrivée ${formatClock(finishCut.at)}`, M + leftW, fy + 4.5, { align: 'right' });
+  }
+
+  // Droite : les scénarios, puis « À surveiller »
+  let ry = top + 2;
+  if (plans.length > 1) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7);
     doc.setTextColor(...MUTED);
-    doc.text(p.scenario.name.toUpperCase() + (isSelected ? '  ·  DÉTAILLÉ' : ''), x + 3.5, y + 5.5);
-    doc.setFontSize(15);
-    doc.setTextColor(...TEXT);
-    doc.text(formatClock(p.finish), x + 3.5, y + 13);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
+    doc.text('SCÉNARIOS', right, ry);
+    ry += 5;
+    plans.forEach((p, i) => {
+      const on = i === selected;
+      doc.setFont('helvetica', on ? 'bold' : 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...(on ? TEXT : MUTED));
+      doc.text(p.scenario.name + (on ? ' (détaillé)' : ''), right, ry);
+      doc.text(formatClock(p.finish), PAGE_W - M, ry, { align: 'right' });
+      ry += 4.6;
+    });
+    doc.setDrawColor(...BORDER);
+    doc.setLineWidth(0.2);
+    doc.line(right, ry - 2.6, PAGE_W - M, ry - 2.6);
+    ry += 2;
+  }
+  const tightest = tightestCutoff(plan);
+  const worst = worstCutoff(plans);
+  if (tightest) {
+    const watchTop = ry - 3;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
     doc.setTextColor(...MUTED);
-    doc.text(`${formatDuration(p.totalDuration)} de course · arrêts ${formatDuration(p.totalStops)}`, x + 3.5, y + 18);
-    const tightest = tightestCutoff(p);
-    if (tightest) {
-      const margin = formatHm(tightest.cutoff.marginMinutes);
-      doc.text(fit(doc, `Plus serrée : ${pdfText(tightest.eta.name)}`, w - 9 - badgeWidth(doc, margin)), x + 3.5, y + 23);
-      badge(doc, margin, tightest.eta.status, x + w - 3.5, y + 23);
+    doc.text('À SURVEILLER', right + 3.5, ry);
+    ry += 4.6;
+    const line = (label: string, name: string, status: CutoffStatus, minutes: number) => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...TEXT);
+      doc.text(fit(doc, `${label} : ${pdfText(name)}`, rightW - 3.5), right + 3.5, ry);
+      ry += 4.4;
+      badge(doc, marginText(status, minutes), status, right + 3.5 + badgeWidth(doc, marginText(status, minutes)), ry);
+      ry += 5;
+    };
+    line('Barrière la plus serrée', tightest.eta.name, tightest.eta.status, tightest.cutoff.marginMinutes);
+    if (worst && worst.scenario !== selected && worst.cutoff.marginMinutes < tightest.cutoff.marginMinutes) {
+      line(`Au pire (${plans[worst.scenario].scenario.name.toLowerCase()})`, worst.eta.name, worst.eta.status, worst.cutoff.marginMinutes);
     }
-  });
-  return y + h;
+    doc.setDrawColor(...TEXT);
+    doc.setLineWidth(0.8);
+    doc.line(right, watchTop, right, ry - 3);
+  }
+  return Math.max(fy + 6, ry);
+}
+
+/** « sam 02h35 » → [« sam », « 02h35 »]. */
+function splitClock(text: string): [string, string] {
+  const i = text.indexOf(' ');
+  return i < 0 ? ['', text] : [text.slice(0, i), text.slice(i + 1)];
 }
 
 /** Coupe le texte avec « … » pour qu'il tienne dans la largeur (police et taille courantes). */
@@ -501,7 +720,7 @@ function badge(doc: jsPDF, text: string, status: CutoffStatus, right: number, ba
 
 function profile(doc: jsPDF, course: CourseView, plan: RacePlan, top: number): number {
   const track = course.track!;
-  let y = sectionTitle(doc, `Profil · ${formatKm(track.distanceKm)} km, ${Math.round(track.gainM)} m D+ mesurés sur la trace`, top);
+  let y = sectionTitle(doc, `Profil · ${formatKm(plan.totalDistanceKm)} km, ${Math.round(plan.totalGainM)} m D+`, top);
   const left = M + 10;
   const width = CONTENT_W - 10;
   const plotTop = y + 7;
@@ -520,10 +739,20 @@ function profile(doc: jsPDF, course: CourseView, plan: RacePlan, top: number): n
   doc.setLineWidth(0.15);
   for (const v of niceTicks(yMin, yMax, 4)) {
     doc.line(left, py(v), left + width, py(v));
-    doc.text(String(v), left - 1.5, py(v) + 1, { align: 'right' });
+    doc.text(`${v} m`, left - 1.5, py(v) + 1, { align: 'right' });
   }
   for (const v of niceTicks(0, maxKm, 10)) {
     doc.text(`${v} km`, px(v), plotTop + height + 4, { align: 'center' });
+  }
+
+  // Nuit : bandes grisées, comme à l'écran.
+  const nights = nightSpans(plan, course.markers);
+  doc.setFillColor(...NIGHT);
+  for (const [from, to] of nights) doc.rect(px(from), plotTop, Math.max(0, px(to) - px(from)), height, 'F');
+  if (nights[0]) {
+    doc.setFontSize(6.5);
+    doc.setTextColor(...MUTED);
+    doc.text('de nuit', px(nights[0][0]) + 1.2, plotTop + 3);
   }
 
   // Relief : 400 points suffisent à l'œil et gardent le PDF léger.
@@ -538,21 +767,31 @@ function profile(doc: jsPDF, course: CourseView, plan: RacePlan, top: number): n
   doc.setLineWidth(0.35);
   doc.lines(relative(pts), pts[0][0], pts[0][1], [1, 1], 'S', false);
 
-  // Ravitos : trait pointillé et pastille colorée selon la marge du scénario détaillé
+  // Ravitos : trait pointillé et forme du statut (rond, triangle, carré, anneau), comme sur la carte et le profil.
   course.markers.forEach((m, i) => {
-    const color = rgb(STATUS_COLORS[plan.checkpoints[i]?.status ?? 'NONE']);
+    const status = plan.checkpoints[i]?.status ?? 'NONE';
+    const color = rgb(STATUS_COLORS[status]);
     const x = px(m.trackKm);
+    const cy = plotTop - 3.4;
+    const r = m.aid === 'FULL' ? 2.5 : 2.1;
     doc.setDrawColor(...color);
     doc.setLineWidth(0.2);
     doc.setLineDashPattern([0.8, 0.8], 0);
     doc.line(x, plotTop - 1, x, base);
     doc.setLineDashPattern([], 0);
     doc.setFillColor(...color);
-    doc.circle(x, plotTop - 3.2, m.aid === 'FULL' ? 2.4 : 2, 'F');
+    if (status === 'TIGHT') doc.triangle(x, cy - r * 1.25, x - r * 1.2, cy + r * 0.85, x + r * 1.2, cy + r * 0.85, 'F');
+    else if (status === 'MISSED') doc.rect(x - r, cy - r, 2 * r, 2 * r, 'F');
+    else if (status === 'NONE') {
+      doc.setFillColor(255, 255, 255);
+      doc.setLineWidth(0.35);
+      doc.circle(x, cy, r, 'FD');
+    } else doc.circle(x, cy, r, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(m.code.length > 2 ? 4.5 : 5.5);
-    doc.setTextColor(255, 255, 255);
-    doc.text(pdfText(m.code), x, plotTop - 2.3, { align: 'center' });
+    if (status === 'NONE') doc.setTextColor(...color);
+    else doc.setTextColor(255, 255, 255);
+    doc.text(pdfText(m.code), x, cy + (status === 'TIGHT' ? 1.4 : 0.9), { align: 'center' });
   });
   doc.setFont('helvetica', 'normal');
   return base + 5;
@@ -598,7 +837,11 @@ function servicesText(services: Service[] | undefined): string {
   return (services ?? []).map((s) => SERVICE_INFO[s].short).join(' · ');
 }
 
+/** Titre de section sous un filet noir, comme les blocs de « Mon plan ». */
 function sectionTitle(doc: jsPDF, title: string, y: number): number {
+  doc.setDrawColor(...TEXT);
+  doc.setLineWidth(0.6);
+  doc.line(M, y - 5, PAGE_W - M, y - 5);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(...TEXT);

@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerE
 import type { Marker, RacePlan, TrackSummary } from '../api/types';
 import { STATUS_COLORS, TRACK_COLOR } from '../lib/colors';
 import { statusShapePaint, statusShapePath, statusTextOffset } from '../lib/markerShape';
-import { durationMinutes, formatClockFromMinutes, formatKm } from '../lib/format';
-import { estimatedMinutesAt } from '../lib/plan';
+import { formatClockFromMinutes, formatKm } from '../lib/format';
+import { estimatedMinutesAt, nightSpans } from '../lib/plan';
 import { niceTicks, pointAtKm } from '../lib/track';
 
 interface Props {
@@ -170,30 +170,6 @@ export function ElevationProfile({ track, markers, plan, hoverKm, onHover }: Pro
       </div>
     </div>
   );
-}
-
-/**
- * Portions de la trace courues de nuit (km de la trace), d'après la part de nuit de chaque tronçon : une nuit
- * qui commence en fin de tronçon, ou qui finit en début de tronçon. Les tronçons voisins de nuit sont fusionnés.
- */
-export function nightSpans(plan: RacePlan, markers: Marker[]): [number, number][] {
-  const spans: [number, number][] = [];
-  plan.checkpoints.forEach((eta, i) => {
-    const from = markers[i - 1]?.trackKm;
-    const to = markers[i]?.trackKm;
-    if (i === 0 || from === undefined || to === undefined || !eta.legNightDuration) return;
-    const night = durationMinutes(eta.legNightDuration);
-    const total = durationMinutes(eta.legDuration);
-    if (night < 1 || total <= 0) return;
-    const share = Math.min(1, night / total);
-    // Nuit qui tombe pendant le tronçon : le tronçon d'avant était de jour.
-    const prevNight = durationMinutes(plan.checkpoints[i - 1]?.legNightDuration ?? 'PT0M') > 0;
-    const span: [number, number] = share >= 0.999 || prevNight ? [from, from + (to - from) * share] : [to - (to - from) * share, to];
-    const last = spans[spans.length - 1];
-    if (last && Math.abs(last[1] - span[0]) < 0.05) last[1] = span[1];
-    else spans.push(span);
-  });
-  return spans;
 }
 
 function useWidth(ref: React.RefObject<HTMLElement>): number {
