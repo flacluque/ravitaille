@@ -166,6 +166,12 @@ export function RavitosView({ plan, services, profile, onProfileChange, crew, on
   );
 }
 
+/** « 25 », « 25,5 », « 25 g », « 25g » : on garde le premier nombre saisi (0 si aucun). */
+export function parseGrams(text: string): number {
+  const m = /\d+(?:[.,]\d+)?/.exec(text);
+  return m ? Number(m[0].replace(',', '.')) : 0;
+}
+
 const PART_KEY = 'trail-planner:ravitos-partie';
 const PARTS: ['deroule' | 'reglages', string][] = [['deroule', 'Déroulé'], ['reglages', 'Réglages']];
 
@@ -302,10 +308,18 @@ function ProfileCard({ profile, onChange }: { profile: NutritionProfile; onChang
   const setProduct = (id: string, patch: Partial<Product>) =>
     set({ products: profile.products.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
   const drink = profile.products.find((p) => p.enabled && p.kind === 'DRINK');
-  const carbs = Number(draft.carbs.replace(',', '.'));
+  const carbs = parseGrams(draft.carbs);
   const canAdd = draft.name.trim() !== '' && carbs > 0;
+  // Bouton toujours actif : un clic sur une saisie incomplète dit ce qui manque au lieu de rester grisé sans raison.
+  const [tried, setTried] = useState(false);
+  const missing = draft.name.trim() === '' ? 'Donne un nom au produit.'
+    : !(carbs > 0) ? 'Indique les glucides en grammes (un nombre, par exemple 25).' : null;
   function add() {
-    if (!canAdd) return;
+    if (!canAdd) {
+      setTried(true);
+      return;
+    }
+    setTried(false);
     set({ products: [...profile.products, { id: `p${Date.now().toString(36)}`, name: draft.name.trim(), kind: draft.kind, carbsG: carbs, enabled: true }] });
     setDraft({ name: '', carbs: '', kind: draft.kind });
   }
@@ -375,7 +389,7 @@ function ProfileCard({ profile, onChange }: { profile: NutritionProfile; onChang
             </li>
           ))}
         </ul>
-        <div className="product-add">
+        <form className="product-add" onSubmit={(e) => { e.preventDefault(); add(); }}>
           <label>Nom du produit
             <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Ex. : Barre Näak" /></label>
           <label>Glucides (g)
@@ -386,8 +400,9 @@ function ProfileCard({ profile, onChange }: { profile: NutritionProfile; onChang
               <option value="SOLID">Solide (barre, compote…)</option>
               <option value="DRINK">Boisson (par flasque)</option>
             </select></label>
-          <button type="button" onClick={add} disabled={!canAdd}>Ajouter</button>
-        </div>
+          <button type="submit">Ajouter</button>
+          {tried && missing && <p className="field-error product-add-error" role="alert">{missing}</p>}
+        </form>
       </div>
 
       <details className="profile-fine">

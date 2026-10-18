@@ -1094,3 +1094,4 @@ button.cv-secondary { width: 100%; min-height: 48px; background: var(--surface);
 .race-finish p.small { font-size: var(--fs-small); }
 .example-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
   padding: 10px 14px; border-left: 4px solid var(--text); background: var(--surface-2); }
+.product-add-error { flex-basis: 100%; margin: 0; }
