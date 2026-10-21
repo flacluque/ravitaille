@@ -131,8 +131,10 @@ function minutesAt(km: number, stops: { km: number; eta: RacePlan['checkpoints']
 }
 
 const SEMICIRCLES = 2 ** 31 / 180;
+// Types présents dès les premières versions du profil FIT : les plus récents (aidStation, checkpoint) s'affichent
+// dans l'appli Garmin Connect mais peuvent être ignorés par la montre (constaté sur une Fenix 7).
 const COURSE_POINT_TYPE: Record<FitPointKind, string> = {
-  start: 'generic', finish: 'generic', aid: 'aidStation', water: 'water', checkpoint: 'checkpoint',
+  start: 'generic', finish: 'generic', aid: 'food', water: 'water', checkpoint: 'generic',
 };
 
 export function fitFilename(raceName: string): string {

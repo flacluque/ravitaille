@@ -50,7 +50,7 @@ describe('parcours FIT pour montre Garmin', () => {
     expect(messages.courseMesgs![0].name).toBe('Raid des Bogomiles 2026');
     expect(messages.recordMesgs!.length).toBeGreaterThan(100);
     expect(messages.coursePointMesgs!.map((p) => p.name)).toContain('Greffeil 3h45');
-    expect(messages.coursePointMesgs!.map((p) => p.type)).toContain('aidStation');
+    expect(new Set(messages.coursePointMesgs!.map((p) => p.type))).toEqual(new Set(['generic', 'food']));
     const recs = messages.recordMesgs as { timestamp: Date }[];
     const span = (recs[recs.length - 1].timestamp.getTime() - recs[0].timestamp.getTime()) / 60000;
     const expected = (new Date(plan.finish).getTime() - new Date(plan.start).getTime()) / 60000;
