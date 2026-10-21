@@ -11,18 +11,19 @@ const plan = plans[1];
 const services = course.race.checkpoints.map((c) => c.services ?? defaultServices(c.aid));
 
 describe('parcours FIT pour montre Garmin', () => {
-  it('nomme les points en 15 caractères sans accents, barrière en fin', () => {
-    expect(fitPointName('Greffeil', 'aid', '2026-10-24T03:45:00', true)).toBe('Greffeil 3h45');
-    expect(fitPointName("Molières-sur-l'Alberte", 'aid', '2026-10-23T14:30:00', true)).toBe('Molieres 14h30');
+  it('nomme les points en 15 caractères sans accents, heure prévue en fin', () => {
+    expect(fitPointName('Greffeil', 'aid', '2026-10-23T21:58:00', true)).toBe('Greffeil 21h58');
+    expect(fitPointName('Ladern-sur-Lauquet', 'aid', '2026-10-24T00:42:00', true)).toBe('Ladern 0h42');
+    expect(fitPointName("Molières-sur-l'Alberte", 'aid', '2026-10-23T13:26:00', true)).toBe('Molieres 13h26');
     expect(fitPointName('Lac de Cavayère', 'checkpoint', null, true)).toBe('Lac de Cavayere');
     expect(fitPointName('Départ Cité de Carcassonne', 'start', null, true)).toBe('Depart');
     expect(fitPointName('Palaja (camp de Villemaury)', 'aid', null, false)).toBe('Palaja');
-    for (const p of fitCoursePoints(course, plan, services, { cutInName: true, checkpoints: true })) expect(p.name.length).toBeLessThanOrEqual(15);
+    for (const p of fitCoursePoints(course, plan, services, { timeInName: true, checkpoints: true })) expect(p.name.length).toBeLessThanOrEqual(15);
   });
 
   it('peut laisser de côté les pointages sans ravito', () => {
-    const all = fitCoursePoints(course, plan, services, { cutInName: false, checkpoints: true });
-    const noCp = fitCoursePoints(course, plan, services.map((s, i) => (i === 1 ? [] : s)), { cutInName: false, checkpoints: false });
+    const all = fitCoursePoints(course, plan, services, { timeInName: false, checkpoints: true });
+    const noCp = fitCoursePoints(course, plan, services.map((s, i) => (i === 1 ? [] : s)), { timeInName: false, checkpoints: false });
     expect(all).toHaveLength(plan.checkpoints.length);
     expect(noCp).toHaveLength(plan.checkpoints.length - 1);
   });
@@ -39,7 +40,7 @@ describe('parcours FIT pour montre Garmin', () => {
   });
 
   it('écrit un fichier FIT de parcours que le SDK de Garmin relit', async () => {
-    const bytes = await buildCourseFit(course, plan, services, { cutInName: true, checkpoints: true });
+    const bytes = await buildCourseFit(course, plan, services, { timeInName: true, checkpoints: true });
     expect(bytes).not.toBeNull();
     const decoder = new Decoder(Stream.fromByteArray(bytes!));
     expect(decoder.isFIT()).toBe(true);
@@ -49,7 +50,9 @@ describe('parcours FIT pour montre Garmin', () => {
     expect(messages.fileIdMesgs![0].type).toBe('course');
     expect(messages.courseMesgs![0].name).toBe('Raid des Bogomiles 2026');
     expect(messages.recordMesgs!.length).toBeGreaterThan(100);
-    expect(messages.coursePointMesgs!.map((p) => p.name)).toContain('Greffeil 3h45');
+    const greffeil = plan.checkpoints.find((c) => c.name === 'Greffeil')!;
+    const hm = new Date(greffeil.arrival);
+    expect(messages.coursePointMesgs!.map((p) => p.name)).toContain(`Greffeil ${hm.getHours()}h${String(hm.getMinutes()).padStart(2, '0')}`);
     expect(new Set(messages.coursePointMesgs!.map((p) => p.type))).toEqual(new Set(['generic', 'food']));
     const recs = messages.recordMesgs as { timestamp: Date }[];
     const span = (recs[recs.length - 1].timestamp.getTime() - recs[0].timestamp.getTime()) / 60000;
@@ -58,7 +61,7 @@ describe('parcours FIT pour montre Garmin', () => {
   });
 
   it('ne produit rien sans trace GPX', async () => {
-    expect(await buildCourseFit({ ...course, track: null }, plan, services, { cutInName: true, checkpoints: true })).toBeNull();
+    expect(await buildCourseFit({ ...course, track: null }, plan, services, { timeInName: true, checkpoints: true })).toBeNull();
     expect(fitFilename('Raid des Bogomiles 2026')).toBe('raid-des-bogomiles-2026.fit');
   });
 });

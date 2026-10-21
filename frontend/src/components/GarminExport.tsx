@@ -21,7 +21,7 @@ const HELP = [
 const STEPS = {
   phone: [
     'Ouvre le fichier téléchargé (dans tes Téléchargements) avec l\'appli Garmin Connect.',
-    'Enregistre le parcours : tu y vois déjà les ravitos, leurs barrières et le profil.',
+    'Enregistre le parcours : tu y vois déjà les ravitos, leurs heures prévues et le profil.',
     '« Envoyer vers l\'appareil », puis synchronise ta montre.',
   ],
   connect: [
@@ -47,14 +47,14 @@ const ICON: Record<FitPointKind, string> = { start: '▶', finish: '⚑', aid: '
 export function GarminExport({ course, plans, selected, services, onClose }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [scenario, setScenario] = useState(Math.min(selected, plans.length - 1));
-  const [cutInName, setCutInName] = useState(true);
+  const [timeInName, setTimeInName] = useState(true);
   const [checkpoints, setCheckpoints] = useState(true);
   const [how, setHow] = useState<keyof typeof STEPS>('phone');
   const [state, setState] = useState<'idle' | 'busy' | 'done' | 'failed'>('idle');
   const plan = plans[scenario];
-  const options = { cutInName, checkpoints };
-  const points = useMemo(() => fitCoursePoints(course, plan, services, { cutInName, checkpoints }),
-    [course, plan, services, cutInName, checkpoints]);
+  const options = { timeInName, checkpoints };
+  const points = useMemo(() => fitCoursePoints(course, plan, services, { timeInName, checkpoints }),
+    [course, plan, services, timeInName, checkpoints]);
   const filename = fitFilename(course.race.name);
 
   // <dialog> modal : focus piégé, Échap et fond gérés par le navigateur. Pas de close() au démontage :
@@ -63,7 +63,7 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
     const d = dialog.current;
     if (d && !d.open) d.showModal();
   }, []);
-  useEffect(() => setState('idle'), [scenario, cutInName, checkpoints]);
+  useEffect(() => setState('idle'), [scenario, timeInName, checkpoints]);
 
   async function download() {
     setState('busy');
@@ -110,8 +110,9 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
 
           <section className="garmin-part" aria-labelledby="garmin-opts">
             <span id="garmin-opts" className="overline">Sur la montre</span>
-            <label className="check"><input type="checkbox" checked={cutInName} onChange={(e) => setCutInName(e.target.checked)} />
-              Barrière horaire dans le nom des points</label>
+            <label className="check"><input type="checkbox" checked={timeInName} onChange={(e) => setTimeInName(e.target.checked)} />
+              Heure de passage prévue dans le nom des points</label>
+            <span className="muted small">Celle du scénario choisi ci-dessus, par exemple « Greffeil 21h58 ».</span>
             <label className="check"><input type="checkbox" checked={checkpoints} onChange={(e) => setCheckpoints(e.target.checked)} />
               Aussi les pointages sans ravito</label>
           </section>
@@ -144,7 +145,7 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
             </div>
             <ol>{STEPS[how].map((s) => <li key={s}>{s}</li>)}</ol>
             <p><strong>Une seule fois, sur la montre :</strong> dans les réglages de ton activité Trail, ajoute un écran de données
-              personnalisé avec le champ « Waypoint suivant » (le nom du prochain ravito, avec sa barrière), et les champs de
+              personnalisé avec le champ « Waypoint suivant » (le nom du prochain ravito, avec l'heure où tu dois y arriver), et les champs de
               navigation qui t'intéressent, comme la distance jusqu'à ce point. Les noms des champs varient selon les modèles.</p>
             <p className="garmin-dday"><strong>Le jour J :</strong> lance une activité Trail, puis <strong>Navigation › Parcours ›
               {' '}{course.race.name} › Suivre le parcours</strong>.</p>

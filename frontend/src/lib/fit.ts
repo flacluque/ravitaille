@@ -1,6 +1,5 @@
 import type { CourseView, RacePlan, Service } from '../api/types';
 import { durationMinutes, localMinutes } from './format';
-import { bindingCutoff } from './plan';
 
 /**
  * Parcours pour montre Garmin (fichier FIT « course »), généré dans le navigateur : la trace, chaque point
@@ -9,8 +8,8 @@ import { bindingCutoff } from './plan';
  * Le SDK FIT de Garmin n'est chargé qu'au premier export.
  */
 export interface FitOptions {
-  /** Ajoute l'heure de la barrière à la fin du nom du point (« Greffeil 3h45 »). */
-  cutInName: boolean;
+  /** Ajoute l'heure de passage prévue par le plan à la fin du nom du point (« Greffeil 21h58 »). */
+  timeInName: boolean;
   /** Garde aussi les pointages sans ravito. */
   checkpoints: boolean;
 }
@@ -42,9 +41,9 @@ function shortClock(iso: string): string {
   return `${Math.floor(day / 60)}h${String(day % 60).padStart(2, '0')}`;
 }
 
-/** Nom du point sur la montre : 15 caractères sans accents, la barrière à la fin si demandé. */
-export function fitPointName(name: string, kind: FitPointKind, cutoffIso: string | null, withCut: boolean): string {
-  const tail = withCut && cutoffIso ? ` ${shortClock(cutoffIso)}` : '';
+/** Nom du point sur la montre : 15 caractères sans accents, l'heure prévue à la fin si demandé. */
+export function fitPointName(name: string, kind: FitPointKind, timeIso: string | null, withTime: boolean): string {
+  const tail = withTime && timeIso ? ` ${shortClock(timeIso)}` : '';
   const room = NAME_MAX - tail.length;
   let base = kind === 'start' ? 'Depart' : kind === 'finish' ? 'Arrivee' : ascii(name.replace(/\s*\(.*\)\s*$/, ''));
   if (base.length > room) base = base.split(/[ '-]/)[0];
@@ -68,15 +67,15 @@ export function fitCoursePoints(course: CourseView, plan: RacePlan, services: Se
     if (!marker) return [];
     const kind = pointKind(i, last, services[i] ?? []);
     if (kind === 'checkpoint' && !options.checkpoints) return [];
-    const cutoff = bindingCutoff(eta);
+    const time = i === 0 ? eta.departure : eta.arrival;
     return [{
       index: i,
-      name: fitPointName(eta.name, kind, cutoff?.at ?? null, options.cutInName),
+      name: fitPointName(eta.name, kind, time, options.timeInName),
       kind,
       trackKm: marker.trackKm,
       lat: marker.lat,
       lon: marker.lon,
-      minutes: localMinutes(i === 0 ? eta.departure : eta.arrival) - start,
+      minutes: localMinutes(time) - start,
     }];
   });
 }
