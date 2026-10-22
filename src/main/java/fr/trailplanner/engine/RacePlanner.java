@@ -17,7 +17,7 @@ import java.util.List;
 /**
  * Calcule les heures de passage à chaque point du roadbook.
  * <p>
- * L'effort de chaque tronçon est découpé en petits pas (0,05 km-effort) : à chaque pas, on
+ * L'effort de chaque tronçon (selon ses pentes, voir {@link TerrainEffort}) est découpé en petits pas (0,05) : à chaque pas, on
  * avance l'horloge selon le modèle d'effort, en appliquant le facteur de nuit si l'horloge
  * est dans la plage nocturne, et le facteur de forme du scénario. Aux ravitos, on ajoute le temps d'arrêt du scénario.
  */
@@ -76,7 +76,7 @@ public class RacePlanner {
         for (int i = 0; i < weighted.size(); i++) {
             ReferenceWeighting.Weighted w = weighted.get(i);
             ReferenceWeighting.Weighted alone = new ReferenceWeighting.Weighted(w.reference(), w.effortKm(),
-                    w.raceMinutes(), 1, w.recencyFactor(), w.distanceFactor(), w.formFactor());
+                    w.raceMinutes(), 1, w.recencyFactor(), w.distanceFactor(), w.formFactor(), w.terrainEffortKm());
             TrainingHistory.PrepBlock block = form == null ? null : form.referenceBlocks().get(i);
             Double weekly = block != null && block.usable() ? block.weeklyEffortKm() : null;
             RacePlan solo = simulate(race, legs, source,
@@ -117,7 +117,7 @@ public class RacePlanner {
             // --- Course sur le tronçon, pas à pas ---
             LocalDateTime legStart = clock;
             double legNightSeconds = 0;
-            double legEffort = leg.effortKm();
+            double legEffort = leg.terrainEffortKm();
             int steps = Math.max(1, (int) Math.ceil(legEffort / STEP_EFFORT_KM));
             double stepEffort = legEffort / steps;
             double clockSeconds = 0;

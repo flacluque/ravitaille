@@ -10,10 +10,17 @@ import fr.trailplanner.model.Checkpoint;
  * @param distanceKm distance du tronçon
  * @param gainM      D+ du tronçon
  * @param lossM      D- du tronçon
+ * @param terrainEffortKm effort selon la pente, montées et descentes (voir {@link TerrainEffort}) : c'est lui qui
+ *                   règle le temps du tronçon
  */
-public record Leg(Checkpoint from, Checkpoint to, double distanceKm, double gainM, double lossM) {
+public record Leg(Checkpoint from, Checkpoint to, double distanceKm, double gainM, double lossM, double terrainEffortKm) {
 
-    /** Kilomètre-effort du tronçon : distance + D+/100 (convention ITRA). */
+    /** Tronçon sans profil : montée et descente à pente moyenne. */
+    public Leg(Checkpoint from, Checkpoint to, double distanceKm, double gainM, double lossM) {
+        this(from, to, distanceKm, gainM, lossM, TerrainEffort.ofTotals(distanceKm, gainM, lossM));
+    }
+
+    /** Kilomètre-effort du tronçon : distance + D+/100 (convention ITRA), pour comparer les distances. */
     public double effortKm() {
         return EffortModel.effortKm(distanceKm, gainM);
     }
