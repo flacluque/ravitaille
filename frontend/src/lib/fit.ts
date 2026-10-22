@@ -84,7 +84,8 @@ export function fitCoursePoints(course: CourseView, plan: RacePlan, services: Se
 /**
  * Heure prévue (minutes depuis le départ) le long de la trace : les points de la trace, plus un second point à
  * chaque ravito pour l'arrêt (même position, heure de départ) : le partenaire virtuel s'arrête aussi.
- * Entre deux ravitos, le temps suit le terrain (km-effort) : le partenaire virtuel ralentit dans les montées.
+ * Entre deux ravitos, le temps suit le terrain : le partenaire virtuel ralentit dans les montées et les descentes
+ * raides, et accélère dans les descentes douces.
  */
 export function timedTrack(course: CourseView, plan: RacePlan): { km: number; lat: number; lon: number; ele: number; minutes: number }[] {
   const track = course.track;

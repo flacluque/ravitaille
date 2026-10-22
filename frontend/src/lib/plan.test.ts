@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckpointEta, Marker, RacePlan } from '../api/types';
 import { formatClockFromMinutes } from './format';
-import { bindingCutoff, effortShare, estimatedMinutesAt, tightestCutoff, worstCutoff } from './plan';
+import { bindingCutoff, effortShare, estimatedMinutesAt, terrainFactor, tightestCutoff, worstCutoff } from './plan';
 
 function eta(partial: Partial<CheckpointEta>): CheckpointEta {
   return {
@@ -79,6 +79,17 @@ describe('heure estimée sur la trace', () => {
     expect(effortShare(3, 0, 9, profile)).toBeCloseTo(7 / 13);
     expect(effortShare(9, 0, 9, profile)).toBe(1);
     expect(effortShare(-1, 0, 9, profile)).toBe(0);
+  });
+
+  it('fait aller plus vite dans une descente douce et plus lentement dans une raide', () => {
+    // 2 km : 1 km de descente douce (−10 %), puis 1 km de descente raide (−30 %).
+    const profile = [0, 0.5, 1, 1.5, 2].map((km) => ({
+      km, cumulativeGainM: 0, cumulativeLossM: km <= 1 ? km * 100 : 100 + (km - 1) * 300, elevationM: 0, lat: 0, lon: 0,
+    }));
+    expect(terrainFactor(-0.1)).toBeCloseTo(0.7);
+    expect(terrainFactor(-0.3)).toBeCloseTo(1.1);
+    // Le premier km (doux) prend 0,7 / (0,7 + 1,1) du temps du tronçon.
+    expect(effortShare(1, 0, 2, profile)).toBeCloseTo(0.7 / 1.8);
   });
 });
 

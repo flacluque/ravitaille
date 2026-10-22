@@ -68,24 +68,64 @@ export function estimatedMinutesAt(trackKm: number, plan: RacePlan, markers: Mar
 }
 
 /**
- * Part du tronçon [k0, k1] déjà faite au km `km`, en km-effort (1 km + 1 par 100 m de D+) : on avance moins vite
- * dans les montées, comme dans le calcul du plan. Sans profil, la part de distance.
+ * Part du tronçon [k0, k1] déjà faite au km `km`, en effort selon la pente (voir terrainFactor) : on avance moins
+ * vite dans les montées et les descentes raides, plus vite dans les descentes douces, comme dans le calcul du plan.
+ * Sans profil, la part de distance.
  */
 export function effortShare(km: number, k0: number, k1: number, profile?: ProfilePoint[]): number {
   if (k1 <= k0) return 0;
   const x = Math.min(k1, Math.max(k0, km));
   if (!profile || profile.length < 2) return (x - k0) / (k1 - k0);
-  const effort = (k: number) => k + gainAt(profile, k) / 100;
-  const total = effort(k1) - effort(k0);
-  return total > 0 ? (effort(x) - effort(k0)) / total : (x - k0) / (k1 - k0);
+  const total = terrainEffortAt(profile, k1) - terrainEffortAt(profile, k0);
+  return total > 0 ? (terrainEffortAt(profile, x) - terrainEffortAt(profile, k0)) / total : (x - k0) / (k1 - k0);
 }
 
-/** D+ cumulé au km `km` de la trace, interpolé entre deux points du profil. */
-export function gainAt(profile: ProfilePoint[], km: number): number {
+/**
+ * Coefficient de temps selon la pente g (m/m, négative en descente), 1 = plat. Même règle que le serveur
+ * (TerrainEffort) : montée 1 + 10 g (ITRA) ; descente 0,7 à −10 %, puis 0,9 à −20 %, 1,1 à −30 %, 1,3 à −40 %.
+ */
+export function terrainFactor(grade: number): number {
+  if (grade >= 0) return 1 + 10 * grade;
+  const down = -grade;
+  return down <= 0.1 ? 1 - 3 * down : 0.7 + 2 * (down - 0.1);
+}
+
+/** Effort d'un bout de parcours (km, D+ et D- en m) : montée et descente à pente moyenne. */
+export function terrainOfTotals(distanceKm: number, gainM: number, lossM: number): number {
+  const gain = Math.max(0, gainM);
+  const loss = Math.max(0, lossM);
+  if (distanceKm <= 0) return gain / 100;
+  if (gain + loss <= 0) return distanceKm;
+  const up = (distanceKm * gain) / (gain + loss);
+  const down = distanceKm - up;
+  return (up > 0 ? up * terrainFactor(gain / (up * 1000)) : gain / 100)
+    + (down > 0 ? down * terrainFactor(-loss / (down * 1000)) : 0);
+}
+
+const cumulative = new WeakMap<ProfilePoint[], number[]>();
+
+/** Effort selon la pente cumulé à chaque point du profil (calculé une fois par profil). */
+function cumulativeTerrain(profile: ProfilePoint[]): number[] {
+  let out = cumulative.get(profile);
+  if (!out) {
+    out = [0];
+    for (let i = 1; i < profile.length; i++) {
+      const a = profile[i - 1];
+      const b = profile[i];
+      out.push(out[i - 1] + terrainOfTotals(b.km - a.km, b.cumulativeGainM - a.cumulativeGainM, b.cumulativeLossM - a.cumulativeLossM));
+    }
+    cumulative.set(profile, out);
+  }
+  return out;
+}
+
+/** Effort selon la pente cumulé au km `km` de la trace, interpolé entre deux points du profil. */
+export function terrainEffortAt(profile: ProfilePoint[], km: number): number {
+  const c = cumulativeTerrain(profile);
   let lo = 0;
   let hi = profile.length - 1;
-  if (km <= profile[0].km) return profile[0].cumulativeGainM;
-  if (km >= profile[hi].km) return profile[hi].cumulativeGainM;
+  if (km <= profile[0].km) return 0;
+  if (km >= profile[hi].km) return c[hi];
   while (hi - lo > 1) {
     const mid = (lo + hi) >> 1;
     if (profile[mid].km <= km) lo = mid;
@@ -94,7 +134,7 @@ export function gainAt(profile: ProfilePoint[], km: number): number {
   const a = profile[lo];
   const b = profile[hi];
   const f = b.km === a.km ? 0 : (km - a.km) / (b.km - a.km);
-  return a.cumulativeGainM + (b.cumulativeGainM - a.cumulativeGainM) * f;
+  return c[lo] + (c[hi] - c[lo]) * f;
 }
 
 /**
