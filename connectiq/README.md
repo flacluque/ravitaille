@@ -43,6 +43,6 @@ Avec la distance et le temps écoulé donnés par la montre :
 
 ## À vérifier sur la montre
 
-Ce code n'a pas encore été compilé (le SDK n'était pas disponible là où il a été écrit) : le premier build peut
-demander quelques corrections. À vérifier aussi : que les réglages acceptent un code de 500 à 1 000 caractères,
-l'affichage des accents, et la lisibilité des polices sur l'écran 260 × 260 de la Fenix 7.
+Le champ compile et tourne sur le simulateur Fenix 7 (code du plan, prochain ravito, écart au plan). Reste à
+vérifier sur la montre : l'alerte à 300 m, que les réglages de l'appli Connect IQ acceptent un code de 500 à
+1 000 caractères, et la lisibilité en course sur l'écran 260 × 260.
