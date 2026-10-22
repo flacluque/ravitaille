@@ -9,8 +9,8 @@ import java.util.List;
  *
  * <h2>Principe</h2>
  * <ul>
- *   <li>Kilomètre-effort (ITRA) : E = distance (km) + D+ (m) / 100.
- *       100 m de montée « coûtent » autant qu'un kilomètre à plat.</li>
+ *   <li>Effort selon la pente ({@link TerrainEffort}) : en montée, la règle ITRA (100 m de D+ ≈ 1 km à plat) ;
+ *       en descente, plus rapide que le plat si elle est douce, plus lent si elle est raide.</li>
  *   <li>Loi de Riegel appliquée à l'effort : le temps pour atteindre l'effort cumulé E vaut
  *       T(E) = a × E^b. Avec b &gt; 1, l'allure se dégrade naturellement au fil de la course,
  *       ce qui modélise la fatigue sans paramètre supplémentaire.</li>
@@ -38,11 +38,14 @@ public final class EffortModel {
         return calibrateWeighted(ReferenceWeighting.weigh(references, Double.NaN, null), exponent);
     }
 
-    /** a = Σ poids × T_ref / E_ref^b, avec les poids de {@link ReferenceWeighting}. */
+    /**
+     * a = Σ poids × T_ref / E_ref^b, avec les poids de {@link ReferenceWeighting}. E_ref est l'effort selon la pente
+     * ({@link TerrainEffort}), dans la même unité que les tronçons de la course.
+     */
     public static EffortModel calibrateWeighted(List<ReferenceWeighting.Weighted> references, double exponent) {
         double a = 0;
         for (ReferenceWeighting.Weighted ref : references) {
-            a += ref.weight() * ref.raceMinutes() / Math.pow(ref.effortKm(), exponent);
+            a += ref.weight() * ref.raceMinutes() / Math.pow(ref.terrainEffortKm(), exponent);
         }
         return new EffortModel(a, exponent);
     }

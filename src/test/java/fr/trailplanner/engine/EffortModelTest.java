@@ -18,10 +18,13 @@ class EffortModelTest {
         assertEquals(92, EffortModel.effortKm(60, 3200), 1e-9);
     }
 
+    /** Effort de la référence selon la pente (autant de D- que de D+, pente moyenne). */
+    private static final double E_60K = TerrainEffort.ofReference(60, 3200);
+
     @Test
     void laCalibrationRetrouveLeTempsDeReference() {
         EffortModel m = EffortModel.calibrate(List.of(REF_60K), 1.07);
-        assertEquals(528, m.minutesAt(92), 1e-6);
+        assertEquals(528, m.minutesAt(E_60K), 1e-6);
     }
 
     @Test
@@ -35,7 +38,7 @@ class EffortModelTest {
     @Test
     void sansFatigueLeTempsEstProportionnel() {
         EffortModel m = EffortModel.calibrate(List.of(REF_60K), 1.0);
-        assertEquals(528.0 * 2, m.minutesAt(184), 1e-6);
+        assertEquals(528.0 * 2, m.minutesAt(2 * E_60K), 1e-6);
     }
 
     @Test
@@ -43,7 +46,7 @@ class EffortModelTest {
         var rapide = new ReferencePerformance("rapide", 60, 3200, Duration.ofHours(8));
         var lente = new ReferencePerformance("lente", 60, 3200, Duration.ofHours(10));
         EffortModel m = EffortModel.calibrate(List.of(rapide, lente), 1.07);
-        assertEquals(540, m.minutesAt(92), 1e-6);
+        assertEquals(540, m.minutesAt(E_60K), 1e-6);
     }
 
     @Test

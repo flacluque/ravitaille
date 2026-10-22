@@ -47,9 +47,10 @@ public final class ReferenceWeighting {
      * @param recencyFactor   part du poids due à l'ancienneté (1 = récente ou sans date)
      * @param distanceFactor  part du poids due à l'écart de distance avec la course (1 = même effort)
      * @param formFactor      correction de forme appliquée au temps (1 = aucune, voir {@link TrainingForm})
+     * @param terrainEffortKm effort selon la pente (voir {@link TerrainEffort}), qui sert à la calibration
      */
     public record Weighted(ReferencePerformance reference, double effortKm, double raceMinutes, double weight,
-                           double recencyFactor, double distanceFactor, double formFactor) {}
+                           double recencyFactor, double distanceFactor, double formFactor, double terrainEffortKm) {}
 
     /**
      * @param targetEffortKm effort de la course à planifier ; NaN pour ignorer l'écart de distance
@@ -80,12 +81,13 @@ public final class ReferenceWeighting {
             double distance = Double.isNaN(targetEffortKm) ? 1 : 1 / (1 + Math.abs(Math.log(targetEffortKm / effort)));
             double weight = recency * distance * (training ? TRAINING_WEIGHT : 1);
             total += weight;
-            raw.add(new Weighted(ref, effort, minutes, weight, recency, distance, form));
+            raw.add(new Weighted(ref, effort, minutes, weight, recency, distance, form,
+                    TerrainEffort.ofReference(ref.distanceKm(), ref.elevationGainM())));
         }
         double sum = total;
         return raw.stream()
                 .map(w -> new Weighted(w.reference(), w.effortKm(), w.raceMinutes(), w.weight() / sum,
-                        w.recencyFactor(), w.distanceFactor(), w.formFactor()))
+                        w.recencyFactor(), w.distanceFactor(), w.formFactor(), w.terrainEffortKm()))
                 .toList();
     }
 

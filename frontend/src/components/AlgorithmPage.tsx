@@ -54,7 +54,7 @@ export function AlgorithmPage({ plan }: { plan: RacePlan | undefined }) {
         <section className="card algo-mine">
           <h2>Ton plan en chiffres · scénario {plan.scenario.name.toLowerCase()}</h2>
           <dl>
-            <dt>Effort de la course</dt>
+            <dt>Kilomètre-effort (ITRA)</dt>
             <dd>{formatKm(plan.totalDistanceKm)} km + {Math.round(plan.totalGainM)} m D+ / 100 = <strong>{formatKm(plan.totalEffortKm)} km-effort</strong></dd>
             <dt>Exposant de fatigue b</dt>
             <dd><strong>{plan.scenario.fatigueExponent.toLocaleString('fr-FR')}</strong>, forme du jour ×{plan.scenario.paceFactor.toLocaleString('fr-FR')}, nuit ×{plan.scenario.nightFactor.toLocaleString('fr-FR')}</dd>
@@ -87,16 +87,40 @@ export function AlgorithmPage({ plan }: { plan: RacePlan | undefined }) {
       )}
 
       <section id="algo-effort">
-        <h2>1. Kilomètre-effort</h2>
+        <h2>1. Effort selon la pente</h2>
         <p>
-          Pour comparer des courses de profils différents, on ramène distance et dénivelé à une seule unité, le
-          kilomètre-effort, comme l'ITRA <Ref id="itra" /> :
+          Pour comparer des courses de profils différents, on ramène distance, montées et descentes à une seule unité.
+          Chaque bout de parcours compte pour sa distance × un coefficient qui dépend de sa pente :
         </p>
-        <p className="formula">E = distance (km) + D+ (m) / 100</p>
+        <div className="table-scroll">
+          <table>
+            <thead><tr><th>Pente</th><th className="num">Coefficient</th><th>Pourquoi</th></tr></thead>
+            <tbody>
+              <tr><td>Montée de g %</td><td className="num">1 + g / 10</td><td>Règle ITRA <Ref id="itra" /> : 100 m de D+ ≈ 1 km à plat</td></tr>
+              <tr><td>Plat</td><td className="num">1</td><td></td></tr>
+              <tr><td>Descente jusqu'à −10 %</td><td className="num">jusqu'à 0,7</td><td>On y va plus vite que sur le plat</td></tr>
+              <tr><td>Descente à −20 %</td><td className="num">0,9</td><td rowSpan={3}>Au-delà de −10 à −20 %, on freine : technique et appuis limitent</td></tr>
+              <tr><td>Descente à −30 %</td><td className="num">1,1</td></tr>
+              <tr><td>Descente à −40 %</td><td className="num">1,3</td></tr>
+            </tbody>
+          </table>
+        </div>
         <p>
-          100 m de montée « coûtent » autant qu'un kilomètre à plat. La descente n'est pas comptée à part : son coût
-          énergétique est faible <Ref id="minetti" />, et la fatigue qu'elle cause est prise en compte par la loi de
-          fatigue ci-dessous.
+          Le coût énergétique de la course est le plus bas entre −10 et −20 % <Ref id="minetti" /> ; plus raide, ce n'est
+          plus le souffle qui limite mais le freinage et la technique. Les seuils de descente sont un choix de départ, pas
+          encore calibrés sur tes sorties.
+        </p>
+        <p>
+          Avec la trace GPX, la pente est mesurée tous les 100 m ; sans trace, on prend la pente moyenne de la montée et de la
+          descente de chaque tronçon (D+ et D- du roadbook). Tes références, dont on ne connaît que la distance et le D+, sont
+          comptées de la même façon en supposant autant de descente que de montée, à pente moyenne. Pour rester comparable,
+          l'effort total de la course se mesure aussi à partir de ses totaux (distance, D+, D-) : le profil fin ne sert qu'à
+          répartir le temps entre les tronçons, et dans chaque tronçon (heure au survol du profil, partenaire virtuel, champ
+          Garmin).
+        </p>
+        <p>
+          Le kilomètre-effort de l'ITRA (E = distance + D+ / 100) reste l'unité pour comparer les distances des références et
+          le volume d'entraînement.
         </p>
       </section>
 
@@ -174,7 +198,7 @@ export function AlgorithmPage({ plan }: { plan: RacePlan | undefined }) {
       <section id="algo-simulation">
         <h2>5. Simulation pas à pas</h2>
         <ol>
-          <li>Le parcours est découpé en tronçons entre ravitos, chacun en pas de 0,05 km-effort.</li>
+          <li>Le parcours est découpé en tronçons entre ravitos, chacun en petits pas d'effort selon la pente (section 1).</li>
           <li>À chaque pas, le temps vaut a × ((E + ΔE)<sup>b</sup> − E<sup>b</sup>) × forme du jour, × facteur de nuit
             si l'horloge est dans la plage frontale.</li>
           <li>Aux ravitos, on ajoute l'arrêt du scénario. L'arrivée et chaque passage tombent de cette horloge.</li>
@@ -204,7 +228,8 @@ export function AlgorithmPage({ plan }: { plan: RacePlan | undefined }) {
         <h2>7. Limites</h2>
         <ul>
           <li>L'intensité de l'entraînement (fractionné, seuil) n'est pas mesurée sans fréquence cardiaque ni puissance.</li>
-          <li>La technicité du terrain, la chaleur et l'altitude ne sont pas modélisées.</li>
+          <li>La technicité du terrain n'est vue qu'à travers la pente ; la chaleur et l'altitude ne sont pas modélisées.</li>
+          <li>Les coefficients de descente sont les mêmes pour tous : un bon descendeur ira plus vite que prévu.</li>
           <li>Les études citées portent surtout sur la route (marathon, 100 km) : en trail, ce sont des ordres de grandeur.</li>
         </ul>
       </section>
@@ -224,7 +249,7 @@ export function AlgorithmPage({ plan }: { plan: RacePlan | undefined }) {
 }
 
 const TOC: [string, string][] = [
-  ['algo-effort', '1. Kilomètre-effort'], ['algo-riegel', '2. Loi de fatigue'], ['algo-references', '3. Références'],
+  ['algo-effort', '1. Effort selon la pente'], ['algo-riegel', '2. Loi de fatigue'], ['algo-references', '3. Références'],
   ['algo-forme', "4. Forme d'entraînement"], ['algo-simulation', '5. Simulation'], ['algo-nutrition', '6. Nutrition'],
   ['algo-limites', '7. Limites'], ['algo-sources', 'Sources'],
 ];

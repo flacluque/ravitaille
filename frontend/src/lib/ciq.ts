@@ -1,6 +1,6 @@
 import type { CourseView, RacePlan } from '../api/types';
 import { localMinutes } from './format';
-import { gainAt } from './plan';
+import { terrainEffortAt } from './plan';
 
 /**
  * Plan pour le champ de données Connect IQ « Trail Planner » : un texte compact que le coureur colle dans les
@@ -8,7 +8,7 @@ import { gainAt } from './plan';
  * montre, le prochain ravito, l'écart au plan et l'heure d'arrivée estimée. Ce module en est aussi la
  * référence : le code Monkey C (connectiq/) reprend les mêmes calculs.
  *
- * Format v1 : TP1;<heure du départ, minutes>;<km-effort cumulé à chaque km de la trace, en dixièmes>;<ravitos>
+ * Format v1 : TP1;<heure du départ, minutes>;<effort selon la pente cumulé à chaque km de la trace, en dixièmes>;<ravitos>
  * Ravito : nom~km de la trace (dixièmes)~arrivée~départ (minutes depuis le départ)~à faire (séparés par ^,
  * laissé vide pour l'instant : le champ n'affiche pas de consignes), ravitos séparés par |.
  */
@@ -26,7 +26,7 @@ export interface CiqRavito {
 export interface CiqPlan {
   /** Heure du départ, en minutes depuis minuit. */
   startClock: number;
-  /** Km-effort cumulé (1 km + 1 par 100 m de D+) à chaque km entier de la trace. */
+  /** Effort selon la pente (montées et descentes, voir terrainFactor) cumulé à chaque km entier de la trace. */
   effort: number[];
   ravitos: CiqRavito[];
 }
@@ -50,7 +50,7 @@ export function buildCiqPlan(course: CourseView, plan: RacePlan): CiqPlan | null
   if (!track || course.markers.length !== plan.checkpoints.length) return null;
   const start = localMinutes(plan.start);
   const maxKm = track.profile[track.profile.length - 1]?.km ?? 0;
-  const effort = Array.from({ length: Math.ceil(maxKm) + 1 }, (_, km) => km + gainAt(track.profile, km) / 100);
+  const effort = Array.from({ length: Math.ceil(maxKm) + 1 }, (_, km) => terrainEffortAt(track.profile, km));
   const last = plan.checkpoints.length - 1;
   const ravitos = plan.checkpoints.map((eta, i) => {
     return {
@@ -86,7 +86,7 @@ export function decodeCiqPlan(code: string): CiqPlan | null {
   return { startClock: Number(parts[1]), effort, ravitos };
 }
 
-/** Km-effort cumulé au km `km`, interpolé dans la table. */
+/** Effort selon la pente cumulé au km `km`, interpolé dans la table. */
 export function ciqEffortAt(p: CiqPlan, km: number): number {
   const e = p.effort;
   if (km <= 0) return e[0] ?? 0;
@@ -100,7 +100,7 @@ export const CIQ_AT_RAVITO_KM = 0.1;
 
 /**
  * Écart au plan (minutes, positif = retard) avec `km` parcourus en `elapsed` minutes. Au ravito, l'arrêt prévu ne
- * compte pas comme du retard ; entre deux ravitos, le temps prévu suit le terrain (km-effort).
+ * compte pas comme du retard ; entre deux ravitos, le temps prévu suit le terrain (montées et descentes).
  */
 export function ciqGap(p: CiqPlan, km: number, elapsed: number): number {
   const rs = p.ravitos;

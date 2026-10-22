@@ -47,21 +47,62 @@ public final class CourseBuilder {
     public static List<Leg> legs(RaceDefinition race, TrackProfile track, ElevationSource source) {
         List<Checkpoint> cps = race.checkpoints();
         List<Leg> legs = new ArrayList<>();
+        // Roadbook sans D- : on suppose autant de descente que de montée sur chaque tronçon, comme pour les références.
+        boolean lossKnown = cps.stream().anyMatch(c -> c.lossM() != null && c.lossM() > 0);
         for (int i = 1; i < cps.size(); i++) {
             Checkpoint from = cps.get(i - 1), to = cps.get(i);
             if (source == ElevationSource.ROADBOOK) {
-                double gain = to.gainM() - nz(from.gainM());
-                double loss = to.lossM() == null ? 0 : to.lossM() - nz(from.lossM());
-                legs.add(new Leg(from, to, to.km() - from.km(), Math.max(0, gain), Math.max(0, loss)));
+                double distance = to.km() - from.km();
+                double gain = Math.max(0, to.gainM() - nz(from.gainM()));
+                double loss = Math.max(0, nz(to.lossM()) - nz(from.lossM()));
+                if (track == null) {
+                    // D- affiché tel que donné (0 si inconnu) ; pour le calcul, autant de descente que de montée.
+                    legs.add(new Leg(from, to, distance, gain, loss,
+                            TerrainEffort.ofTotals(distance, gain, lossKnown ? loss : gain)));
+                } else {
+                    // Chiffres officiels pour la distance et le D+, forme des descentes lue sur la trace.
+                    TrackProfile.ProfilePoint p0 = onTrack(race, track, from);
+                    TrackProfile.ProfilePoint p1 = onTrack(race, track, to);
+                    double onTrackKmEffort = EffortModel.effortKm(p1.km() - p0.km(), p1.cumulativeGainM() - p0.cumulativeGainM());
+                    double descent = TerrainEffort.ofTrack(track, p0.km(), p1.km()) - onTrackKmEffort;
+                    double terrain = Math.max(0.5 * distance, EffortModel.effortKm(distance, gain) + descent);
+                    // D- absent du roadbook : celui de la trace.
+                    double legLoss = lossKnown ? loss : p1.cumulativeLossM() - p0.cumulativeLossM();
+                    legs.add(new Leg(from, to, distance, gain, legLoss, terrain));
+                }
             } else {
                 TrackProfile.ProfilePoint p0 = onTrack(race, track, from);
                 TrackProfile.ProfilePoint p1 = onTrack(race, track, to);
                 legs.add(new Leg(from, to, p1.km() - p0.km(),
                         p1.cumulativeGainM() - p0.cumulativeGainM(),
-                        p1.cumulativeLossM() - p0.cumulativeLossM()));
+                        p1.cumulativeLossM() - p0.cumulativeLossM(),
+                        TerrainEffort.ofTrack(track, p0.km(), p1.km())));
             }
         }
-        return legs;
+        boolean assumeLoss = source == ElevationSource.ROADBOOK && track == null && !lossKnown;
+        return normalized(legs, assumeLoss);
+    }
+
+    /**
+     * L'effort total de la course se mesure comme celui des références, à partir de ses totaux (distance, D+, D-) :
+     * une pente mesurée finement a toujours des passages plus raides que sa moyenne, et la course paraîtrait plus dure
+     * qu'une référence au profil identique. Le profil fin ne sert qu'à répartir cet effort entre les tronçons.
+     */
+    static List<Leg> normalized(List<Leg> legs, boolean lossEqualsGain) {
+        double distance = 0, gain = 0, loss = 0, fine = 0;
+        for (Leg leg : legs) {
+            distance += leg.distanceKm();
+            gain += leg.gainM();
+            loss += leg.lossM();
+            fine += leg.terrainEffortKm();
+        }
+        if (fine <= 0) {
+            return legs;
+        }
+        double scale = TerrainEffort.ofTotals(distance, gain, lossEqualsGain ? gain : loss) / fine;
+        return legs.stream()
+                .map(l -> new Leg(l.from(), l.to(), l.distanceKm(), l.gainM(), l.lossM(), l.terrainEffortKm() * scale))
+                .toList();
     }
 
     /** Position estimée d'un point du roadbook sur la trace. */
