@@ -26,14 +26,19 @@ Avec la distance et le temps écoulé donnés par la montre :
    l'export compile le champ pour chacun.
 2. Installe **Visual Studio Code** et l'extension **Monkey C** (Garmin). `Ctrl/Cmd+Shift+P` →
    « Monkey C: Generate a Developer Key » (une seule fois).
-3. Ouvre le dossier `connectiq/`, puis « Monkey C: Build for Device » → `fenix7`. Pour essayer d'abord :
-   « Monkey C: Run » lance le **simulateur** (Fichier › Paramètres de l'app pour coller un code, et
-   Simulation › Données d'activité pour faire avancer la course).
-4. Sur la montre, deux façons :
-   - **store Connect IQ en bêta** (sans câble) : « Monkey C: Export Project » produit un `.iq` à déposer sur
-     apps.garmin.com/developer en **application bêta** ; elle s'installe ensuite depuis l'appli Connect IQ du
-     téléphone, visible de toi seul ;
-   - **câble** : copier le `.prg` dans `GARMIN/Apps` de la montre.
+3. Ouvre le dossier `connectiq/`. Pour essayer sur le **simulateur** : Exécuter › Exécuter sans débogage, puis
+   choisir l'appareil (`fenix7xpro` pour une Fenix 7X Pro). Dans le simulateur : File › Edit Persistent Storage ›
+   Edit Application.Properties data pour coller un code ; Simulation › Activity Data (distance en m, temps en ms)
+   ou Simulation › FIT Data › Playback File pour faire avancer la course.
+4. Sur la montre, par le **store Connect IQ en bêta** (sans câble) :
+   - « Monkey C: Export Project » produit un `.iq` ;
+   - sur **apps-developer.garmin.com** (compte Garmin) : téléverser le `.iq` en **application bêta**, visible de toi
+     seul (pour une nouvelle version : l'ajouter à la même fiche) ;
+   - sur le téléphone, ouvrir `https://apps.garmin.com/fr-FR/apps/<identifiant de l'appli>` et l'installer depuis
+     l'appli Connect IQ. Une appli bêta n'apparaît pas dans la recherche du store.
+
+   Chaque modèle de montre est un appareil distinct (la 7X Pro n'est pas la 7X) : il doit figurer dans
+   `manifest.xml`, sinon le champ est invisible pour lui.
 
 ## Pour chaque course
 
@@ -44,6 +49,7 @@ Avec la distance et le temps écoulé donnés par la montre :
 
 ## À vérifier sur la montre
 
-Le champ compile et tourne sur le simulateur Fenix 7 (code du plan, prochain ravito, écart au plan). Reste à
-vérifier sur la montre : l'alerte à 300 m, que les réglages de l'appli Connect IQ acceptent un code de 500 à
-1 000 caractères, et la lisibilité en course sur l'écran 260 × 260.
+Le champ tourne sur le simulateur et sur une Fenix 7X Pro (installé en bêta depuis le store). Reste à vérifier :
+que les réglages de l'appli Connect IQ acceptent un code de 500 à 1 000 caractères, l'alerte à 300 m et la
+lisibilité en course. Le code de la trace de test est la valeur par défaut du réglage : à vider avant une
+publication publique (qui demandera aussi un autre identifiant d'appli dans `manifest.xml`).
