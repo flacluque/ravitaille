@@ -1,7 +1,9 @@
 <?xml version="1.0"?>
-<!-- Champ de données « Trail Planner » : le prochain ravito du plan, l'écart au plan et l'heure d'arrivée estimée. -->
+<!-- Champ de données « Trail Planner » : le prochain ravito du plan, l'écart au plan et l'heure d'arrivée estimée.
+     Identifiant de la version publique (store). La version bêta (tests, visible du seul développeur) utilisait
+     351219e39d544d20a58b819ba04c9906 : Garmin demande un identifiant différent pour chacune. -->
 <iq:manifest version="3" xmlns:iq="http://www.garmin.com/xml/connectiq">
-    <iq:application id="351219e39d544d20a58b819ba04c9906" type="datafield" name="@Strings.AppName"
+    <iq:application id="f92a894f0f604602ab84f7af6b0ff210" type="datafield" name="@Strings.AppName"
         entry="TrailPlannerApp" launcherIcon="@Drawables.LauncherIcon" minApiLevel="3.2.0">
         <iq:products>
             <iq:product id="fenix7"/>

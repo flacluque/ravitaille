@@ -8,15 +8,15 @@ Garmin Connect ne le gênent pas, et il marche même sans parcours chargé.
 ## Le calcul
 
 Le site génère un **code du plan** (`TP1;…`, voir `frontend/src/lib/ciq.ts`, qui sert de référence testée) :
-l'heure du départ, le km-effort cumulé à chaque km de la trace, et pour chaque ravito son km et ses heures
+l'heure du départ, l'effort selon la pente cumulé à chaque km de la trace, et pour chaque ravito son km et ses heures
 d'arrivée et de départ prévues.
 
 Avec la distance et le temps écoulé donnés par la montre :
 
 - **prochain ravito** : le premier dont le km est au-delà de ta position ;
 - **écart au plan** = ton temps écoulé − le temps prévu au même km. Entre deux ravitos, le temps prévu suit le
-  terrain (km-effort : 1 km + 1 par 100 m de D+), pas une allure régulière. Au ravito, l'arrêt prévu ne compte pas
-  comme du retard ;
+  terrain (montées et descentes, comme le calcul du plan), pas une allure régulière. Au ravito, l'arrêt prévu ne
+  compte pas comme du retard ;
 - **arrivée estimée** = heure prévue au ravito + écart.
 
 ## Compiler et installer (sur ton ordinateur)
@@ -51,5 +51,10 @@ Avec la distance et le temps écoulé donnés par la montre :
 
 Le champ tourne sur le simulateur et sur une Fenix 7X Pro (installé en bêta depuis le store). Reste à vérifier :
 que les réglages de l'appli Connect IQ acceptent un code de 500 à 1 000 caractères, l'alerte à 300 m et la
-lisibilité en course. Le code de la trace de test est la valeur par défaut du réglage : à vider avant une
-publication publique (qui demandera aussi un autre identifiant d'appli dans `manifest.xml`).
+lisibilité en course.
+
+## Publication sur le store
+
+`manifest.xml` porte l'identifiant de la **version publique** et le réglage « Code du plan » est vide par défaut.
+Pour une version bêta de test, remettre l'identifiant bêta (en commentaire dans `manifest.xml`). Textes de la fiche
+du store : `STORE.md`.
