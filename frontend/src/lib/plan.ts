@@ -1,4 +1,4 @@
-import type { CheckpointEta, Marker, RacePlan } from '../api/types';
+import type { CheckpointEta, Marker, ProfilePoint, RacePlan } from '../api/types';
 import { durationMinutes, localMinutes } from './format';
 
 /** Barrière qui compte pour un point : la plus serrée des deux (entrée / sortie). */
@@ -52,7 +52,7 @@ export function worstCutoff(plans: RacePlan[]): { scenario: number; eta: Checkpo
  * approximation (le plan ne détaille pas l'allure dans un tronçon), suffisante pour le survol.
  * Les ravitos sont repérés par leur position sur la trace (markers), dans le même ordre que le plan.
  */
-export function estimatedMinutesAt(trackKm: number, plan: RacePlan, markers: Marker[]): number | null {
+export function estimatedMinutesAt(trackKm: number, plan: RacePlan, markers: Marker[], profile?: ProfilePoint[]): number | null {
   const etas = plan.checkpoints;
   if (markers.length !== etas.length || etas.length < 2) return null;
   for (let i = 1; i < etas.length; i++) {
@@ -61,11 +61,40 @@ export function estimatedMinutesAt(trackKm: number, plan: RacePlan, markers: Mar
     if (trackKm <= k1 || i === etas.length - 1) {
       const t0 = localMinutes(etas[i - 1].departure);
       const t1 = localMinutes(etas[i].arrival);
-      const ratio = k1 === k0 ? 0 : Math.min(1, Math.max(0, (trackKm - k0) / (k1 - k0)));
-      return t0 + (t1 - t0) * ratio;
+      return t0 + (t1 - t0) * effortShare(trackKm, k0, k1, profile);
     }
   }
   return null;
+}
+
+/**
+ * Part du tronçon [k0, k1] déjà faite au km `km`, en km-effort (1 km + 1 par 100 m de D+) : on avance moins vite
+ * dans les montées, comme dans le calcul du plan. Sans profil, la part de distance.
+ */
+export function effortShare(km: number, k0: number, k1: number, profile?: ProfilePoint[]): number {
+  if (k1 <= k0) return 0;
+  const x = Math.min(k1, Math.max(k0, km));
+  if (!profile || profile.length < 2) return (x - k0) / (k1 - k0);
+  const effort = (k: number) => k + gainAt(profile, k) / 100;
+  const total = effort(k1) - effort(k0);
+  return total > 0 ? (effort(x) - effort(k0)) / total : (x - k0) / (k1 - k0);
+}
+
+/** D+ cumulé au km `km` de la trace, interpolé entre deux points du profil. */
+function gainAt(profile: ProfilePoint[], km: number): number {
+  let lo = 0;
+  let hi = profile.length - 1;
+  if (km <= profile[0].km) return profile[0].cumulativeGainM;
+  if (km >= profile[hi].km) return profile[hi].cumulativeGainM;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (profile[mid].km <= km) lo = mid;
+    else hi = mid;
+  }
+  const a = profile[lo];
+  const b = profile[hi];
+  const f = b.km === a.km ? 0 : (km - a.km) / (b.km - a.km);
+  return a.cumulativeGainM + (b.cumulativeGainM - a.cumulativeGainM) * f;
 }
 
 /**

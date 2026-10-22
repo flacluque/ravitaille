@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckpointEta, Marker, RacePlan } from '../api/types';
 import { formatClockFromMinutes } from './format';
-import { bindingCutoff, estimatedMinutesAt, tightestCutoff, worstCutoff } from './plan';
+import { bindingCutoff, effortShare, estimatedMinutesAt, tightestCutoff, worstCutoff } from './plan';
 
 function eta(partial: Partial<CheckpointEta>): CheckpointEta {
   return {
@@ -69,4 +69,16 @@ describe('heure estimée sur la trace', () => {
   it('renonce si les ravitos ne correspondent pas au plan', () => {
     expect(estimatedMinutesAt(10, p, markers.slice(1))).toBeNull();
   });
+
+  it('répartit le temps d\'un tronçon selon le terrain (km-effort), pas selon la distance', () => {
+    // 9 km : 400 m de D+ sur les 3 premiers km, puis plat.
+    const profile = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((km) => ({
+      km, cumulativeGainM: Math.min(km, 3) * (400 / 3), cumulativeLossM: 0, elevationM: 0, lat: 0, lon: 0,
+    }));
+    expect(effortShare(3, 0, 9)).toBeCloseTo(3 / 9);
+    expect(effortShare(3, 0, 9, profile)).toBeCloseTo(7 / 13);
+    expect(effortShare(9, 0, 9, profile)).toBe(1);
+    expect(effortShare(-1, 0, 9, profile)).toBe(0);
+  });
 });
+

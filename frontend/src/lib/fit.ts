@@ -1,5 +1,6 @@
 import type { CourseView, RacePlan, Service } from '../api/types';
 import { durationMinutes, localMinutes } from './format';
+import { estimatedMinutesAt } from './plan';
 
 /**
  * Parcours pour montre Garmin (fichier FIT « course »), généré dans le navigateur : la trace, chaque point
@@ -83,6 +84,7 @@ export function fitCoursePoints(course: CourseView, plan: RacePlan, services: Se
 /**
  * Heure prévue (minutes depuis le départ) le long de la trace : les points de la trace, plus un second point à
  * chaque ravito pour l'arrêt (même position, heure de départ) : le partenaire virtuel s'arrête aussi.
+ * Entre deux ravitos, le temps suit le terrain (km-effort) : le partenaire virtuel ralentit dans les montées.
  */
 export function timedTrack(course: CourseView, plan: RacePlan): { km: number; lat: number; lon: number; ele: number; minutes: number }[] {
   const track = course.track;
@@ -102,9 +104,9 @@ export function timedTrack(course: CourseView, plan: RacePlan): { km: number; la
       s++;
     }
     if (p.km > stops[stops.length - 1].km) break;
-    const minutes = minutesAt(p.km, stops, start);
+    const minutes = estimatedMinutesAt(p.km, plan, course.markers, track.profile);
     if (minutes !== null && (out.length === 0 || p.km > out[out.length - 1].km)) {
-      out.push({ km: p.km, lat: p.lat, lon: p.lon, ele: p.elevationM, minutes });
+      out.push({ km: p.km, lat: p.lat, lon: p.lon, ele: p.elevationM, minutes: minutes - start });
     }
   }
   // L'arrivée (et tout point au-delà du dernier point de la trace).
@@ -113,20 +115,6 @@ export function timedTrack(course: CourseView, plan: RacePlan): { km: number; la
     out.push({ km: stops[s].km, lat: m.lat, lon: m.lon, ele: m.elevationM, minutes: localMinutes(stops[s].eta.arrival) - start });
   }
   return out;
-}
-
-function minutesAt(km: number, stops: { km: number; eta: RacePlan['checkpoints'][number] }[], start: number): number | null {
-  for (let i = 1; i < stops.length; i++) {
-    if (km <= stops[i].km || i === stops.length - 1) {
-      const k0 = stops[i - 1].km;
-      const k1 = stops[i].km;
-      const t0 = localMinutes(stops[i - 1].eta.departure) - start;
-      const t1 = localMinutes(stops[i].eta.arrival) - start;
-      const ratio = k1 === k0 ? 0 : Math.min(1, Math.max(0, (km - k0) / (k1 - k0)));
-      return t0 + (t1 - t0) * ratio;
-    }
-  }
-  return null;
 }
 
 const SEMICIRCLES = 2 ** 31 / 180;
