@@ -1,0 +1,5 @@
+<settings>
+    <setting propertyKey="@Properties.planCode" title="@Strings.PlanCodeTitle">
+        <settingConfig type="alphaNumeric" />
+    </setting>
+</settings>

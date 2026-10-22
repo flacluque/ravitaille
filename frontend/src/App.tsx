@@ -559,7 +559,8 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
         </section>
       </main>
       {garminOpen && course && plans.length > 0 && (
-        <GarminExport course={course} plans={plans} selected={scenarioIndex} services={services} onClose={() => setGarminOpen(false)} />
+        <GarminExport course={course} plans={plans} selected={scenarioIndex} services={services} nutrition={nutritionProfile}
+          crew={crew} onClose={() => setGarminOpen(false)} />
       )}
       <MobileNav tab={tab} hrefs={TAB_HASH} onPdf={(v) => void savePdf(v)} onGarmin={() => setGarminOpen(true)} pdfDisabled={savingPdf || !!pdfBlocked}
         pdfReason={pdfBlocked}

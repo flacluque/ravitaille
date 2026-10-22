@@ -81,7 +81,7 @@ export function effortShare(km: number, k0: number, k1: number, profile?: Profil
 }
 
 /** D+ cumulé au km `km` de la trace, interpolé entre deux points du profil. */
-function gainAt(profile: ProfilePoint[], km: number): number {
+export function gainAt(profile: ProfilePoint[], km: number): number {
   let lo = 0;
   let hi = profile.length - 1;
   if (km <= profile[0].km) return profile[0].cumulativeGainM;
