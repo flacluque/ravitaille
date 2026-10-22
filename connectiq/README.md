@@ -1,15 +1,15 @@
 # Champ de données Connect IQ « Trail Planner »
 
 Champ pour montre Garmin (Fenix 7 pour l'instant) : le **prochain ravito de ton plan**, la distance pour y arriver,
-l'**heure d'arrivée estimée** et ton **écart au plan**. À 300 m d'un ravito, la montre vibre et le champ affiche ce
-qu'il y a à y faire (flasques, repas, produits). Il ne lit pas les points du parcours : les virages ajoutés par
+l'**heure d'arrivée estimée** et ton **écart au plan**. À 300 m d'un ravito, la montre vibre et affiche une alerte
+« RAVITO DANS 300 M ». Il ne lit pas les points du parcours : les virages ajoutés par
 Garmin Connect ne le gênent pas, et il marche même sans parcours chargé.
 
 ## Le calcul
 
 Le site génère un **code du plan** (`TP1;…`, voir `frontend/src/lib/ciq.ts`, qui sert de référence testée) :
-l'heure du départ, le km-effort cumulé à chaque km de la trace, et pour chaque ravito son km, ses heures
-d'arrivée et de départ prévues et ce qu'il y a à y faire.
+l'heure du départ, le km-effort cumulé à chaque km de la trace, et pour chaque ravito son km et ses heures
+d'arrivée et de départ prévues.
 
 Avec la distance et le temps écoulé donnés par la montre :
 
@@ -44,5 +44,5 @@ Avec la distance et le temps écoulé donnés par la montre :
 ## À vérifier sur la montre
 
 Ce code n'a pas encore été compilé (le SDK n'était pas disponible là où il a été écrit) : le premier build peut
-demander quelques corrections. À vérifier aussi : que les réglages acceptent un code d'environ 1 200 caractères,
+demander quelques corrections. À vérifier aussi : que les réglages acceptent un code de 500 à 1 000 caractères,
 l'affichage des accents, et la lisibilité des polices sur l'écran 260 × 260 de la Fenix 7.

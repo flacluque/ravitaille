@@ -3,7 +3,6 @@ import type { CourseView, RacePlan, Service } from '../api/types';
 import { formatClock } from '../lib/format';
 import { buildCiqPlan, encodeCiqPlan } from '../lib/ciq';
 import { buildCourseFit, fitCoursePoints, fitFilename, type FitPointKind } from '../lib/fit';
-import type { NutritionProfile } from '../lib/nutrition';
 
 interface Props {
   course: CourseView;
@@ -11,9 +10,6 @@ interface Props {
   /** Scénario affiché dans Mon plan : celui du partenaire virtuel par défaut. */
   selected: number;
   services: Service[][];
-  /** Pour le champ Connect IQ : ce qu'il y a à faire à chaque ravito. */
-  nutrition: NutritionProfile;
-  crew: string[];
   onClose: () => void;
 }
 
@@ -49,7 +45,7 @@ const ICON: Record<FitPointKind, string> = { start: '▶', finish: '⚑', aid: '
  * Export du plan vers une montre Garmin : un fichier de parcours .fit (trace, ravitos, heures du plan pour le
  * partenaire virtuel), puis comment l'envoyer sur la montre.
  */
-export function GarminExport({ course, plans, selected, services, nutrition, crew, onClose }: Props) {
+export function GarminExport({ course, plans, selected, services, onClose }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [scenario, setScenario] = useState(Math.min(selected, plans.length - 1));
   const [timeInName, setTimeInName] = useState(true);
@@ -61,7 +57,7 @@ export function GarminExport({ course, plans, selected, services, nutrition, cre
   const points = useMemo(() => fitCoursePoints(course, plan, services, { timeInName, checkpoints }),
     [course, plan, services, timeInName, checkpoints]);
   const filename = fitFilename(course.race.name);
-  const ciqPlan = useMemo(() => buildCiqPlan(course, plan, services, nutrition, crew), [course, plan, services, nutrition, crew]);
+  const ciqPlan = useMemo(() => buildCiqPlan(course, plan), [course, plan]);
   const ciqCode = ciqPlan ? encodeCiqPlan(ciqPlan) : '';
   const [copied, setCopied] = useState(false);
   useEffect(() => setCopied(false), [ciqCode]);

@@ -1,6 +1,5 @@
-import type { CourseView, RacePlan, Service } from '../api/types';
+import type { CourseView, RacePlan } from '../api/types';
 import { localMinutes } from './format';
-import { computeNutrition, MEAL_CARBS_G, type NutritionPlan, type NutritionProfile, type PointActions } from './nutrition';
 import { gainAt } from './plan';
 
 /**
@@ -10,8 +9,8 @@ import { gainAt } from './plan';
  * référence : le code Monkey C (connectiq/) reprend les mêmes calculs.
  *
  * Format v1 : TP1;<heure du départ, minutes>;<km-effort cumulé à chaque km de la trace, en dixièmes>;<ravitos>
- * Ravito : nom~km de la trace (dixièmes)~arrivée~départ (minutes depuis le départ)~à faire (séparés par ^),
- * ravitos séparés par |.
+ * Ravito : nom~km de la trace (dixièmes)~arrivée~départ (minutes depuis le départ)~à faire (séparés par ^,
+ * laissé vide pour l'instant : le champ n'affiche pas de consignes), ravitos séparés par |.
  */
 export interface CiqRavito {
   name: string;
@@ -20,6 +19,7 @@ export interface CiqRavito {
   /** Arrivée et départ prévus, en minutes depuis le départ. */
   arr: number;
   dep: number;
+  /** Consignes au ravito : non utilisées par le champ pour l'instant (toujours vide). */
   todo: string[];
 }
 
@@ -32,8 +32,6 @@ export interface CiqPlan {
 }
 
 const NAME_MAX = 18;
-const TODO_MAX = 26;
-const TODO_COUNT = 4;
 
 /** Retire les séparateurs du format et coupe à la longueur voulue. */
 function clean(text: string, max: number): string {
@@ -47,14 +45,12 @@ function shortName(name: string): string {
   return base.slice(0, NAME_MAX);
 }
 
-export function buildCiqPlan(course: CourseView, plan: RacePlan, services: Service[][], nutrition: NutritionProfile,
-  crew: string[] = []): CiqPlan | null {
+export function buildCiqPlan(course: CourseView, plan: RacePlan): CiqPlan | null {
   const track = course.track;
   if (!track || course.markers.length !== plan.checkpoints.length) return null;
   const start = localMinutes(plan.start);
   const maxKm = track.profile[track.profile.length - 1]?.km ?? 0;
   const effort = Array.from({ length: Math.ceil(maxKm) + 1 }, (_, km) => km + gainAt(track.profile, km) / 100);
-  const n = computeNutrition(plan, services, nutrition, crew);
   const last = plan.checkpoints.length - 1;
   const ravitos = plan.checkpoints.map((eta, i) => {
     return {
@@ -62,28 +58,10 @@ export function buildCiqPlan(course: CourseView, plan: RacePlan, services: Servi
       km: course.markers[i].trackKm,
       arr: localMinutes(i === 0 ? eta.departure : eta.arrival) - start,
       dep: localMinutes(eta.departure) - start,
-      todo: i === last ? [] : watchTodo(n.points[i], n, nutrition, i === 0).slice(0, TODO_COUNT).map((a) => clean(a, TODO_MAX)),
+      todo: [],
     };
   });
   return { startClock: Math.round(start) % 1440, effort, ravitos };
-}
-
-/**
- * Ce qu'il y a à faire au point, en lignes courtes pour l'écran de la montre (« Remplir 2 flasques »,
- * « Repas chaud », « +2 Gel Décathlon »), plutôt que les phrases de l'appli.
- */
-export function watchTodo(p: PointActions, n: NutritionPlan, profile: NutritionProfile, start: boolean): string[] {
-  const lines: string[] = [];
-  if (p.fillFlasks > 0) {
-    const verb = start ? 'Partir avec' : 'Remplir';
-    lines.push(`${verb} ${p.fillFlasks} flasque${p.fillFlasks > 1 ? 's' : ''}`);
-    if (p.fillDrinkFlasks > 0 && n.drink) lines.push(`dont ${p.fillDrinkFlasks} de ${n.drink.name}`);
-  }
-  if (p.eatG > 0) lines.push(p.eatG >= MEAL_CARBS_G ? 'Repas chaud' : `Manger env. ${p.eatG} g`);
-  const products = new Map(profile.products.map((x) => [x.id, x.name]));
-  for (const [id, count] of Object.entries(p.take)) if (count > 0) lines.push(`+${count} ${products.get(id) ?? id}`);
-  if (p.takeDrinkDoses > 0 && n.drink) lines.push(`+${p.takeDrinkDoses} dose${p.takeDrinkDoses > 1 ? 's' : ''} ${n.drink.name}`);
-  return lines;
 }
 
 export function encodeCiqPlan(p: CiqPlan): string {

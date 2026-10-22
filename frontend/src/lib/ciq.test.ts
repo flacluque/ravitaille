@@ -2,25 +2,22 @@ import { describe, expect, it } from 'vitest';
 import type { CourseView, RacePlan } from '../api/types';
 import fixture from './__fixtures__/bogomiles-plan.json';
 import { buildCiqPlan, ciqGap, ciqNext, decodeCiqPlan, encodeCiqPlan, type CiqPlan } from './ciq';
-import { DEFAULT_PROFILE } from './nutrition';
-import { defaultServices } from './services';
 
 const course = fixture.course as unknown as CourseView;
 const plans = fixture.plans as unknown as RacePlan[];
-const services = course.race.checkpoints.map((c) => c.services ?? defaultServices(c.aid));
 
 describe('plan pour le champ Connect IQ', () => {
-  const plan = buildCiqPlan(course, plans[1], services, DEFAULT_PROFILE, ['5', '11'])!;
+  const plan = buildCiqPlan(course, plans[1])!;
 
   it('tient dans un code court, relu à l\'identique', () => {
     const code = encodeCiqPlan(plan);
     expect(code.startsWith('TP1;660;')).toBe(true);
-    expect(code.length).toBeLessThan(2000);
+    expect(code.length).toBeLessThan(1000);
     const back = decodeCiqPlan(code)!;
     expect(back.ravitos.map((r) => r.name)).toEqual(plan.ravitos.map((r) => r.name));
     expect(back.ravitos[0].name).toBe('Départ');
     expect(back.ravitos.at(-1)!.name).toBe('Arrivée');
-    expect(back.ravitos.find((r) => r.name === 'Greffeil')!.todo.length).toBeGreaterThan(0);
+    expect(back.ravitos.find((r) => r.name === 'Molières')).toBeDefined();
     expect(decodeCiqPlan('TP2;0;0;x')).toBeNull();
     expect(decodeCiqPlan('n\'importe quoi')).toBeNull();
   });

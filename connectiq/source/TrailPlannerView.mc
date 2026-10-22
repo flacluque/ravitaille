@@ -9,7 +9,7 @@ import Toybox.WatchUi;
 const APPROACH_KM = 0.3;
 
 // Le champ : prochain ravito du plan, distance, heure d'arrivée estimée et écart au plan.
-// Plein écran ou en version compacte selon la place ; à 300 m d'un ravito, ce qu'il y a à y faire.
+// Plein écran ou en version compacte selon la place ; à 300 m d'un ravito, une alerte avec vibration.
 class TrailPlannerView extends WatchUi.DataField {
     var plan as TrailPlannerPlan?;
     var km as Float = 0.0;
@@ -41,9 +41,15 @@ class TrailPlannerView extends WatchUi.DataField {
         if (plan != null) {
             var p = plan as TrailPlannerPlan;
             var i = p.nextIndex(km);
-            if (i != alerted && p.ravitos[i].km - km <= $.APPROACH_KM && (Attention has :vibrate)) {
+            // Une seule alerte par ravito, en entrant dans les 300 derniers mètres.
+            if (i > 0 && i != alerted && p.ravitos[i].km - km <= $.APPROACH_KM + 0.001) {
                 alerted = i;
-                Attention.vibrate([new Attention.VibeProfile(60, 700)]);
+                if (Attention has :vibrate) {
+                    Attention.vibrate([new Attention.VibeProfile(60, 700)]);
+                }
+                if (WatchUi.DataField has :showAlert) {
+                    showAlert(new TrailPlannerAlert(p.ravitos[i].name));
+                }
             }
         }
     }
@@ -73,29 +79,17 @@ class TrailPlannerView extends WatchUi.DataField {
         var gap = started ? p.gap(km, elapsed) : 0.0;
         var eta = p.clock(r.arr + gap);
         var full = h > 150;
-
-        // À l'approche d'un ravito : ce qu'il y a à y faire.
-        if (full && started && dist <= $.APPROACH_KM && r.todo.size() > 0) {
-            dc.setColor(Graphics.COLOR_GREEN, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.2, Graphics.FONT_XTINY, "RAVITO DANS " + (dist * 1000).toNumber() + " M", center);
-            dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.32, Graphics.FONT_SMALL, r.name, center);
-            var y = h * 0.45;
-            var step = h * 0.11;
-            for (var k = 0; k < r.todo.size() && k < 4; k++) {
-                dc.drawText(cx, y + k * step, Graphics.FONT_XTINY, r.todo[k], center);
-            }
-            return;
-        }
+        var near = started && dist <= $.APPROACH_KM + 0.001;
 
         var gapColor = gap > 1 ? Graphics.COLOR_ORANGE : Graphics.COLOR_GREEN;
         if (full) {
-            dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.2, Graphics.FONT_XTINY, "PROCHAIN RAVITO", center);
+            dc.setColor(near ? Graphics.COLOR_GREEN : Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(cx, h * 0.2, Graphics.FONT_XTINY, near ? "RAVITO DANS " + (dist * 1000).toNumber() + " M" : "PROCHAIN RAVITO", center);
             dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
             dc.drawText(cx, h * 0.34, Graphics.FONT_MEDIUM, r.name, center);
             dc.setColor(Graphics.COLOR_BLUE, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(w * 0.36, h * 0.53, Graphics.FONT_NUMBER_MILD, formatKm(dist), center);
+            // Police de texte : celles des grands chiffres n'ont pas de virgule.
+            dc.drawText(w * 0.36, h * 0.53, Graphics.FONT_LARGE, formatKm(dist), center);
             dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
             dc.drawText(w * 0.7, h * 0.53, Graphics.FONT_MEDIUM, eta, center);
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
@@ -138,5 +132,27 @@ class TrailPlannerView extends WatchUi.DataField {
             return m.toString() + " min";
         }
         return (m / 60).toString() + "h" + (m % 60).format("%02d");
+    }
+}
+
+// Alerte plein écran à 300 m d'un ravito (affichée par la montre par-dessus l'écran en cours).
+class TrailPlannerAlert extends WatchUi.DataFieldAlert {
+    var name as String;
+
+    function initialize(name as String) {
+        DataFieldAlert.initialize();
+        self.name = name;
+    }
+
+    function onUpdate(dc as Graphics.Dc) as Void {
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
+        dc.clear();
+        var cx = dc.getWidth() / 2;
+        var h = dc.getHeight();
+        var center = Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER;
+        dc.setColor(Graphics.COLOR_GREEN, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, h * 0.38, Graphics.FONT_SMALL, "RAVITO DANS 300 M", center);
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, h * 0.55, Graphics.FONT_MEDIUM, name, center);
     }
 }
