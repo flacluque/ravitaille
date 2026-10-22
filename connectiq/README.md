@@ -1,6 +1,6 @@
 # Champ de données Connect IQ « Trail Planner »
 
-Champ pour montre Garmin (Fenix 7 pour l'instant) : le **prochain ravito de ton plan**, la distance pour y arriver,
+Champ pour montre Garmin (Fenix 7, 7S, 7X et leurs versions Pro pour l'instant) : le **prochain ravito de ton plan**, la distance pour y arriver,
 l'**heure d'arrivée estimée** et ton **écart au plan**. À 300 m d'un ravito, la montre vibre et affiche une alerte
 « RAVITO DANS 300 M ». Il ne lit pas les points du parcours : les virages ajoutés par
 Garmin Connect ne le gênent pas, et il marche même sans parcours chargé.
@@ -22,7 +22,8 @@ Avec la distance et le temps écoulé donnés par la montre :
 ## Compiler et installer (sur ton ordinateur)
 
 1. Installe le **SDK Connect IQ** avec le *SDK Manager* (developer.garmin.com/connect-iq/sdk, compte Garmin),
-   puis télécharge dans le SDK Manager l'appareil **fēnix 7**.
+   puis télécharge dans le SDK Manager les appareils de la gamme **fēnix 7** (7, 7S, 7X, et les versions Pro) :
+   l'export compile le champ pour chacun.
 2. Installe **Visual Studio Code** et l'extension **Monkey C** (Garmin). `Ctrl/Cmd+Shift+P` →
    « Monkey C: Generate a Developer Key » (une seule fois).
 3. Ouvre le dossier `connectiq/`, puis « Monkey C: Build for Device » → `fenix7`. Pour essayer d'abord :
