@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CourseView, RacePlan, Service } from '../api/types';
 import { formatClock } from '../lib/format';
+import { buildCiqPlan, encodeCiqPlan } from '../lib/ciq';
 import { buildCourseFit, fitCoursePoints, fitFilename, type FitPointKind } from '../lib/fit';
 
 interface Props {
@@ -56,6 +57,19 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
   const points = useMemo(() => fitCoursePoints(course, plan, services, { timeInName, checkpoints }),
     [course, plan, services, timeInName, checkpoints]);
   const filename = fitFilename(course.race.name);
+  const ciqPlan = useMemo(() => buildCiqPlan(course, plan), [course, plan]);
+  const ciqCode = ciqPlan ? encodeCiqPlan(ciqPlan) : '';
+  const [copied, setCopied] = useState(false);
+  useEffect(() => setCopied(false), [ciqCode]);
+
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(ciqCode);
+      setCopied(true);
+    } catch {
+      // Presse-papiers refusé : le code reste sélectionnable dans le champ.
+    }
+  }
 
   // <dialog> modal : focus piégé, Échap et fond gérés par le navigateur. Pas de close() au démontage :
   // le retirer du DOM suffit (et close() déclencherait onClose pendant le double montage du mode strict).
@@ -150,6 +164,16 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
             <p className="garmin-dday"><strong>Le jour J :</strong> lance une activité Trail, puis <strong>Navigation › Parcours ›
               {' '}{course.race.name} › Suivre le parcours</strong>.</p>
             <p className="muted small">Tu as recalculé ton plan ? Renvoie le fichier : les heures du partenaire virtuel viennent du plan.</p>
+          </section>
+
+          <section className="garmin-part plan-rule" aria-labelledby="garmin-ciq">
+            <span id="garmin-ciq" className="overline">Champ Trail Planner (Connect IQ, en test)</span>
+            <p>Le champ de données « Trail Planner » affiche le prochain ravito de ton plan, la distance, l'heure d'arrivée
+              estimée et ton écart au plan, sans les virages de Garmin Connect. Colle ce code dans ses réglages (appli Connect IQ ›
+              Trail Planner › Réglages), pour le scénario {plan.scenario.name.toLowerCase()}.</p>
+            <textarea className="garmin-code" readOnly value={ciqCode} rows={3} aria-label="Code du plan pour le champ Trail Planner"
+              onFocus={(e) => e.currentTarget.select()} />
+            <button type="button" className="ghost" onClick={() => void copyCode()}>{copied ? '✓ Code copié' : 'Copier le code'}</button>
           </section>
         </>}
       </div>

@@ -56,7 +56,7 @@ export function ElevationProfile({ track, markers, plan, hoverKm, onHover }: Pro
   const nights = useMemo(() => nightSpans(plan, markers), [plan, markers]);
 
   const hover = hoverKm === null ? null : pointAtKm(track.profile, hoverKm);
-  const hoverTime = hover ? estimatedMinutesAt(hover.km, plan, markers) : null;
+  const hoverTime = hover ? estimatedMinutesAt(hover.km, plan, markers, track.profile) : null;
 
   // Lecture au clavier : flèches = 1 km (Maj : 10 km), Page préc./suiv. = point précédent/suivant, Début/Fin.
   function handleKey(e: KeyboardEvent<SVGSVGElement>) {

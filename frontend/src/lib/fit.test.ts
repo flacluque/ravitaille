@@ -39,6 +39,22 @@ describe('parcours FIT pour montre Garmin', () => {
     expect(Math.abs(track[track.length - 1].minutes - (new Date(finish.arrival).getTime() - startMin) / 60000)).toBeLessThan(1);
   });
 
+  it('fait ralentir le partenaire virtuel dans les montées', () => {
+    const track = timedTrack(course, plan);
+    const pace = (a: (typeof track)[number], b: (typeof track)[number]) => (b.minutes - a.minutes) / Math.max(1e-6, b.km - a.km);
+    const profile = course.track!.profile;
+    const gainAt = (km: number) => profile.reduce((g, p) => (p.km <= km ? p.cumulativeGainM : g), 0);
+    // Sur un même tronçon, un pas en montée prend plus de temps par km qu'un pas sans D+.
+    const steps = track.slice(1).map((b, i) => ({ a: track[i], b, gain: gainAt(b.km) - gainAt(track[i].km) }))
+      .filter((s) => s.b.km - s.a.km > 0.05 && s.b.minutes > s.a.minutes && s.b.km < 19);
+    const climb = steps.filter((s) => s.gain > 15);
+    const flat = steps.filter((s) => s.gain === 0);
+    expect(climb.length).toBeGreaterThan(0);
+    expect(flat.length).toBeGreaterThan(0);
+    const avg = (xs: typeof steps) => xs.reduce((t, s) => t + pace(s.a, s.b), 0) / xs.length;
+    expect(avg(climb)).toBeGreaterThan(avg(flat) * 1.5);
+  });
+
   it('écrit un fichier FIT de parcours que le SDK de Garmin relit', async () => {
     const bytes = await buildCourseFit(course, plan, services, { timeInName: true, checkpoints: true });
     expect(bytes).not.toBeNull();
