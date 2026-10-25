@@ -46,12 +46,15 @@ Avec la distance et le temps écoulé donnés par la montre :
 2. Appli Connect IQ du téléphone › Trail Planner › **Réglages** : colle le code, enregistre.
 3. Sur la montre : réglages de l'activité Trail › Écrans de données : ajoute le champ (seul pour la version
    complète, ou dans un écran à 2 champs pour la version compacte).
+4. Une seule fois, sur la montre : réglages de l'activité Trail › **Alertes › Ajouter › Connect IQ** › Trail Planner
+   (le libellé varie selon le modèle). Sans ce réglage, la montre vibre à 300 m du ravito mais n'affiche pas l'alerte
+   par-dessus l'écran en cours : la vibration vient du champ, l'affichage de l'alerte est soumis à ce réglage.
 
 ## À vérifier sur la montre
 
 Le champ tourne sur le simulateur et sur une Fenix 7X Pro (installé en bêta depuis le store). Reste à vérifier :
-que les réglages de l'appli Connect IQ acceptent un code de 500 à 1 000 caractères, l'alerte à 300 m et la
-lisibilité en course.
+que les réglages de l'appli Connect IQ acceptent un code de 500 à 1 000 caractères, et l'alerte plein écran à 300 m
+une fois activée dans les alertes de l'activité (au Trail des Troubadours, sans ce réglage : vibration seule).
 
 ## Publication sur le store
 

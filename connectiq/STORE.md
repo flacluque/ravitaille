@@ -18,6 +18,8 @@ Comment faire :
 2. « Télécharger › Parcours pour ma Garmin » : copie le code du plan.
 3. Appli Connect IQ › Trail Planner › Réglages : colle le code.
 4. Ajoute le champ à un écran de ton activité Trail (seul ou à côté d'autres champs).
+5. Pour l'alerte à 300 m par-dessus l'écran en cours : réglages de l'activité › Alertes › Ajouter › Connect IQ ›
+   Trail Planner. Sans ce réglage, la montre vibre seulement.
 
 ## Description (English)
 Your Trail Planner race plan on your wrist: next aid station, distance to it, estimated arrival time, and how far
@@ -31,6 +33,8 @@ How to use:
 2. "Télécharger › Parcours pour ma Garmin": copy the plan code.
 3. Connect IQ app › Trail Planner › Settings: paste the code.
 4. Add the field to a data screen of your Trail activity.
+5. For the 300 m alert on top of the current screen: activity settings › Alerts › Add New › Connect IQ ›
+   Trail Planner. Without it, the watch only vibrates.
 
 ## Captures d'écran
 Captures du simulateur (Fenix 7) : écran plein avec un plan chargé, version à 2 champs, alerte « RAVITO DANS 300 M ».

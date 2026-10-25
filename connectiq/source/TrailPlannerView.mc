@@ -9,7 +9,9 @@ import Toybox.WatchUi;
 const APPROACH_KM = 0.3;
 
 // Le champ : prochain ravito du plan, distance, heure d'arrivée estimée et écart au plan.
-// Plein écran ou en version compacte selon la place ; à 300 m d'un ravito, une alerte avec vibration.
+// Plein écran ou en version compacte selon la place ; à 300 m d'un ravito, une vibration et une alerte plein écran.
+// L'alerte ne s'affiche que si le coureur l'a activée sur la montre (réglages de l'activité › Alertes › Connect IQ) ;
+// la vibration, elle, vient du champ et ne dépend pas de ce réglage.
 class TrailPlannerView extends WatchUi.DataField {
     var plan as TrailPlannerPlan?;
     var km as Float = 0.0;
@@ -83,19 +85,27 @@ class TrailPlannerView extends WatchUi.DataField {
 
         var gapColor = gap > 1 ? Graphics.COLOR_ORANGE : Graphics.COLOR_GREEN;
         if (full) {
-            dc.setColor(near ? Graphics.COLOR_GREEN : Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.2, Graphics.FONT_XTINY, near ? "RAVITO DANS " + (dist * 1000).toNumber() + " M" : "PROCHAIN RAVITO", center);
-            dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.34, Graphics.FONT_MEDIUM, r.name, center);
+            // En approche, le bandeau du haut passe en vert et grossit : visible même sans l'alerte de la montre.
+            if (near) {
+                dc.setColor(Graphics.COLOR_GREEN, Graphics.COLOR_TRANSPARENT);
+                dc.drawText(cx, h * 0.18, Graphics.FONT_TINY, "RAVITO DANS " + (dist * 1000).toNumber() + " M", center);
+            } else {
+                dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
+                dc.drawText(cx, h * 0.18, Graphics.FONT_XTINY, "PROCHAIN RAVITO", center);
+            }
+            dc.setColor(near ? Graphics.COLOR_GREEN : fg, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(cx, h * 0.32, Graphics.FONT_MEDIUM, r.name, center);
+            // Distance et heure d'arrivée estimée en grand, côte à côte ; sous chacune, l'unité et l'heure du plan.
+            // Police de texte : celles des grands chiffres n'ont ni virgule ni « h ».
             dc.setColor(Graphics.COLOR_BLUE, Graphics.COLOR_TRANSPARENT);
-            // Police de texte : celles des grands chiffres n'ont pas de virgule.
-            dc.drawText(w * 0.36, h * 0.53, Graphics.FONT_LARGE, formatKm(dist), center);
+            dc.drawText(w * 0.3, h * 0.5, Graphics.FONT_LARGE, formatKm(dist), center);
             dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(w * 0.7, h * 0.53, Graphics.FONT_MEDIUM, eta, center);
+            dc.drawText(w * 0.68, h * 0.5, Graphics.FONT_LARGE, eta, center);
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.68, Graphics.FONT_XTINY, "km  ·  prévu " + p.clock(r.arr), center);
+            dc.drawText(w * 0.3, h * 0.645, Graphics.FONT_SMALL, "km", center);
+            dc.drawText(w * 0.68, h * 0.645, Graphics.FONT_SMALL, "prévu " + p.clock(r.arr), center);
             dc.setColor(gapColor, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.8, Graphics.FONT_TINY, started ? gapText(gap) : "au départ", center);
+            dc.drawText(cx, h * 0.8, Graphics.FONT_SMALL, started ? gapText(gap) : "au départ", center);
         } else {
             dc.drawText(cx, h * 0.3, Graphics.FONT_SMALL, r.name + " " + formatKm(dist), center);
             dc.setColor(gapColor, Graphics.COLOR_TRANSPARENT);
