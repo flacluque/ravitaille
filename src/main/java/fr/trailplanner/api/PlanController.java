@@ -1,9 +1,10 @@
 package fr.trailplanner.api;
 
-import fr.trailplanner.engine.CourseBuilder;
 import fr.trailplanner.engine.ElevationSource;
+import fr.trailplanner.engine.Placement;
 import fr.trailplanner.engine.RacePlan;
 import fr.trailplanner.gpx.GpxParser;
+import fr.trailplanner.model.Checkpoint;
 import fr.trailplanner.model.NightWindow;
 import fr.trailplanner.model.RaceDefinition;
 import fr.trailplanner.model.ReferencePerformance;
@@ -34,6 +35,7 @@ import java.io.InputStream;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.stream.IntStream;
 
 @RestController
 @RequestMapping("/api")
@@ -184,8 +186,10 @@ public class PlanController {
             throw new IllegalArgumentException("Pas de trace GPX pour " + id);
         }
         TrackProfile track = sample.track().profile();
-        return sample.race().checkpoints().stream().map(cp -> {
-            TrackProfile.ProfilePoint p = CourseBuilder.onTrack(sample.race(), track, cp);
+        List<Placement> places = Placement.of(sample.race(), track);
+        return IntStream.range(0, places.size()).mapToObj(i -> {
+            Checkpoint cp = sample.race().checkpoints().get(i);
+            TrackProfile.ProfilePoint p = track.at(places.get(i).trackKm());
             return new CheckpointComparison(cp.code(), cp.name(), cp.km(), cp.gainM(),
                     Math.round(p.km() * 10) / 10.0, Math.round(p.cumulativeGainM()), Math.round(p.elevationM()));
         }).toList();

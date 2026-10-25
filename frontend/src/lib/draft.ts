@@ -21,6 +21,8 @@ export interface DraftCheckpoint {
   cutoffOut: string;
   aid: AidLevel;
   services: Service[];
+  /** Position sur la trace GPX placée sur la carte (km de la trace) ; absente : placée d'après le roadbook. */
+  trackKm?: number | null;
 }
 
 export interface RaceDraft {
@@ -211,6 +213,7 @@ export function draftToRace(draft: RaceDraft, hasTrack: boolean): DraftResult {
       cutoffOut: resolved[i].cutoffOut,
       aid: cp.aid,
       services: sortServices(cp.services),
+      ...(hasTrack && typeof cp.trackKm === 'number' ? { trackKm: cp.trackKm } : {}),
     });
   });
 
@@ -259,6 +262,7 @@ export function raceToDraft(race: RaceDefinition, night?: Partial<NightWindow>):
       cutoffOut: clockText(cp.cutoffOut),
       aid: cp.aid ?? 'NONE',
       services: cp.services ?? defaultServices(cp.aid ?? 'NONE'),
+      ...(typeof cp.trackKm === 'number' ? { trackKm: cp.trackKm } : {}),
     })),
   };
 }
@@ -342,6 +346,27 @@ export function extractedToDraft(extracted: ExtractedRoadbook, current: RaceDraf
 function nameFromFile(fileName: string): string {
   const base = fileName.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
   return base ? base[0].toUpperCase() + base.slice(1) : '';
+}
+
+/**
+ * Positions placées sur la carte, point par point (null : position automatique). Les points de la course calculée
+ * sont ceux du brouillon, dans le même ordre.
+ */
+export function withTrackPositions(draft: RaceDraft, positions: (number | null)[]): RaceDraft {
+  return {
+    ...draft,
+    checkpoints: draft.checkpoints.map((cp, i) => {
+      const { trackKm: _old, ...rest } = cp;
+      const km = positions[i];
+      return typeof km === 'number' ? { ...rest, trackKm: Math.round(km * 100) / 100 } : rest;
+    }),
+  };
+}
+
+/** Une autre trace GPX : les positions placées sur l'ancienne n'ont plus de sens. */
+export function withoutTrackPositions(draft: RaceDraft): RaceDraft {
+  if (!draft.checkpoints.some((cp) => typeof cp.trackKm === 'number')) return draft;
+  return withTrackPositions(draft, []);
 }
 
 /** Vrai si l'éditeur contient déjà une saisie (au-delà du brouillon vide) : on demande avant d'écraser. */
