@@ -17,6 +17,8 @@ export interface Checkpoint {
   cutoffOut: string | null;
   aid: AidLevel;
   services: Service[];
+  /** Position sur la trace GPX placée par le coureur (km de la trace) ; absente : waypoint du GPX ou km du roadbook. */
+  trackKm?: number | null;
 }
 
 export interface RaceDefinition {
@@ -55,7 +57,17 @@ export interface Marker {
   lon: number;
   elevationM: number;
   aid: AidLevel;
+  /** D'où vient la position sur la trace (absent des plans gardés par une ancienne version : ROADBOOK). */
+  placement?: Placement;
+  /** Position que donnerait le km du roadbook (mis à l'échelle de la trace). */
+  roadbookTrackKm?: number;
+  /** Waypoint du GPX reconnu pour ce point, même s'il n'est pas retenu. */
+  waypointName?: string | null;
+  waypointKm?: number | null;
 }
+
+/** MANUAL : placé par le coureur ; WAYPOINT : point nommé du GPX ; ROADBOOK : km du roadbook mis à l'échelle. */
+export type Placement = 'ROADBOOK' | 'WAYPOINT' | 'MANUAL';
 
 export interface CourseView {
   race: RaceDefinition;

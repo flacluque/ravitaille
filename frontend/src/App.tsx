@@ -8,6 +8,7 @@ import {
 import type { ElevationSource, Reference } from './api/types';
 import { CompareTable } from './components/CompareTable';
 import { CourseMap } from './components/CourseMap';
+import { PlacementEditor } from './components/PlacementEditor';
 import { ElevationProfile } from './components/ElevationProfile';
 import { Legend } from './components/Legend';
 import { GearCard } from './components/GearCard';
@@ -28,7 +29,8 @@ import { Roadbook } from './components/Roadbook';
 import { GarminExport } from './components/GarminExport';
 import { RavitosView } from './components/RavitosView';
 import { TrainingLine } from './components/TrainingLine';
-import { draftSignature, draftToRace, emptyDraft, type RaceDraft } from './lib/draft';
+import { draftSignature, draftToRace, emptyDraft, withoutTrackPositions, withTrackPositions, type RaceDraft } from './lib/draft';
+import { placementWarnings } from './lib/placement';
 import { formatClock, formatKm, formatMeters } from './lib/format';
 import { defaultServices } from './lib/services';
 
@@ -249,7 +251,13 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   function changeGpx(file: File | null) {
     setGpx(file);
     void saveGpx(file);
-    revalidate(draft, file);
+    // Les ravitos placés à la main l'étaient sur l'ancienne trace.
+    const next = withoutTrackPositions(draft);
+    if (next !== draft) {
+      setDraft(next);
+      saveDraft(next);
+    }
+    revalidate(next, file);
   }
 
   // En mode "ma course", on n'affiche pas le plan de l'exemple (et inversement).
@@ -263,6 +271,27 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   // rien à faire à l'écran, même grisé.
   const otherRace = stale && !!course && draft.name.trim() !== course.race.name;
   const draftName = draft.name.trim() || 'Ta nouvelle course';
+  // Ravitos à placer sur la trace : seulement pour sa course, avec une trace, et un plan à jour de la saisie
+  // (les points de la course calculée sont alors ceux du brouillon, dans le même ordre).
+  const canPlace = mode === 'custom' && !!course?.track && !stale && !otherRace;
+  const [placing, setPlacing] = useState(false);
+  const [savingPlaces, setSavingPlaces] = useState(false);
+  const toPlace = useMemo(() => (canPlace && course ? placementWarnings(course) : []), [canPlace, course]);
+  useEffect(() => { if (!canPlace) setPlacing(false); }, [canPlace]);
+  async function savePlaces(positions: (number | null)[]) {
+    const next = withTrackPositions(draft, positions);
+    changeDraft(next);
+    setSavingPlaces(true);
+    try {
+      if (await computeCustom(references, source, next, gpx)) setPlacing(false);
+    } finally {
+      setSavingPlaces(false);
+    }
+  }
+  function openPlacing() {
+    setPlacing(true);
+    requestAnimationFrame(() => document.querySelector('.placement')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
   // Services de chaque point (déduits du type d'arrêt pour un plan gardé par une ancienne version).
   const services = useMemo(
     () => course?.race.checkpoints.map((c) => c.services ?? defaultServices(c.aid)) ?? [],
@@ -497,6 +526,20 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
                     {planWarnings.map((w) => <li key={w}>{w}</li>)}
                   </ul>
                 )}
+                {toPlace.length > 0 && !placing && (
+                  <div className="placement-banner no-print" role="status">
+                    <span>
+                      <strong>{toPlace.length === 1 ? '1 ravito à vérifier sur la trace' : `${toPlace.length} ravitos à vérifier sur la trace`} :</strong>{' '}
+                      {toPlace.map((i) => course.markers[i].name).join(', ')}. Le D+ du roadbook ou le waypoint du GPX ne
+                      colle pas avec leur position : la montre t'annoncerait le ravito au mauvais endroit.
+                    </span>
+                    <button type="button" onClick={openPlacing}>Les placer sur la carte</button>
+                  </div>
+                )}
+                {placing && canPlace && (
+                  <PlacementEditor course={course} plan={plan} saving={savingPlaces} hoverKm={hoverKm} onHover={setHoverKm}
+                    onSave={(positions) => void savePlaces(positions)} onCancel={() => setPlacing(false)} />
+                )}
               </div>
 
               {course.track && (
@@ -508,10 +551,12 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
               <Roadbook plan={plan} markers={course.markers} services={services} crew={crew} onHover={setHoverKm}
                 onDetails={() => goTab('analyse')} />
 
-              {course.track && (
+              {course.track && !placing && (
                 <section className="plan-map plan-rule no-print" aria-label="Carte">
                   <div className="roadbook-head">
                     <span className="overline">Carte</span>
+                    {canPlace && <button type="button" className="link-btn" onClick={openPlacing}
+                      title="Déplacer les ravitos le long de la trace, là où ils sont vraiment">Ajuster les ravitos</button>}
                     <button type="button" className="link-btn plan-map-toggle" aria-expanded={showMap}
                       onClick={() => setMapOpen(!mapOpen)}>{mapOpen ? 'Masquer la carte' : 'Voir la carte'}</button>
                   </div>

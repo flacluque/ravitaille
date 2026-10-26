@@ -12,11 +12,17 @@ import java.util.List;
  * Lecture d'un fichier GPX en streaming (StAX) : tient sans souci des traces de plusieurs Mo.
  * <p>
  * Lit les points de trace ({@code trkpt}) et, à défaut, les points de route ({@code rtept}),
- * ce qui couvre les exports Strava, Garmin, Suunto, Visorando, etc.
+ * ce qui couvre les exports Strava, Garmin, Suunto, Visorando, etc. Lit aussi les points nommés ({@code wpt}),
+ * où l'organisation place souvent ses ravitos.
  */
 public class GpxParser {
 
-    public record ParsedGpx(String name, List<TrackPoint> points) {}
+    public record ParsedGpx(String name, List<TrackPoint> points, List<Waypoint> waypoints) {
+
+        public ParsedGpx(String name, List<TrackPoint> points) {
+            this(name, points, List.of());
+        }
+    }
 
     public ParsedGpx parse(InputStream in) {
         XMLInputFactory factory = XMLInputFactory.newFactory();
@@ -26,23 +32,26 @@ public class GpxParser {
 
         List<TrackPoint> trackPoints = new ArrayList<>();
         List<TrackPoint> routePoints = new ArrayList<>();
+        List<Waypoint> waypoints = new ArrayList<>();
         String name = null;
 
         try {
             XMLStreamReader r = factory.createXMLStreamReader(in);
-            String currentPoint = null; // "trkpt" ou "rtept"
+            String currentPoint = null; // "trkpt", "rtept" ou "wpt"
             double lat = 0, lon = 0, ele = Double.NaN;
+            String pointName = null;
 
             while (r.hasNext()) {
                 int event = r.next();
                 if (event == XMLStreamConstants.START_ELEMENT) {
                     String tag = r.getLocalName();
                     switch (tag) {
-                        case "trkpt", "rtept" -> {
+                        case "trkpt", "rtept", "wpt" -> {
                             currentPoint = tag;
                             lat = Double.parseDouble(r.getAttributeValue(null, "lat"));
                             lon = Double.parseDouble(r.getAttributeValue(null, "lon"));
                             ele = Double.NaN;
+                            pointName = null;
                         }
                         case "ele" -> {
                             if (currentPoint != null) {
@@ -54,8 +63,12 @@ public class GpxParser {
                         }
                         case "name" -> {
                             // Premier <name> rencontré hors d'un point : nom de la trace
-                            if (name == null && currentPoint == null) {
-                                name = r.getElementText().trim();
+                            if (currentPoint == null) {
+                                if (name == null) {
+                                    name = r.getElementText().trim();
+                                }
+                            } else if (currentPoint.equals("wpt")) {
+                                pointName = r.getElementText().trim();
                             }
                         }
                         default -> { /* ignoré */ }
@@ -63,11 +76,14 @@ public class GpxParser {
                 } else if (event == XMLStreamConstants.END_ELEMENT) {
                     String tag = r.getLocalName();
                     if (tag.equals(currentPoint)) {
-                        TrackPoint p = new TrackPoint(lat, lon, ele);
-                        if (tag.equals("trkpt")) {
-                            trackPoints.add(p);
+                        if (tag.equals("wpt")) {
+                            if (pointName != null && !pointName.isEmpty()) {
+                                waypoints.add(new Waypoint(pointName, lat, lon));
+                            }
+                        } else if (tag.equals("trkpt")) {
+                            trackPoints.add(new TrackPoint(lat, lon, ele));
                         } else {
-                            routePoints.add(p);
+                            routePoints.add(new TrackPoint(lat, lon, ele));
                         }
                         currentPoint = null;
                     }
@@ -82,7 +98,7 @@ public class GpxParser {
         if (points.size() < 2) {
             throw new GpxParseException("Le fichier GPX ne contient pas de tracé exploitable (moins de 2 points)", null);
         }
-        return new ParsedGpx(name, List.copyOf(points));
+        return new ParsedGpx(name, List.copyOf(points), List.copyOf(waypoints));
     }
 
     public static class GpxParseException extends RuntimeException {

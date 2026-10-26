@@ -33,6 +33,23 @@ class GpxParserTest {
     }
 
     @Test
+    void litLesWaypointsNommesSansPrendreLeurNomPourCeluiDeLaTrace() {
+        var parsed = parser.parse(gpx("""
+                <wpt lat="43.0005" lon="2.0"><name>RAV Greffeil</name></wpt>
+                <wpt lat="43.0008" lon="2.0"></wpt>
+                <trk><name>Ma trace</name><trkseg>
+                  <trkpt lat="43.0" lon="2.0"><ele>100</ele></trkpt>
+                  <trkpt lat="43.001" lon="2.0"><ele>110</ele></trkpt>
+                </trkseg></trk>"""));
+
+        assertEquals("Ma trace", parsed.name());
+        assertEquals(1, parsed.waypoints().size());
+        assertEquals("RAV Greffeil", parsed.waypoints().get(0).name());
+        assertEquals(43.0005, parsed.waypoints().get(0).lat(), 1e-9);
+        assertEquals(2, parsed.points().size());
+    }
+
+    @Test
     void altitudeAbsenteDonneNaN() {
         var parsed = parser.parse(gpx("""
                 <trk><trkseg>

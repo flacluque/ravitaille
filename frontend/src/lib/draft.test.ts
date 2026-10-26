@@ -14,6 +14,8 @@ import {
   parseRoadbookFile,
   raceToDraft,
   resolveCutoffs,
+  withoutTrackPositions,
+  withTrackPositions,
   type RaceDraft,
 } from './draft';
 
@@ -245,5 +247,27 @@ describe('erreurs champ par champ', () => {
     expect(fields[`${finish.id}.gainM`]).toBe('D+ manquant');
     expect(fields[`${finish.id}.cutoffIn`]).toBe('Format 14h30');
     expect(draftFieldErrors(draft, true)[`${finish.id}.gainM`]).toBeUndefined();
+  });
+});
+
+describe('ravitos placés sur la trace', () => {
+  it('garde les positions placées sur la carte, et les envoie seulement avec une trace', () => {
+    const draft = withTrackPositions(troubadours(), [null, 19.42, null, null]);
+    expect(draft.checkpoints.map((cp) => cp.trackKm ?? null)).toEqual([null, 19.42, null, null]);
+    const withTrack = draftToRace(draft, true);
+    const without = draftToRace(draft, false);
+    expect(withTrack.ok && withTrack.race.checkpoints[1].trackKm).toBe(19.42);
+    expect(without.ok && 'trackKm' in without.race.checkpoints[1]).toBe(false);
+    // Le plan affiché n'est plus à jour.
+    expect(draftSignature(draft, null)).not.toBe(draftSignature(troubadours(), null));
+  });
+
+  it('les relit dans un roadbook exporté, et les oublie avec une autre trace', () => {
+    const draft = withTrackPositions(troubadours(), [null, 19.42, null, null]);
+    const file = draftToFile(draft)!;
+    expect(parseRoadbookFile(file).checkpoints[1].trackKm).toBe(19.42);
+    expect(withoutTrackPositions(draft).checkpoints.every((cp) => cp.trackKm === undefined)).toBe(true);
+    const plain = troubadours();
+    expect(withoutTrackPositions(plain)).toBe(plain);
   });
 });

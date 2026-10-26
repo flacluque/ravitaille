@@ -1,7 +1,10 @@
 package fr.trailplanner.track;
 
+import fr.trailplanner.gpx.Waypoint;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalDouble;
 
 /**
  * Profil cumulé d'un tracé : pour chaque point, distance, D+ et D- depuis le départ.
@@ -15,15 +18,60 @@ public final class TrackProfile {
     private final double[] distanceM;   // distance cumulée (m)
     private final double[] gainM;       // D+ cumulé (m), après filtrage du bruit
     private final double[] lossM;       // D- cumulé (m), après filtrage du bruit
+    private final List<Waypoint> waypoints; // points nommés du GPX (souvent les ravitos)
 
     TrackProfile(double[] lat, double[] lon, double[] elevation,
                  double[] distanceM, double[] gainM, double[] lossM) {
+        this(lat, lon, elevation, distanceM, gainM, lossM, List.of());
+    }
+
+    private TrackProfile(double[] lat, double[] lon, double[] elevation,
+                         double[] distanceM, double[] gainM, double[] lossM, List<Waypoint> waypoints) {
         this.lat = lat;
         this.lon = lon;
         this.elevation = elevation;
         this.distanceM = distanceM;
         this.gainM = gainM;
         this.lossM = lossM;
+        this.waypoints = List.copyOf(waypoints);
+    }
+
+    /** Le même profil, avec les points nommés du GPX. */
+    public TrackProfile withWaypoints(List<Waypoint> named) {
+        return new TrackProfile(lat, lon, elevation, distanceM, gainM, lossM, named);
+    }
+
+    public List<Waypoint> waypoints() {
+        return waypoints;
+    }
+
+    /**
+     * Km de la trace où elle passe au plus près d'une position, parmi ses passages à moins de {@code maxDistanceM}
+     * (une boucle ou un aller-retour passe plusieurs fois au même endroit) : celui le plus proche de {@code expectedKm}.
+     * Vide si la trace ne passe pas assez près.
+     */
+    public OptionalDouble kmNear(double latitude, double longitude, double maxDistanceM, double expectedKm) {
+        double bestKm = Double.NaN, bestGap = Double.POSITIVE_INFINITY;
+        double passKm = Double.NaN, passDist = Double.POSITIVE_INFINITY;
+        for (int i = 0; i <= size(); i++) {
+            double d = i < size() ? TrackAnalyzer.haversine(latitude, longitude, lat[i], lon[i]) : Double.POSITIVE_INFINITY;
+            if (d <= maxDistanceM) {
+                if (d < passDist) {
+                    passDist = d;
+                    passKm = distanceM[i] / 1000.0;
+                }
+            } else if (!Double.isNaN(passKm)) {
+                // Fin d'un passage : on garde son point le plus proche.
+                double gap = Math.abs(passKm - expectedKm);
+                if (gap < bestGap) {
+                    bestGap = gap;
+                    bestKm = passKm;
+                }
+                passKm = Double.NaN;
+                passDist = Double.POSITIVE_INFINITY;
+            }
+        }
+        return Double.isNaN(bestKm) ? OptionalDouble.empty() : OptionalDouble.of(bestKm);
     }
 
     public int size() {

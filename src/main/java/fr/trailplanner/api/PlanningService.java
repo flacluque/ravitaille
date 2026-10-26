@@ -48,7 +48,7 @@ public class PlanningService {
 
     public LoadedTrack loadTrack(InputStream gpx) {
         GpxParser.ParsedGpx parsed = parser.parse(gpx);
-        return new LoadedTrack(parsed.name(), analyzer.analyze(parsed.points()));
+        return new LoadedTrack(parsed.name(), analyzer.analyze(parsed.points()).withWaypoints(parsed.waypoints()));
     }
 
     /** Plans sans historique d'entraînement. */

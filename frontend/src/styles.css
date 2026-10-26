@@ -684,6 +684,78 @@ button.plan-hero-worst { padding: 0; min-height: 44px; background: transparent; 
 .roadbook-detail { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 14px 92px; background: var(--surface-2); font-size: var(--fs-small); }
 .rb-m { display: none; }
 
+/* Ajuster les ravitos sur la trace (carte d'édition). */
+.placement-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap;
+  padding: 12px 16px; border-radius: 8px; background: var(--tight-bg); color: var(--tight-fg); }
+.placement-banner button { flex: none; }
+.placement { display: flex; flex-direction: column; gap: 14px; }
+.placement-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px 24px; flex-wrap: wrap; }
+.placement-head h2 { margin: 2px 0 4px; font-family: var(--font-display); font-size: var(--fs-display); line-height: 1.05; }
+.placement-head p { margin: 0; max-width: 640px; }
+.placement-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.placement-dirty { color: var(--tight-fg); font-weight: 600; }
+.placement-warn { margin: 0; padding: 10px 14px; border-radius: 8px; background: var(--tight-bg); color: var(--tight-fg); }
+.placement-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 24px; align-items: start; }
+.placement-map { display: flex; flex-direction: column; gap: 6px; position: sticky; top: 12px; }
+.placement-map p { margin: 0; }
+.map.map-edit { height: 620px; border-radius: 6px; }
+.map-num-icon, .map-wp-icon { background: none; border: 0; }
+.map-num { display: grid; place-items: center; width: 26px; height: 26px; margin: 2px; border-radius: 50%; background: var(--text);
+  color: #fff; border: 2.5px solid #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 0.4); font: 800 13px/1 var(--font-body); cursor: grab; box-sizing: border-box; }
+.map-num:active { cursor: grabbing; }
+.map-num.is-warn { background: var(--status-tight); box-shadow: 0 0 0 6px rgb(217 119 6 / 0.25); }
+.map-num.is-selected { background: var(--track); box-shadow: 0 0 0 7px rgb(194 65 12 / 0.22); }
+.map-wp { display: block; width: 10px; height: 10px; margin: 2px; transform: rotate(45deg); background: var(--accent); border: 1.5px solid #fff; }
+.map-end { display: block; width: 12px; height: 12px; margin: 2px; background: var(--text); border: 2px solid #fff; }
+.placement-side { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.placement-card { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); }
+.placement-card-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.placement-card-head h3 { margin: 0; flex: 1; min-width: 0; font-family: var(--font-display); font-size: var(--fs-title); line-height: 1.1; }
+.placement-num { display: inline-grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--text);
+  color: #fff; font-weight: 800; font-size: var(--fs-small); }
+.placement-num.is-warn { background: var(--status-tight); }
+.placement-num.is-end { border-radius: 3px; width: 16px; height: 16px; }
+.placement-row.is-selected .placement-num, .placement-card .placement-num { background: var(--track); }
+.placement-src { padding: 2px 10px; border-radius: 999px; font-size: var(--fs-small); font-weight: 700; background: var(--surface-2); color: var(--muted); }
+.placement-src.src-waypoint { background: #d9e4dc; color: var(--accent); }
+.placement-src.src-manual { background: #dbe7f3; color: #1e3a5f; }
+.placement-figures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.placement-figures dt { font-size: var(--fs-micro); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.placement-figures dd { margin: 0; font-family: var(--font-display); font-size: 1.625rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.placement-figures .placement-track { color: var(--track); font-weight: 800; }
+.placement-gain { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--ok-bg); color: var(--ok-fg); }
+.placement-gain.is-off { background: var(--tight-bg); color: var(--tight-fg); }
+.placement-conflict { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 8px; border: 1px solid #f3d27a; background: #fffbeb; }
+.placement-conflict p { margin: 0; }
+.placement-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.placement-fine { display: flex; align-items: center; gap: 8px; }
+.placement-fine input { flex: 1; min-width: 0; accent-color: var(--track); }
+.placement-fine button { flex: none; }
+.placement-card > .link-btn { align-self: flex-start; }
+.placement-list { list-style: none; margin: 0; padding: 0; border-top: 3px solid var(--text); }
+.placement-list li { border-bottom: 1px solid var(--border); }
+.placement-row { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 10px 8px;
+  background: transparent; color: var(--text); border: 0; border-radius: 0; font-weight: 400; text-align: left; }
+.placement-row:hover:not(:disabled) { background: var(--surface-2); }
+.placement-row:disabled { opacity: 1; }
+.placement-row.is-selected { background: #f4e3d7; }
+.placement-row-name { display: flex; flex-direction: column; font-weight: 600; min-width: 0; }
+.placement-row-name .muted { font-weight: 400; }
+.placement-row-warn { color: var(--tight-fg); font-weight: 700; }
+.placement-row .num { display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; }
+@media (max-width: 1100px) {
+  .placement-grid { grid-template-columns: minmax(0, 1fr); }
+  .placement-map { position: static; }
+  .map.map-edit { height: 420px; }
+}
+@media (max-width: 560px) {
+  .placement-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .placement-actions { width: 100%; }
+  .placement-actions button { flex: 1; }
+  .map.map-edit { height: 360px; }
+}
+
 @media (max-width: 1100px) {
   .plan-page { grid-template-columns: minmax(0, 1fr); grid-template-rows: none;
     grid-template-areas: "refs" "hero" "notes" "profile" "map" "road"; }

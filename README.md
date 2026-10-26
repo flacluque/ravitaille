@@ -347,3 +347,6 @@ et pourra être réutilisé tel quel (CLI, appli mobile via une API, batch de ca
   comptés séparément, descente technique), vitesses par tranche de pente calibrées sur tes flux d'activité Strava
 - [ ] **v0.7** : la montre : plan envoyé sur la montre (ravitos, barrières, heures du plan), suivi du plan au poignet
   pendant la course (à concevoir)
+- [x] **v0.7c** : ravitos placés sur la trace : un ravito se fait glisser sur la carte jusqu'à sa vraie place (roadbook
+  faux), les waypoints du GPX au nom des ravitos sont repris, et le site signale un ravito dont le D+ ou le waypoint ne
+  colle pas avec le km du roadbook. Le plan, le parcours Garmin et le code du champ suivent la position sur la trace

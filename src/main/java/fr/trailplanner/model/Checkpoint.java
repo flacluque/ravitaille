@@ -19,6 +19,7 @@ import java.util.Set;
  * @param cutoffOut  barrière horaire à la sortie (null si aucune)
  * @param aid        type d'arrêt (temps passé au ravito). Déduit des services s'il manque.
  * @param services   ce qu'on trouve sur place. Déduits du type d'arrêt s'ils manquent (anciens roadbooks).
+ * @param trackKm    position sur la trace GPX placée par le coureur (null : waypoint du GPX ou km du roadbook)
  */
 public record Checkpoint(
         String code,
@@ -29,12 +30,16 @@ public record Checkpoint(
         LocalDateTime cutoffIn,
         LocalDateTime cutoffOut,
         AidLevel aid,
-        Set<Service> services) {
+        Set<Service> services,
+        Double trackKm) {
 
     @JsonCreator
     public Checkpoint {
         if (km < 0) {
             throw new IllegalArgumentException("Kilométrage négatif pour " + name);
+        }
+        if (trackKm != null && (trackKm < 0 || trackKm.isNaN())) {
+            throw new IllegalArgumentException("Position sur la trace invalide pour " + name);
         }
         if (aid == null) {
             aid = services == null ? AidLevel.NONE : Service.aidFor(services);
@@ -44,10 +49,16 @@ public record Checkpoint(
                 : services.isEmpty() ? EnumSet.noneOf(Service.class) : EnumSet.copyOf(services));
     }
 
+    /** Sans position placée sur la trace. */
+    public Checkpoint(String code, String name, double km, Double gainM, Double lossM,
+                      LocalDateTime cutoffIn, LocalDateTime cutoffOut, AidLevel aid, Set<Service> services) {
+        this(code, name, km, gainM, lossM, cutoffIn, cutoffOut, aid, services, null);
+    }
+
     /** Sans services détaillés : ils se déduisent du type d'arrêt. */
     public Checkpoint(String code, String name, double km, Double gainM, Double lossM,
                       LocalDateTime cutoffIn, LocalDateTime cutoffOut, AidLevel aid) {
-        this(code, name, km, gainM, lossM, cutoffIn, cutoffOut, aid, null);
+        this(code, name, km, gainM, lossM, cutoffIn, cutoffOut, aid, null, null);
     }
 
     /** Vrai si l'on peut remplir ses flasques à ce point. */
