@@ -2,6 +2,7 @@ package fr.trailplanner.strava;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import fr.trailplanner.engine.RunnerProfile;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -62,6 +63,17 @@ public class StravaController {
         StravaSession session = cookies.read(request);
         try {
             return strava.activities(session, after != null ? after : LocalDate.now().minusYears(2));
+        } finally {
+            cookies.save(session, request, response);
+        }
+    }
+
+    /** Profil personnel (pente et fatigue) mesuré sur les sorties Strava du coureur. */
+    @GetMapping("/profile")
+    public RunnerProfile profile(HttpServletRequest request, HttpServletResponse response) {
+        StravaSession session = cookies.read(request);
+        try {
+            return strava.profile(session);
         } finally {
             cookies.save(session, request, response);
         }

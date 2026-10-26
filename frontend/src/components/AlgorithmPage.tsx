@@ -107,8 +107,14 @@ export function AlgorithmPage({ plan }: { plan: RacePlan | undefined }) {
         </div>
         <p>
           Le coût énergétique de la course est le plus bas entre −10 et −20 % <Ref id="minetti" /> ; plus raide, ce n'est
-          plus le souffle qui limite mais le freinage et la technique. Les seuils de descente sont un choix de départ, pas
-          encore calibrés sur tes sorties.
+          plus le souffle qui limite mais le freinage et la technique. Ces coefficients sont ceux du coureur moyen.
+        </p>
+        <p>
+          <strong>Ton profil de coureur</strong> (onglet Analyse) les ajuste à toi : sur tes sorties Strava de l'année, chaque
+          100 m est comparé au modèle, en tenant compte du rythme de la sortie et de la fatigue déjà accumulée. On en tire,
+          pour chaque tranche de pente, ton écart au coureur moyen (« 15 % plus rapide en montée »), et ta fatigue sur les
+          sorties de plus de 2 h. Avec peu de mesures, ton profil reste proche du coureur moyen : chaque tranche ne s'en
+          éloigne qu'en proportion des kilomètres mesurés.
         </p>
         <p>
           Avec la trace GPX, la pente est mesurée tous les 100 m ; sans trace, on prend la pente moyenne de la montée et de la

@@ -73,6 +73,14 @@ public class StravaClient {
                 .header("Authorization", "Bearer " + accessToken).GET().build());
     }
 
+    /** Flux d'une activité, point par point : temps, distance, altitude, en mouvement ou non. */
+    public JsonNode streams(String accessToken, long activityId) {
+        URI uri = URI.create(baseUrl + "/api/v3/activities/" + activityId + "/streams?" + form(Map.of(
+                "keys", "time,distance,altitude,moving", "key_by_type", "true")));
+        return send(HttpRequest.newBuilder(uri).timeout(TIMEOUT)
+                .header("Authorization", "Bearer " + accessToken).GET().build());
+    }
+
     private StravaToken token(JsonNode json, long athleteId, String athlete) {
         String access = json.path("access_token").asText(null);
         String refresh = json.path("refresh_token").asText(null);

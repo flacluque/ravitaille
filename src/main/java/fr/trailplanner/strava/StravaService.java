@@ -1,6 +1,8 @@
 package fr.trailplanner.strava;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import fr.trailplanner.engine.RunnerCalibration;
+import fr.trailplanner.engine.RunnerProfile;
 import fr.trailplanner.engine.TrainingHistory;
 import fr.trailplanner.engine.TrainingSource;
 import fr.trailplanner.model.TrainingSession;
@@ -41,6 +43,10 @@ public class StravaService {
     static final int PER_PAGE = 200;
     /** 10 pages de 200 : de quoi couvrir des années d'entraînement sans épuiser le quota de Strava. */
     static final int MAX_PAGES = 10;
+    /** Profil du coureur : sorties lues (une requête chacune, le quota de Strava est de 100 par quart d'heure). */
+    static final int PROFILE_ACTIVITIES = 15;
+    static final Duration PROFILE_MIN_DURATION = Duration.ofHours(1);
+    static final double PROFILE_MIN_GAIN_M = 200;
 
     /** En local, l'appli peut être servie par Vite sur un autre port que l'API. */
     private static final Pattern LOCAL_ORIGIN = Pattern.compile("^http://(localhost|127\\.0\\.0\\.1)(:\\d{1,5})?$");
@@ -182,6 +188,67 @@ public class StravaService {
         }
         result.sort(Comparator.comparing(StravaActivity::date).reversed());
         return result;
+    }
+
+    /**
+     * Profil personnel du coureur (pente et fatigue, voir {@link RunnerCalibration}), mesuré sur ses sorties de course à
+     * pied et de trail de l'année : les {@value #PROFILE_ACTIVITIES} plus parlantes (du dénivelé, de la durée, les
+     * courses d'abord), une requête Strava chacune.
+     */
+    public RunnerProfile profile(StravaSession session) {
+        LocalDate since = LocalDate.now(clock).minusYears(1);
+        List<StravaActivity> chosen = fetch(session, since, RUNNING).stream()
+                .filter(a -> a.movingTime().compareTo(PROFILE_MIN_DURATION) >= 0)
+                .filter(a -> a.race() || a.elevationGainM() >= PROFILE_MIN_GAIN_M)
+                .sorted(Comparator.comparingDouble(StravaService::profileScore).reversed())
+                .limit(PROFILE_ACTIVITIES)
+                .toList();
+        if (chosen.isEmpty()) {
+            throw new IllegalArgumentException("Pas encore de sortie qui s'y prête sur Strava cette année : il faut des "
+                    + "sorties d'au moins 1 h avec du dénivelé (" + Math.round(PROFILE_MIN_GAIN_M) + " m de D+ ou plus).");
+        }
+        String access = accessToken(session);
+        List<RunnerCalibration.Activity> activities = new ArrayList<>();
+        for (StravaActivity a : chosen) {
+            JsonNode streams = call(session, () -> client.streams(access, a.id()));
+            toStreams(streams, a).ifPresent(activities::add);
+        }
+        return RunnerCalibration.calibrate(activities).orElseThrow(() -> new IllegalArgumentException(
+                "Pas assez de mesures dans tes sorties Strava (GPS et altitude) pour calculer ton profil."));
+    }
+
+    /** Les courses et les sorties longues et vallonnées en disent le plus. */
+    static double profileScore(StravaActivity a) {
+        return (a.race() ? 2 : 1) * (a.distanceKm() + a.elevationGainM() / 100.0);
+    }
+
+    static Optional<RunnerCalibration.Activity> toStreams(JsonNode json, StravaActivity a) {
+        double[] time = numbers(json.path("time").path("data"));
+        double[] distance = numbers(json.path("distance").path("data"));
+        double[] altitude = numbers(json.path("altitude").path("data"));
+        JsonNode movingData = json.path("moving").path("data");
+        if (time.length < 10 || distance.length != time.length || altitude.length != time.length) {
+            return Optional.empty();
+        }
+        boolean[] moving = null;
+        if (movingData.isArray() && movingData.size() == time.length) {
+            moving = new boolean[time.length];
+            for (int i = 0; i < moving.length; i++) {
+                moving[i] = movingData.get(i).asBoolean(true);
+            }
+        }
+        return Optional.of(new RunnerCalibration.Activity(a.date(), a.race(), time, distance, altitude, moving));
+    }
+
+    private static double[] numbers(JsonNode data) {
+        if (!data.isArray()) {
+            return new double[0];
+        }
+        double[] out = new double[data.size()];
+        for (int i = 0; i < out.length; i++) {
+            out[i] = data.get(i).asDouble();
+        }
+        return out;
     }
 
     /** Révoque l'accès chez Strava (au mieux) et oublie les jetons. */

@@ -6,6 +6,7 @@ import fr.trailplanner.track.TrackProfile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.DoubleUnaryOperator;
 
 /**
  * Construit les tronçons entre ravitos, à partir du roadbook et/ou de la trace GPX.
@@ -45,6 +46,11 @@ public final class CourseBuilder {
     }
 
     public static List<Leg> legs(RaceDefinition race, TrackProfile track, ElevationSource source) {
+        return legs(race, track, source, TerrainEffort::factor);
+    }
+
+    /** Tronçons avec un coefficient de pente donné (celui du coureur, voir {@link RunnerProfile}). */
+    public static List<Leg> legs(RaceDefinition race, TrackProfile track, ElevationSource source, DoubleUnaryOperator factor) {
         List<Checkpoint> cps = race.checkpoints();
         List<Leg> legs = new ArrayList<>();
         // Roadbook sans D- : on suppose autant de descente que de montée sur chaque tronçon, comme pour les références.
@@ -63,13 +69,13 @@ public final class CourseBuilder {
                 if (track == null) {
                     // D- affiché tel que donné (0 si inconnu) ; pour le calcul, autant de descente que de montée.
                     legs.add(new Leg(from, to, distance, gain, loss,
-                            TerrainEffort.ofTotals(distance, gain, lossKnown ? loss : gain)));
+                            TerrainEffort.ofTotals(distance, gain, lossKnown ? loss : gain, factor)));
                 } else {
                     // Chiffres officiels pour la distance et le D+, forme des descentes lue sur la trace.
                     TrackProfile.ProfilePoint p0 = track.at(places.get(i - 1).trackKm());
                     TrackProfile.ProfilePoint p1 = track.at(places.get(i).trackKm());
                     double onTrackKmEffort = EffortModel.effortKm(p1.km() - p0.km(), p1.cumulativeGainM() - p0.cumulativeGainM());
-                    double descent = TerrainEffort.ofTrack(track, p0.km(), p1.km()) - onTrackKmEffort;
+                    double descent = TerrainEffort.ofTrack(track, p0.km(), p1.km(), factor) - onTrackKmEffort;
                     double terrain = Math.max(0.5 * distance, EffortModel.effortKm(distance, gain) + descent);
                     // D- absent du roadbook : celui de la trace.
                     double legLoss = lossKnown ? loss : p1.cumulativeLossM() - p0.cumulativeLossM();
@@ -81,11 +87,11 @@ public final class CourseBuilder {
                 legs.add(new Leg(from, to, p1.km() - p0.km(),
                         p1.cumulativeGainM() - p0.cumulativeGainM(),
                         p1.cumulativeLossM() - p0.cumulativeLossM(),
-                        TerrainEffort.ofTrack(track, p0.km(), p1.km())));
+                        TerrainEffort.ofTrack(track, p0.km(), p1.km(), factor)));
             }
         }
         boolean assumeLoss = source == ElevationSource.ROADBOOK && track == null && !lossKnown;
-        return normalized(legs, assumeLoss);
+        return normalized(legs, assumeLoss, factor);
     }
 
     /**
@@ -94,6 +100,10 @@ public final class CourseBuilder {
      * qu'une référence au profil identique. Le profil fin ne sert qu'à répartir cet effort entre les tronçons.
      */
     static List<Leg> normalized(List<Leg> legs, boolean lossEqualsGain) {
+        return normalized(legs, lossEqualsGain, TerrainEffort::factor);
+    }
+
+    static List<Leg> normalized(List<Leg> legs, boolean lossEqualsGain, DoubleUnaryOperator factor) {
         double distance = 0, gain = 0, loss = 0, fine = 0;
         for (Leg leg : legs) {
             distance += leg.distanceKm();
@@ -104,7 +114,7 @@ public final class CourseBuilder {
         if (fine <= 0) {
             return legs;
         }
-        double scale = TerrainEffort.ofTotals(distance, gain, lossEqualsGain ? gain : loss) / fine;
+        double scale = TerrainEffort.ofTotals(distance, gain, lossEqualsGain ? gain : loss, factor) / fine;
         return legs.stream()
                 .map(l -> new Leg(l.from(), l.to(), l.distanceKm(), l.gainM(), l.lossM(), l.terrainEffortKm() * scale))
                 .toList();

@@ -24,6 +24,8 @@ final class FakeStrava implements AutoCloseable {
     volatile int activitiesStatus = 200;
     /** Pages d'activités renvoyées dans l'ordre ; au-delà, une page vide. */
     volatile List<String> pages = List.of("[]");
+    /** Flux renvoyés pour chaque activité demandée. */
+    volatile String streams = "{}";
 
     FakeStrava() throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -42,6 +44,10 @@ final class FakeStrava implements AutoCloseable {
             java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:^|&)page=(\\d+)").matcher(query);
             int page = m.find() ? Integer.parseInt(m.group(1)) : 1;
             respond(ex, activitiesStatus, page <= pages.size() ? pages.get(page - 1) : "[]");
+        });
+        server.createContext("/api/v3/activities/", ex -> {
+            requests.add("GET " + ex.getRequestURI().getPath() + "?" + ex.getRequestURI().getQuery());
+            respond(ex, 200, streams);
         });
         server.start();
     }

@@ -3,12 +3,13 @@ import { ApiError, fetchCourse, fetchCustomPlans, fetchPlans, loadSnapshot, save
 import {
   loadCrew, loadDraft, loadGear, loadGpx, loadNutrition, loadTrainingOptions, saveCrew, saveDraft, saveGpx, saveNutrition,
   saveTrainingOptions,
-  loadFix, loadRunnerName,
+  loadFix, loadRunnerName, loadRunnerProfile, saveRunnerProfile, type StoredRunnerProfile,
 } from './api/storage';
 import type { ElevationSource, Reference } from './api/types';
 import { CompareTable } from './components/CompareTable';
 import { CourseMap } from './components/CourseMap';
 import { PlacementEditor } from './components/PlacementEditor';
+import { RunnerProfileCard } from './components/RunnerProfileCard';
 import { ElevationProfile } from './components/ElevationProfile';
 import { Legend } from './components/Legend';
 import { GearCard } from './components/GearCard';
@@ -131,6 +132,9 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   // Tenir compte de l'entraînement Strava : lu au moment de chaque calcul.
   const [training, setTraining] = useState(loadTrainingOptions);
   const trainingRef = useRef(training);
+  // Profil personnel (pente et fatigue, mesuré sur Strava) : envoyé avec chaque calcul de sa course s'il l'utilise.
+  const [runner, setRunner] = useState<StoredRunnerProfile>(loadRunnerProfile);
+  const runnerRef = useRef(runner);
 
   const run = useCallback(async (sampleId: string, load: () => Promise<Pick<Snapshot, 'course' | 'plans'>>,
     refs: Reference[], src: ElevationSource) => {
@@ -164,10 +168,20 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
       return false;
     }
     setDraftErrors([]);
-    const ok = await run(CUSTOM_ID, () => fetchCustomPlans(result.race, result.night, file, refs, src, trainingRef.current), refs, src);
+    const ok = await run(CUSTOM_ID, () => fetchCustomPlans(result.race, result.night, file, refs, src, trainingRef.current,
+      runnerRef.current.use ? runnerRef.current.profile : null), refs, src);
     if (ok) setComputedSignature(draftSignature(d, file));
     return ok;
   }, [run]);
+
+  function changeRunner(next: StoredRunnerProfile) {
+    const applied = (r: StoredRunnerProfile) => (r.use ? r.profile : null);
+    const changed = JSON.stringify(applied(next)) !== JSON.stringify(applied(runnerRef.current));
+    setRunner(next);
+    runnerRef.current = next;
+    saveRunnerProfile(next);
+    if (changed && mode === 'custom') void compute(references, source);
+  }
 
   function changeTraining(next: typeof training) {
     setTraining(next);
@@ -365,6 +379,10 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
         onTrainingChange={changeTraining}
       />
       {plan && <SourceNote source={plan.elevationSource} hasTrack={!!course?.track} />}
+      {plan?.runner && (
+        <p className="note">Pente et fatigue : ton profil de coureur ({plan.runner.activities} sortie{plan.runner.activities > 1 ? 's' : ''} Strava),
+          {' '}<a href={TAB_HASH.analyse}>voir dans Analyse</a>.</p>
+      )}
     </>
   );
   const planReady = !!plan && !!course && !otherRace;
@@ -583,6 +601,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
               complet (tronçons, allures, arrêts) et les trois scénarios côte à côte.</p>
             {plan && <ReferenceInsights plan={plan} />}
             {plan?.training && <TrainingCard plan={plan} />}
+            <RunnerProfileCard stored={runner} onChange={changeRunner} isExample={mode === 'demo'} />
             {plans.length > 1 && (
               <div className="plan-hero-scenarios analyse-scenario" role="group" aria-label="Scénario du tableau détaillé">
                 {plans.map((p, i) => (

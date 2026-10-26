@@ -1201,3 +1201,18 @@ button.garmin-download { min-height: 52px; font-size: var(--fs-lead); font-weigh
 }
 .garmin-code { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--fs-micro); padding: 8px;
   border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text); resize: vertical; word-break: break-all; }
+
+/* Profil de coureur (Analyse) : pente et fatigue mesurées sur Strava. */
+.runner-profile { display: flex; flex-direction: column; gap: 12px; }
+.runner-profile p { margin: 0; }
+.runner-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; }
+.runner-profile h3 { margin: 0 0 6px; font-size: var(--fs-small); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.runner-slope td, .runner-slope th { text-align: left; padding: 6px 8px 6px 0; }
+.runner-slope td.num { width: 64px; font-variant-numeric: tabular-nums; font-weight: 600; }
+.runner-verdict.faster { color: var(--ok-fg); font-weight: 600; }
+.runner-verdict.slower { color: var(--tight-fg); font-weight: 600; }
+.runner-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.runner-actions .strava-btn { text-decoration: none; }
+@media (max-width: 700px) {
+  .runner-grid { grid-template-columns: minmax(0, 1fr); }
+}

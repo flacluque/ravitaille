@@ -2,6 +2,8 @@ package fr.trailplanner.engine;
 
 import fr.trailplanner.track.TrackProfile;
 
+import java.util.function.DoubleUnaryOperator;
+
 /**
  * Effort « terrain » (v0.6) : chaque bout de parcours compte pour sa distance × un coefficient selon sa pente.
  * <ul>
@@ -15,6 +17,9 @@ import fr.trailplanner.track.TrackProfile;
  * Sans profil (référence, roadbook sans trace), on suppose une pente moyenne : la distance se partage entre
  * montée et descente au prorata du D+ et du D-. Pour une référence, dont on ne connaît que le D+, on suppose
  * autant de D- que de D+ (boucle), avec la montée et la descente à pente moyenne.
+ * <p>
+ * Chaque calcul existe aussi avec un coefficient personnel ({@link RunnerProfile#factor()}), mesuré sur les sorties
+ * du coureur.
  */
 public final class TerrainEffort {
 
@@ -37,6 +42,11 @@ public final class TerrainEffort {
      * la distance partagée au prorata du D+ et du D-.
      */
     public static double ofTotals(double distanceKm, double gainM, double lossM) {
+        return ofTotals(distanceKm, gainM, lossM, TerrainEffort::factor);
+    }
+
+    /** Même chose avec un coefficient de pente donné. */
+    public static double ofTotals(double distanceKm, double gainM, double lossM, DoubleUnaryOperator factor) {
         double gain = Math.max(0, gainM);
         double loss = Math.max(0, lossM);
         if (distanceKm <= 0) {
@@ -47,8 +57,8 @@ public final class TerrainEffort {
         }
         double upKm = distanceKm * gain / (gain + loss);
         double downKm = distanceKm - upKm;
-        double up = upKm > 0 ? upKm * factor(gain / (upKm * 1000)) : gain / 100.0;
-        double down = downKm > 0 ? downKm * factor(-loss / (downKm * 1000)) : 0;
+        double up = upKm > 0 ? upKm * factor.applyAsDouble(gain / (upKm * 1000)) : gain / 100.0;
+        double down = downKm > 0 ? downKm * factor.applyAsDouble(-loss / (downKm * 1000)) : 0;
         return up + down;
     }
 
@@ -57,14 +67,22 @@ public final class TerrainEffort {
         return ofTotals(distanceKm, gainM, gainM);
     }
 
+    public static double ofReference(double distanceKm, double gainM, DoubleUnaryOperator factor) {
+        return ofTotals(distanceKm, gainM, gainM, factor);
+    }
+
     /** Effort de la trace entre deux km, mesuré par bouts de {@value #SEGMENT_KM} km (D+ et D- filtrés). */
     public static double ofTrack(TrackProfile track, double fromKm, double toKm) {
+        return ofTrack(track, fromKm, toKm, TerrainEffort::factor);
+    }
+
+    public static double ofTrack(TrackProfile track, double fromKm, double toKm, DoubleUnaryOperator factor) {
         double effort = 0;
         TrackProfile.ProfilePoint prev = track.at(fromKm);
         for (double km = fromKm; km < toKm - 1e-9; km += SEGMENT_KM) {
             TrackProfile.ProfilePoint next = track.at(Math.min(toKm, km + SEGMENT_KM));
             effort += ofTotals(next.km() - prev.km(), next.cumulativeGainM() - prev.cumulativeGainM(),
-                    next.cumulativeLossM() - prev.cumulativeLossM());
+                    next.cumulativeLossM() - prev.cumulativeLossM(), factor);
             prev = next;
         }
         return effort;
