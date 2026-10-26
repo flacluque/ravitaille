@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { fetchRunnerProfile, fetchStravaStatus, humanError, stravaConnectUrl } from '../api/client';
-import type { StoredRunnerProfile } from '../api/storage';
+import type { RaceResult, StoredRunnerProfile } from '../api/storage';
 import type { RunnerProfile, SlopePoint } from '../api/types';
 import { formatKm } from '../lib/format';
-import { STANDARD_FATIGUE, fatigueEffect, slopeLabel, slopeVerdict } from '../lib/runner';
+import { STANDARD_FATIGUE, fatigueEffect, racesFatigue, slopeLabel, slopeVerdict } from '../lib/runner';
 import { StravaLogo } from './StravaLogo';
 
 interface Props {
@@ -30,7 +30,7 @@ export function RunnerProfileCard({ stored, onChange, isExample }: Props) {
     setError(null);
     try {
       const profile = await fetchRunnerProfile();
-      onChange({ profile, use: true, measuredAt: new Date().toISOString() });
+      onChange({ ...stored, profile, use: true, measuredAt: new Date().toISOString() });
     } catch (e) {
       setError(humanError(e));
     } finally {
@@ -44,16 +44,18 @@ export function RunnerProfileCard({ stored, onChange, isExample }: Props) {
       <div className="card-head">
         <h2><span className="strava-mark small"><StravaLogo size={13} /></span> Ton profil de coureur</h2>
         <p className="muted small">
-          Ton rythme selon la pente et ta fatigue au fil des heures, mesurés point par point sur tes sorties Strava de
-          l'année (les plus longues et les plus vallonnées). Sans profil, le plan suit le coureur moyen.
+          Ton rythme selon la pente, mesuré point par point sur tes sorties Strava de l'année (les plus longues et les
+          plus vallonnées), et ta fatigue, mesurée sur tes courses (retour de course, ci-dessous). Sans profil, le plan
+          suit le coureur moyen.
         </p>
       </div>
 
       {p ? <ProfileDetail profile={p} /> : (
-        <p>Pas encore de profil.{connected === false && ' Connecte Strava (dans « Mon plan », Importer depuis Strava) pour le mesurer.'}</p>
+        <p>Pas encore de profil de pente.{connected === false && ' Connecte Strava (dans « Mon plan », Importer depuis Strava) pour le mesurer.'}</p>
       )}
+      <FatigueDetail races={stored.races} />
 
-      {p && (
+      {(p || stored.races.length > 0) && (
         <label className="check runner-use">
           <input type="checkbox" checked={stored.use} onChange={(e) => onChange({ ...stored, use: e.target.checked })} />
           Utiliser mon profil dans le plan{isExample ? ' de ma course' : ''}
@@ -70,7 +72,8 @@ export function RunnerProfileCard({ stored, onChange, isExample }: Props) {
           <a className="strava-btn" href={stravaConnectUrl()}><StravaLogo /> Connecter Strava</a>
         )}
         {p && (
-          <button type="button" className="link-btn" onClick={() => onChange({ profile: null, use: false, measuredAt: null })}>
+          <button type="button" className="link-btn"
+            onClick={() => onChange({ ...stored, profile: null, measuredAt: null, use: stored.use && stored.races.length > 0 })}>
             Oublier mon profil
           </button>
         )}
@@ -84,7 +87,6 @@ export function RunnerProfileCard({ stored, onChange, isExample }: Props) {
 function ProfileDetail({ profile }: { profile: RunnerProfile }) {
   const climbs = profile.slope.filter((s) => s.grade > 0.02);
   const descents = profile.slope.filter((s) => s.grade < -0.02).reverse();
-  const fatigue = fatigueEffect(profile.fatigueExponent);
   const period = profile.from && profile.to
     ? ` du ${new Date(profile.from).toLocaleDateString('fr-FR')} au ${new Date(profile.to).toLocaleDateString('fr-FR')}` : '';
   return (
@@ -97,20 +99,32 @@ function ProfileDetail({ profile }: { profile: RunnerProfile }) {
         <SlopeTable title="En montée" points={climbs} />
         <SlopeTable title="En descente" points={descents} />
       </div>
-      <div className="runner-fatigue">
-        <h3>Fatigue</h3>
-        {profile.longActivities === 0 ? (
-          <p className="small">Pas de sortie de plus de 2 h : la fatigue reste celle du coureur moyen.</p>
-        ) : (
-          <p className="small">
-            {fatigue.verdict} Sur une course 2,5 fois plus longue que ta référence, ton temps estimé
-            {Math.abs(fatigue.longRacePercent) < 1 ? ' ne change presque pas' : ` ${fatigue.longRacePercent > 0 ? 'augmente' : 'baisse'} de ${Math.abs(fatigue.longRacePercent)} %`}
-            {' '}par rapport au coureur moyen. <span className="muted">(Exposant {profile.fatigueExponent.toFixed(2).replace('.', ',')},
-            moyenne {STANDARD_FATIGUE.toFixed(2).replace('.', ',')} ; {profile.longActivities} sortie{profile.longActivities > 1 ? 's' : ''} de plus de 2 h.)</span>
-          </p>
-        )}
-      </div>
     </>
+  );
+}
+
+/** Fatigue : celle des courses analysées, sinon celle du coureur moyen. */
+function FatigueDetail({ races }: { races: RaceResult[] }) {
+  const fatigue = racesFatigue(races);
+  const counted = races.filter((r) => r.use && r.fatigueExponent !== null).length;
+  const effect = fatigue === null ? null : fatigueEffect(fatigue);
+  return (
+    <div className="runner-fatigue">
+      <h3>Fatigue</h3>
+      {effect === null ? (
+        <p className="small">
+          Celle du coureur moyen, en attendant une course analysée (retour de course, ci-dessous). Tes sorties
+          d'entraînement, courues à allure maîtrisée, ne disent rien de ta fatigue sur une course à fond.
+        </p>
+      ) : (
+        <p className="small">
+          {effect.verdict} Sur une course 2,5 fois plus longue que ta référence, ton temps estimé
+          {Math.abs(effect.longRacePercent) < 1 ? ' ne change presque pas' : ` ${effect.longRacePercent > 0 ? 'augmente' : 'baisse'} de ${Math.abs(effect.longRacePercent)} %`}
+          {' '}par rapport au coureur moyen. <span className="muted">(D'après {counted} course{counted > 1 ? 's' : ''} ; exposant
+          {' '}{fatigue!.toFixed(2).replace('.', ',')}, moyenne {STANDARD_FATIGUE.toFixed(2).replace('.', ',')}.)</span>
+        </p>
+      )}
+    </div>
   );
 }
 

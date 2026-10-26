@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.DoubleUnaryOperator;
 
 /**
  * Mesure le profil personnel d'un coureur ({@link RunnerProfile}) sur ses sorties enregistrées, point par point
@@ -20,11 +21,15 @@ import java.util.Optional;
  * <ul>
  *   <li>un rythme propre à chaque sortie (une sortie tranquille ne dit rien de ton rythme de course) ;</li>
  *   <li>un rapport au coût standard par tranche de pente, le plat valant 1 ;</li>
- *   <li>β, sur les seules sorties de plus de {@value #LONG_HOURS} h.</li>
+ *   <li>β, sur les seules sorties de plus de {@value #LONG_HOURS} h, pour ne pas confondre fatigue et pente.</li>
  * </ul>
  * Peu de mesures, peu d'écart : chaque tranche de pente ne s'éloigne du standard qu'en proportion des kilomètres
- * mesurés ({@value #SLOPE_SHRINK_KM} km pour la moitié du chemin), et la fatigue en proportion des sorties longues
- * ({@value #FATIGUE_SHRINK} sorties pour la moitié). En montée, le coût ne peut pas baisser quand la pente augmente.
+ * mesurés ({@value #SLOPE_SHRINK_KM} km pour la moitié du chemin). En montée, le coût ne peut pas baisser quand la
+ * pente augmente.
+ * <p>
+ * La fatigue mesurée sur l'entraînement n'est pas gardée : une sortie longue courue à allure maîtrisée ne dit rien de
+ * la fatigue d'une course à fond (constaté sur 15 sorties : 1,03, contre bien plus en course). Le profil garde donc la
+ * fatigue du coureur moyen ; celle du coureur se mesure sur ses courses ({@link #raceFatigue}, retour de course).
  */
 public final class RunnerCalibration {
 
@@ -37,7 +42,6 @@ public final class RunnerCalibration {
     static final double[] EDGES = {-1, -0.3, -0.2, -0.15, -0.1, -0.06, -0.02, 0.02, 0.06, 0.1, 0.15, 0.2, 0.3, 1};
     static final int FLAT = 6;
     static final double SLOPE_SHRINK_KM = 5;
-    static final double FATIGUE_SHRINK = 4;
     static final double LONG_HOURS = 2;
     /** En dessous, pas de profil : trop peu de mesures. */
     static final double MIN_KM = 20;
@@ -47,8 +51,9 @@ public final class RunnerCalibration {
     static final double MIN_MOVING_SHARE = 0.8;
     static final double RACE_WEIGHT = 2;
 
-    private record Segment(int activity, double km, double grade, double seconds, double lnEffort, double weight,
-                           int bucket) {}
+    /** Un bout de sortie ; {@code cost} est le coût de sa pente selon le modèle utilisé (standard ou personnel). */
+    private record Segment(int activity, double km, double grade, double cost, double seconds, double lnEffort,
+                           double weight, int bucket) {}
 
     private RunnerCalibration() {}
 
@@ -60,7 +65,7 @@ public final class RunnerCalibration {
         for (int a = 0; a < activities.size(); a++) {
             Activity act = activities.get(a);
             int before = segments.size();
-            double movingS = segments(act, a, segments);
+            double movingS = segments(act, a, segments, TerrainEffort::factor);
             if (segments.size() == before) {
                 continue;
             }
@@ -161,21 +166,47 @@ public final class RunnerCalibration {
                 longCount++;
             }
         }
-        double standard = Scenario.REALISTE.fatigueExponent();
-        double measured = 1 + beta;
-        double fatigue = clamp(standard + (measured - standard) * longCount / (longCount + FATIGUE_SHRINK),
-                RunnerProfile.MIN_FATIGUE, RunnerProfile.MAX_FATIGUE);
-        return Optional.of(new RunnerProfile(points, round3(fatigue), used, Math.round(totalKm * 10) / 10.0, longCount,
-                from, to));
+        // β a servi à séparer la fatigue de la pente ; la fatigue gardée est celle du coureur moyen (voir plus haut).
+        return Optional.of(new RunnerProfile(points, Scenario.REALISTE.fatigueExponent(), used,
+                Math.round(totalKm * 10) / 10.0, longCount, from, to));
     }
 
-    /** ln(temps par km-effort standard) du bout. */
+    /**
+     * Fatigue d'une course (retour de course) : exposant de Riegel qui décrit le mieux comment l'allure s'est dégradée,
+     * à coût de pente donné (celui du coureur s'il a un profil). Vide pour une sortie de moins de {@value #LONG_HOURS} h.
+     */
+    public static Optional<Double> raceFatigue(Activity race, DoubleUnaryOperator cost) {
+        List<Segment> segments = new ArrayList<>();
+        double moving = segments(race, 0, segments, cost);
+        if (moving < LONG_HOURS * 3600 || segments.size() < 50) {
+            return Optional.empty();
+        }
+        double w = 0, mx = 0, my = 0;
+        for (Segment s : segments) {
+            w += s.weight();
+            mx += s.weight() * s.lnEffort();
+            my += s.weight() * lnY(s);
+        }
+        mx /= w;
+        my /= w;
+        double sxy = 0, sxx = 0;
+        for (Segment s : segments) {
+            sxy += s.weight() * (s.lnEffort() - mx) * (lnY(s) - my);
+            sxx += s.weight() * (s.lnEffort() - mx) * (s.lnEffort() - mx);
+        }
+        if (sxx <= 0) {
+            return Optional.empty();
+        }
+        return Optional.of(round3(clamp(1 + sxy / sxx, 1.0, 1.3)));
+    }
+
+    /** ln(temps par km-effort) du bout. */
     private static double lnY(Segment s) {
-        return Math.log(s.seconds() / (s.km() * TerrainEffort.factor(s.grade())));
+        return Math.log(s.seconds() / (s.km() * s.cost()));
     }
 
-    /** Découpe une sortie en bouts de 100 m ; renvoie son temps en mouvement (s). */
-    private static double segments(Activity act, int index, List<Segment> out) {
+    /** Découpe une sortie en bouts de 100 m, coût de la pente selon {@code cost} ; renvoie son temps en mouvement (s). */
+    private static double segments(Activity act, int index, List<Segment> out, DoubleUnaryOperator cost) {
         double[] t = act.timeS(), d = act.distanceM(), alt = act.altitudeM();
         boolean[] moving = act.moving();
         int n = Math.min(Math.min(t.length, d.length), alt.length);
@@ -207,12 +238,13 @@ public final class RunnerCalibration {
             if (covered >= SEGMENT_M) {
                 double km = covered / 1000;
                 double grade = (alt[i] - alt[start]) / covered;
-                effort += km * TerrainEffort.factor(clamp(grade, -0.6, 0.6));
+                double c = cost.applyAsDouble(clamp(grade, -0.6, 0.6));
+                effort += km * c;
                 double pace = segMoving / covered;
                 boolean keep = Math.abs(grade) <= 0.6 && segMoving > 0 && pace >= MIN_PACE_S_PER_M
                         && pace <= MAX_PACE_S_PER_M && segMoving >= MIN_MOVING_SHARE * segElapsed && effort >= 1;
                 if (keep) {
-                    out.add(new Segment(index, km, grade, segMoving, Math.log(effort), weight * km, bucket(grade)));
+                    out.add(new Segment(index, km, grade, c, segMoving, Math.log(effort), weight * km, bucket(grade)));
                 }
                 start = i;
                 segStartD = d[i];

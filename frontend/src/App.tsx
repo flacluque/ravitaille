@@ -10,6 +10,7 @@ import { CompareTable } from './components/CompareTable';
 import { CourseMap } from './components/CourseMap';
 import { PlacementEditor } from './components/PlacementEditor';
 import { RunnerProfileCard } from './components/RunnerProfileCard';
+import { RaceReviewCard } from './components/RaceReviewCard';
 import { ElevationProfile } from './components/ElevationProfile';
 import { Legend } from './components/Legend';
 import { GearCard } from './components/GearCard';
@@ -32,6 +33,7 @@ import { RavitosView } from './components/RavitosView';
 import { TrainingLine } from './components/TrainingLine';
 import { draftSignature, draftToRace, emptyDraft, withoutTrackPositions, withTrackPositions, type RaceDraft } from './lib/draft';
 import { placementWarnings } from './lib/placement';
+import { appliedProfile } from './lib/runner';
 import { formatClock, formatKm, formatMeters } from './lib/format';
 import { defaultServices } from './lib/services';
 
@@ -169,14 +171,13 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     }
     setDraftErrors([]);
     const ok = await run(CUSTOM_ID, () => fetchCustomPlans(result.race, result.night, file, refs, src, trainingRef.current,
-      runnerRef.current.use ? runnerRef.current.profile : null), refs, src);
+      appliedProfile(runnerRef.current)), refs, src);
     if (ok) setComputedSignature(draftSignature(d, file));
     return ok;
   }, [run]);
 
   function changeRunner(next: StoredRunnerProfile) {
-    const applied = (r: StoredRunnerProfile) => (r.use ? r.profile : null);
-    const changed = JSON.stringify(applied(next)) !== JSON.stringify(applied(runnerRef.current));
+    const changed = JSON.stringify(appliedProfile(next)) !== JSON.stringify(appliedProfile(runnerRef.current));
     setRunner(next);
     runnerRef.current = next;
     saveRunnerProfile(next);
@@ -380,7 +381,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
       />
       {plan && <SourceNote source={plan.elevationSource} hasTrack={!!course?.track} />}
       {plan?.runner && (
-        <p className="note">Pente et fatigue : ton profil de coureur ({plan.runner.activities} sortie{plan.runner.activities > 1 ? 's' : ''} Strava),
+        <p className="note">Ton profil de coureur : {runnerNote(plan.runner.activities, runner.races.filter((r) => r.use && r.fatigueExponent !== null).length)},
           {' '}<a href={TAB_HASH.analyse}>voir dans Analyse</a>.</p>
       )}
     </>
@@ -602,6 +603,9 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
             {plan && <ReferenceInsights plan={plan} />}
             {plan?.training && <TrainingCard plan={plan} />}
             <RunnerProfileCard stored={runner} onChange={changeRunner} isExample={mode === 'demo'} />
+            {mode === 'custom' && plan && course && !otherRace && (
+              <RaceReviewCard plan={plan} course={course} stored={runner} onChange={changeRunner} />
+            )}
             {plans.length > 1 && (
               <div className="plan-hero-scenarios analyse-scenario" role="group" aria-label="Scénario du tableau détaillé">
                 {plans.map((p, i) => (
@@ -630,6 +634,14 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
         feedbackUrl={feedbackUrl} />
     </div>
   );
+}
+
+/** « pente mesurée sur 15 sorties Strava, fatigue de 1 course » */
+function runnerNote(activities: number, races: number): string {
+  const parts = [];
+  if (activities > 0) parts.push(`pente mesurée sur ${activities} sortie${activities > 1 ? 's' : ''} Strava`);
+  parts.push(races > 0 ? `fatigue de ${races} course${races > 1 ? 's' : ''} analysée${races > 1 ? 's' : ''}` : 'fatigue du coureur moyen');
+  return parts.join(', ');
 }
 
 function SourceNote({ source, hasTrack }: { source: ElevationSource; hasTrack: boolean }) {

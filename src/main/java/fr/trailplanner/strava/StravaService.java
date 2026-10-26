@@ -217,12 +217,57 @@ public class StravaService {
                 "Pas assez de mesures dans tes sorties Strava (GPS et altitude) pour calculer ton profil."));
     }
 
+    /**
+     * Retour de course : l'activité lue point par point (temps tous les 100 m) et la fatigue mesurée dessus, à coût de
+     * pente donné par le profil du coureur s'il en a un.
+     */
+    public RaceReview review(StravaSession session, long activityId, RunnerProfile runner) {
+        String access = accessToken(session);
+        JsonNode streams = call(session, () -> client.streams(access, activityId));
+        RunnerCalibration.Activity race = toStreams(streams, null, true).orElseThrow(() -> new IllegalArgumentException(
+                "Cette activité n'a pas d'enregistrement exploitable (distance, temps et altitude)."));
+        Double fatigue = RunnerCalibration.raceFatigue(race, RunnerProfile.factor(runner)).orElse(null);
+        double[] t = race.timeS(), d = race.distanceM();
+        boolean[] moving = race.moving();
+        List<double[]> points = new ArrayList<>();
+        points.add(new double[] {0, 0, 0});
+        double movingS = 0;
+        double next = 100;
+        for (int i = 1; i < t.length; i++) {
+            double dt = t[i] - t[i - 1];
+            if (dt > 0 && (moving == null || moving[i])) {
+                movingS += dt;
+            }
+            if (d[i] >= next) {
+                points.add(new double[] {round2(d[i] / 1000), round2((t[i] - t[0]) / 60), round2(movingS / 60)});
+                while (next <= d[i]) {
+                    next += 100;
+                }
+            }
+        }
+        int last = t.length - 1;
+        // L'arrivée, au-delà du dernier multiple de 100 m
+        if (d[last] / 1000 > points.get(points.size() - 1)[0]) {
+            points.add(new double[] {round2(d[last] / 1000), round2((t[last] - t[0]) / 60), round2(movingS / 60)});
+        }
+        return new RaceReview(activityId, fatigue, round2(d[last] / 1000), round2((t[last] - t[0]) / 60),
+                round2(movingS / 60), points);
+    }
+
+    private static double round2(double v) {
+        return Math.round(v * 100) / 100.0;
+    }
+
     /** Les courses et les sorties longues et vallonnées en disent le plus. */
     static double profileScore(StravaActivity a) {
         return (a.race() ? 2 : 1) * (a.distanceKm() + a.elevationGainM() / 100.0);
     }
 
     static Optional<RunnerCalibration.Activity> toStreams(JsonNode json, StravaActivity a) {
+        return toStreams(json, a.date(), a.race());
+    }
+
+    static Optional<RunnerCalibration.Activity> toStreams(JsonNode json, LocalDate date, boolean race) {
         double[] time = numbers(json.path("time").path("data"));
         double[] distance = numbers(json.path("distance").path("data"));
         double[] altitude = numbers(json.path("altitude").path("data"));
@@ -237,7 +282,7 @@ public class StravaService {
                 moving[i] = movingData.get(i).asBoolean(true);
             }
         }
-        return Optional.of(new RunnerCalibration.Activity(a.date(), a.race(), time, distance, altitude, moving));
+        return Optional.of(new RunnerCalibration.Activity(date, race, time, distance, altitude, moving));
     }
 
     private static double[] numbers(JsonNode data) {
