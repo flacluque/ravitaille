@@ -1,8 +1,13 @@
-# Trail Planner
+# Ravitaille
 
 Planificateur de course trail : à partir du roadbook (et/ou de la trace GPX) et de tes courses
 de référence, il calcule les **heures de passage à chaque ravito**, les **marges sur les barrières
-horaires** et le **temps total**, selon trois scénarios (optimiste / réaliste / prudent).
+horaires** et le **temps total**, selon trois scénarios (optimiste / réaliste / prudent). Son champ pour montre
+Garmin s'appelle **Prochain Ravito** (voir [connectiq/](connectiq/README.md)).
+
+> Anciennement « Trail Planner » (nom déjà pris). Les identifiants internes gardent l'ancien nom : paquet Java
+> `fr.trailplanner`, artefact Maven, service Render, clés du stockage du navigateur (`trail-planner:…`, pour ne pas
+> perdre les courses déjà saisies) et préfixe `TP1` du code du plan (les codes déjà collés sur les montres restent bons).
 
 > v0.1 : moteur de calcul + API REST + front React (carte, profil altimétrique, tableau imprimable, hors ligne).
 
@@ -26,7 +31,7 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
 ```
 
 - **Six onglets** pour ne pas se perdre :
-  - **Accueil** : à quoi sert Trail Planner et comment s'en servir, avec un aperçu du plan. Affiché à la
+  - **Accueil** : à quoi sert Ravitaille et comment s'en servir, avec un aperçu du plan. Affiché à la
     première visite, puis on arrive sur « Mon plan » (le logo ramène à l'accueil) ;
   - **Mon plan** : l'arrivée prévue et sa fourchette, la barrière la plus serrée, la carte, le profil et
     les heures de passage (le tableau détaillé est dans « Analyse ») ;
@@ -169,7 +174,7 @@ test : l'image dans `src/test/resources/roadbooks/`, la saisie de référence da
 Strava demande une **application API**, gratuite, à créer une fois avec ton compte :
 
 1. Sur https://www.strava.com/settings/api, crée une application :
-   - nom : `Trail Planner` (au choix), catégorie : `Training` ;
+   - nom : `Ravitaille` (au choix), catégorie : `Training` ;
    - site web : `http://localhost` ;
    - **domaine de rappel (Authorization Callback Domain) : `localhost`**.
 2. Note l'**identifiant client** (Client ID) et le **secret client** (Client Secret).

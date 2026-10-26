@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'Trail Planner',
-        short_name: 'Trail Planner',
+        name: 'Ravitaille',
+        short_name: 'Ravitaille',
         description: 'Heures de passage, ravitos et barrières horaires de ta course',
         lang: 'fr',
         theme_color: '#1f4d3a',

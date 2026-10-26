@@ -1,6 +1,6 @@
 import Toybox.Lang;
 
-// Le plan collé dans les réglages du champ (code « TP1 » généré par Trail Planner, lib/ciq.ts sur le site).
+// Le plan collé dans les réglages du champ (code « TP1 » généré par Ravitaille, lib/ciq.ts sur le site).
 // Mêmes calculs que lib/ciq.ts, qui en est la référence testée.
 //
 // Format : TP1;<heure du départ, minutes>;<km-effort cumulé à chaque km, en dixièmes>;<ravitos>

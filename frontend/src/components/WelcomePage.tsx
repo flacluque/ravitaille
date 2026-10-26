@@ -27,7 +27,7 @@ const STEPS = [
   { title: 'Le jour J', text: 'Prépare tes ravitos et ton sac, télécharge le PDF à glisser dans ta poche, ou garde l\'appli : le dernier plan reste lisible sans réseau.' },
 ];
 
-/** Page d'arrivée : à quoi sert Trail Planner et comment s'en servir. */
+/** Page d'arrivée : à quoi sert Ravitaille et comment s'en servir. */
 export function WelcomePage({ plan, isExample, onOpenPlan, onMyRace, onAlgorithm, feedbackUrl }: Props) {
   return (
     <article className="welcome">
@@ -35,7 +35,7 @@ export function WelcomePage({ plan, isExample, onOpenPlan, onMyRace, onAlgorithm
         <div className="welcome-pitch">
           <h1>Prépare ton trail, heure par heure.</h1>
           <p className="welcome-lead">
-            Trail Planner calcule tes heures de passage à chaque ravito à partir de <strong>tes propres courses</strong>,
+            Ravitaille calcule tes heures de passage à chaque ravito à partir de <strong>tes propres courses</strong>,
             te dit quelle marge tu as sur les barrières horaires, et prépare ta nutrition et ton sac.
           </p>
           <div className="welcome-cta">
@@ -94,7 +94,7 @@ export function WelcomePage({ plan, isExample, onOpenPlan, onMyRace, onAlgorithm
           <p>
             Tes courses, références et réglages sont gardés dans ton navigateur. Strava se connecte en lecture seule
             et se déconnecte d'un clic. Un roadbook lu par l'IA est envoyé à Gemini (Google) le temps de la lecture ;
-            Trail Planner n'en garde rien.
+            Ravitaille n'en garde rien.
           </p>
         </div>
         <div className="card">

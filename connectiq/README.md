@@ -1,4 +1,4 @@
-# Champ de données Connect IQ « Trail Planner »
+# Champ de données Connect IQ « Prochain Ravito »
 
 Champ pour montre Garmin à écran rond (fēnix 6, 7 et 8, epix, Enduro, Forerunner, vívoactive et Venu : liste dans
 `manifest.xml`) : le **prochain ravito de ton plan**, la distance pour y arriver,
@@ -50,11 +50,11 @@ d'une longue course (100 km et plus). Instinct et écrans rectangulaires ne sont
 
 ## Pour chaque course
 
-1. Sur le site : « Télécharger ▾ › Parcours pour ma Garmin », section **Champ Trail Planner** : copie le code.
-2. Appli Connect IQ du téléphone › Trail Planner › **Réglages** : colle le code, enregistre.
+1. Sur le site : « Télécharger ▾ › Parcours pour ma Garmin », section **Champ Prochain Ravito** : copie le code.
+2. Appli Connect IQ du téléphone › Prochain Ravito › **Réglages** : colle le code, enregistre.
 3. Sur la montre : réglages de l'activité Trail › Écrans de données : ajoute le champ (seul pour la version
    complète, ou dans un écran à 2 champs pour la version compacte).
-4. Une seule fois, sur la montre : réglages de l'activité Trail › **Alertes › Ajouter › Connect IQ** › Trail Planner
+4. Une seule fois, sur la montre : réglages de l'activité Trail › **Alertes › Ajouter › Connect IQ** › Prochain Ravito
    (le libellé varie selon le modèle). Sans ce réglage, la montre vibre à 300 m du ravito mais n'affiche pas l'alerte
    par-dessus l'écran en cours : la vibration vient du champ, l'affichage de l'alerte est soumis à ce réglage.
 

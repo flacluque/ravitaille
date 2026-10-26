@@ -374,9 +374,9 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   return (
     <div className="app">
       <header className="topbar">
-        <a className="brand" href={TAB_HASH.accueil} aria-label="Trail Planner : accueil">
+        <a className="brand" href={TAB_HASH.accueil} aria-label="Ravitaille : accueil">
           <img src="/icon.svg" alt="" width={28} height={28} />
-          <span>Trail Planner</span>
+          <span>Ravitaille</span>
         </a>
         {tab === 'accueil' ? <div className="race-title" /> : otherRace ? (
           <div className="race-title">
