@@ -37,8 +37,7 @@
             <iq:product id="epix2pro42mm"/>
             <iq:product id="epix2pro47mm"/>
             <iq:product id="epix2pro51mm"/>
-            <!-- Enduro -->
-            <iq:product id="enduro2"/>
+            <!-- Enduro (l'Enduro 2 posait problème : retirée pour l'instant) -->
             <iq:product id="enduro3"/>
             <!-- Forerunner -->
             <iq:product id="fr165"/>
