@@ -203,14 +203,29 @@ export function saveRunnerName(name: string): void {
 // calcul de sa course quand il choisit de l'utiliser.
 const RUNNER_PROFILE_KEY = 'trail-planner:profil-coureur';
 
+/** Une course analysée (retour de course) : sa fatigue compte pour les plans suivants si le coureur le veut. */
+export interface RaceResult {
+  activityId: number;
+  name: string;
+  date: string;
+  distanceKm: number;
+  /** Fatigue mesurée (exposant de Riegel), null si la sortie est trop courte pour la mesurer. */
+  fatigueExponent: number | null;
+  /** Compter cette course pour la fatigue (à décocher pour une course perturbée : blessure, météo…). */
+  use: boolean;
+}
+
 export interface StoredRunnerProfile {
+  /** Coût selon la pente, mesuré sur les sorties Strava (sa fatigue est celle du coureur moyen). */
   profile: RunnerProfile | null;
   use: boolean;
   /** Date de la mesure (ISO). */
   measuredAt: string | null;
+  /** Courses analysées : elles donnent la fatigue. */
+  races: RaceResult[];
 }
 
-export const NO_RUNNER_PROFILE: StoredRunnerProfile = { profile: null, use: false, measuredAt: null };
+export const NO_RUNNER_PROFILE: StoredRunnerProfile = { profile: null, use: false, measuredAt: null, races: [] };
 
 export function loadRunnerProfile(): StoredRunnerProfile {
   try {
@@ -219,7 +234,8 @@ export function loadRunnerProfile(): StoredRunnerProfile {
     const saved = JSON.parse(raw) as Partial<StoredRunnerProfile>;
     const profile = saved.profile && Array.isArray(saved.profile.slope) && typeof saved.profile.fatigueExponent === 'number'
       ? saved.profile : null;
-    return { profile, use: !!profile && saved.use !== false, measuredAt: saved.measuredAt ?? null };
+    const races = Array.isArray(saved.races) ? saved.races.filter((r) => r && typeof r.activityId === 'number') : [];
+    return { profile, use: (!!profile || races.length > 0) && saved.use !== false, measuredAt: saved.measuredAt ?? null, races };
   } catch {
     return NO_RUNNER_PROFILE;
   }
@@ -227,7 +243,7 @@ export function loadRunnerProfile(): StoredRunnerProfile {
 
 export function saveRunnerProfile(stored: StoredRunnerProfile): void {
   try {
-    if (stored.profile) localStorage.setItem(RUNNER_PROFILE_KEY, JSON.stringify(stored));
+    if (stored.profile || stored.races.length > 0) localStorage.setItem(RUNNER_PROFILE_KEY, JSON.stringify(stored));
     else localStorage.removeItem(RUNNER_PROFILE_KEY);
   } catch {
     // Stockage indisponible : le profil vaut pour cette visite seulement.

@@ -73,9 +73,19 @@ class RunnerCalibrationTest {
         assertEquals(0.8, p.ratioAt(0.2), 0.05);
         assertEquals(1.2, p.ratioAt(-0.1), 0.05);
         assertEquals(1.0, p.ratioAt(0.0), 0.01);
-        // La fatigue s'approche de 1,12, rapprochée du standard selon le nombre de sorties longues (12 / (12 + 4)).
-        double expected = 1.07 + (TRUE_EXPONENT - 1.07) * 12 / 16.0;
-        assertEquals(expected, p.fatigueExponent(), 0.015);
+        // La fatigue de l'entraînement n'est pas gardée : celle du coureur moyen, en attendant ses courses.
+        assertEquals(1.07, p.fatigueExponent(), 1e-9);
+    }
+
+    @Test
+    void mesureLaFatigueDUneCourseACoutDePenteDonne() {
+        RunnerCalibration.Activity race = activity(60, 340);
+        RunnerProfile runner = new RunnerProfile(List.of(new RunnerProfile.SlopePoint(-0.03, 1.2, 50),
+                new RunnerProfile.SlopePoint(0, 1, 50), new RunnerProfile.SlopePoint(0.03, 0.8, 50)), 1.07, 5, 150, 0, null, null);
+        // Avec le vrai coût de la pente du coureur, on retrouve sa fatigue.
+        assertEquals(TRUE_EXPONENT, RunnerCalibration.raceFatigue(race, RunnerProfile.factor(runner)).orElseThrow(), 0.01);
+        // Trop court pour parler de fatigue.
+        assertTrue(RunnerCalibration.raceFatigue(activity(12, 300), RunnerProfile.factor(null)).isEmpty());
     }
 
     @Test

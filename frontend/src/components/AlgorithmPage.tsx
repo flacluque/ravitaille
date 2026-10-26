@@ -112,9 +112,11 @@ export function AlgorithmPage({ plan }: { plan: RacePlan | undefined }) {
         <p>
           <strong>Ton profil de coureur</strong> (onglet Analyse) les ajuste à toi : sur tes sorties Strava de l'année, chaque
           100 m est comparé au modèle, en tenant compte du rythme de la sortie et de la fatigue déjà accumulée. On en tire,
-          pour chaque tranche de pente, ton écart au coureur moyen (« 15 % plus rapide en montée »), et ta fatigue sur les
-          sorties de plus de 2 h. Avec peu de mesures, ton profil reste proche du coureur moyen : chaque tranche ne s'en
-          éloigne qu'en proportion des kilomètres mesurés.
+          pour chaque tranche de pente, ton écart au coureur moyen (« 15 % plus rapide en montée »). Avec peu de mesures,
+          ton profil reste proche du coureur moyen : chaque tranche ne s'en éloigne qu'en proportion des kilomètres
+          mesurés. Ta <strong>fatigue</strong>, elle, se mesure sur tes courses (retour de course) : un entraînement couru à
+          allure maîtrisée ne dit rien de la fatigue d'une course à fond. Une course compte pour moitié, deux pour les deux
+          tiers, et ainsi de suite ; une course perturbée (blessure, météo) peut être écartée.
         </p>
         <p>
           Avec la trace GPX, la pente est mesurée tous les 100 m ; sans trace, on prend la pente moyenne de la montée et de la

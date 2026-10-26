@@ -1,14 +1,17 @@
 package fr.trailplanner.strava;
 
+import fr.trailplanner.engine.RunnerProfile;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import fr.trailplanner.engine.RunnerProfile;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -78,6 +81,21 @@ public class StravaController {
             cookies.save(session, request, response);
         }
     }
+
+    /** Retour de course : une activité comparée au plan, et la fatigue mesurée dessus. */
+    @PostMapping("/activities/{id}/review")
+    public RaceReview review(@PathVariable long id, @RequestBody(required = false) ReviewRequest body,
+                             HttpServletRequest request, HttpServletResponse response) {
+        StravaSession session = cookies.read(request);
+        try {
+            return strava.review(session, id, body == null ? null : body.runner());
+        } finally {
+            cookies.save(session, request, response);
+        }
+    }
+
+    /** @param runner profil du coureur (coût de la pente), null pour le coureur moyen */
+    public record ReviewRequest(RunnerProfile runner) {}
 
     @DeleteMapping("/connection")
     public ResponseEntity<Void> disconnect(HttpServletRequest request, HttpServletResponse response) {

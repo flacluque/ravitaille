@@ -267,6 +267,23 @@ class StravaServiceTest {
     }
 
     @Test
+    void retourDeCourseLitLActiviteEtMesureLaFatigue() {
+        fake.streams = streams();
+
+        RaceReview review = service.review(connected("acces-1", 1), 77, null);
+
+        assertEquals(77, review.activityId());
+        assertTrue(fake.requests.stream().anyMatch(r -> r.startsWith("GET /api/v3/activities/77/streams?")));
+        assertEquals(30, review.distanceKm(), 0.1);
+        // Un point tous les 100 m : km, minutes écoulées, minutes en mouvement.
+        assertEquals(301, review.points().size(), 2);
+        double[] last = review.points().get(review.points().size() - 1);
+        assertEquals(review.movingMinutes(), last[2], 0.2);
+        // 3 h de course à allure régulière (selon la pente standard) : pas de fatigue mesurée.
+        assertEquals(1.0, review.fatigueExponent(), 0.02);
+    }
+
+    @Test
     void sansSortieQuiSyPretePasDeProfil() {
         fake.pages = List.of("[" + run(2, "2026-09-02") + "]");
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> service.profile(connected("acces-1", 1)));

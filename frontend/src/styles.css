@@ -1216,3 +1216,17 @@ button.garmin-download { min-height: 52px; font-size: var(--fs-lead); font-weigh
 @media (max-width: 700px) {
   .runner-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Retour de course (Analyse) : la course réelle comparée au plan. */
+.race-review { display: flex; flex-direction: column; gap: 12px; }
+.race-review p { margin: 0; }
+.race-review h3 { margin: 0 0 6px; font-size: var(--fs-small); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.review-races { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.review-races li { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.review-pick { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; border: 0; }
+.review-pick legend { margin-bottom: 4px; font-weight: 600; }
+.review-result { display: flex; flex-direction: column; gap: 10px; }
+.review-table th, .review-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+.review-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.review-late { color: var(--tight-fg); font-weight: 600; }
+.review-early { color: var(--ok-fg); font-weight: 600; }

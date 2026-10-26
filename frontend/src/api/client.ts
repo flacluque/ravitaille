@@ -1,6 +1,6 @@
 import type {
   CourseView, ElevationSource, ExtractedGear, ExtractedRoadbook, ExtractorStatus, RaceDefinition, RacePlan, Reference,
-  RunnerProfile, StravaActivity, StravaStatus, TrainingOptions,
+  RaceReview, RunnerProfile, StravaActivity, StravaStatus, TrainingOptions,
 } from './types';
 import type { NightWindow } from '../lib/draft';
 
@@ -99,6 +99,15 @@ export function fetchStravaActivities(after: string): Promise<StravaActivity[]> 
 /** Profil personnel (pente et fatigue) mesuré sur les sorties Strava : une quinzaine de requêtes à Strava. */
 export function fetchRunnerProfile(): Promise<RunnerProfile> {
   return getJson('/api/strava/profile');
+}
+
+/** Retour de course : l'activité lue point par point et la fatigue mesurée dessus (coût de pente du profil). */
+export function fetchRaceReview(activityId: number, runner: RunnerProfile | null): Promise<RaceReview> {
+  return getJson(`/api/strava/activities/${activityId}/review`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ runner }),
+  });
 }
 
 export async function disconnectStrava(): Promise<void> {

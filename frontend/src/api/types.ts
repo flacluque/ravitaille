@@ -128,6 +128,18 @@ export interface RacePlan {
   runner?: RunnerProfile | null;
 }
 
+/** Retour de course : une activité Strava lue tous les 100 m (fr.trailplanner.strava.RaceReview). */
+export interface RaceReview {
+  activityId: number;
+  /** Fatigue mesurée sur cette course (exposant de Riegel), null pour une sortie de moins de 2 h. */
+  fatigueExponent: number | null;
+  distanceKm: number;
+  elapsedMinutes: number;
+  movingMinutes: number;
+  /** Tous les 100 m : [km, minutes écoulées, minutes en mouvement]. */
+  points: [number, number, number][];
+}
+
 /** Rapport au coût standard à une pente (fr.trailplanner.engine.RunnerProfile.SlopePoint). */
 export interface SlopePoint {
   /** Pente moyenne de la tranche (m/m, négative en descente). */
