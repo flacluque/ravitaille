@@ -26,7 +26,7 @@ Your Trail Planner race plan on your wrist: next aid station, distance to it, es
 ahead or behind plan you are. 300 m before an aid station, the watch vibrates and shows an alert.
 
 Planned times follow the terrain (climbs and descents), and planned stops at aid stations don't count as delay.
-No course or connection needed during the race.
+No course or connection needed during the race. The field displays its texts in French, like the Trail Planner website.
 
 How to use:
 1. Plan your race on Trail Planner (trail-planner.onrender.com).
@@ -40,4 +40,9 @@ How to use:
 Captures du simulateur (Fenix 7) : écran plein avec un plan chargé, version à 2 champs, alerte « RAVITO DANS 300 M ».
 
 ## Appareils
-fēnix 7, 7S, 7X, 7 Pro, 7S Pro, 7X Pro (voir `manifest.xml`).
+Montres à écran rond : fēnix 6, 7 et 8 (toutes tailles), fēnix E, epix (Gen 2) et epix Pro, Enduro 2 et 3,
+Forerunner 165, 255, 265, 570, 955, 965 et 970, vívoactive 5 et 6, Venu 2 et 3 (voir `manifest.xml`).
+
+## Langue
+Le champ affiche ses textes en français, comme le site Trail Planner. À dire dans la description anglaise :
+« The data field displays its texts in French, like the Trail Planner website. »

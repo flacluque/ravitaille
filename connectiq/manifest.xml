@@ -1,17 +1,67 @@
 <?xml version="1.0"?>
 <!-- Champ de données « Trail Planner » : le prochain ravito du plan, l'écart au plan et l'heure d'arrivée estimée.
      Identifiant de la version publique (store). La version bêta (tests, visible du seul développeur) utilisait
-     351219e39d544d20a58b819ba04c9906 : Garmin demande un identifiant différent pour chacune. -->
+     351219e39d544d20a58b819ba04c9906 : Garmin demande un identifiant différent pour chacune.
+     Montres : celles à écran rond de Connect IQ 3.2 ou plus (l'alerte de champ date de 3.2). Instinct et écrans
+     rectangulaires (Venu X1, Venu Sq) attendent une mise en page adaptée. Chaque appareil doit être téléchargé dans le
+     SDK Manager pour compiler ; un identifiant inconnu du SDK bloque la compilation (le corriger avec
+     « Monkey C: Edit Products »). -->
 <iq:manifest version="3" xmlns:iq="http://www.garmin.com/xml/connectiq">
     <iq:application id="f92a894f0f604602ab84f7af6b0ff210" type="datafield" name="@Strings.AppName"
         entry="TrailPlannerApp" launcherIcon="@Drawables.LauncherIcon" minApiLevel="3.2.0">
         <iq:products>
+            <!-- fēnix 6 -->
+            <iq:product id="fenix6"/>
+            <iq:product id="fenix6s"/>
+            <iq:product id="fenix6pro"/>
+            <iq:product id="fenix6spro"/>
+            <iq:product id="fenix6xpro"/>
+            <!-- fēnix 7 -->
             <iq:product id="fenix7"/>
             <iq:product id="fenix7s"/>
             <iq:product id="fenix7x"/>
             <iq:product id="fenix7pro"/>
             <iq:product id="fenix7spro"/>
             <iq:product id="fenix7xpro"/>
+            <iq:product id="fenix7pronowifi"/>
+            <iq:product id="fenix7xpronowifi"/>
+            <!-- fēnix 8 et fēnix E -->
+            <iq:product id="fenix843mm"/>
+            <iq:product id="fenix847mm"/>
+            <iq:product id="fenix8pro47mm"/>
+            <iq:product id="fenix8solar47mm"/>
+            <iq:product id="fenix8solar51mm"/>
+            <iq:product id="fenixe"/>
+            <!-- epix (Gen 2) et epix Pro -->
+            <iq:product id="epix2"/>
+            <iq:product id="epix2pro42mm"/>
+            <iq:product id="epix2pro47mm"/>
+            <iq:product id="epix2pro51mm"/>
+            <!-- Enduro -->
+            <iq:product id="enduro2"/>
+            <iq:product id="enduro3"/>
+            <!-- Forerunner -->
+            <iq:product id="fr165"/>
+            <iq:product id="fr165m"/>
+            <iq:product id="fr255"/>
+            <iq:product id="fr255m"/>
+            <iq:product id="fr255s"/>
+            <iq:product id="fr255sm"/>
+            <iq:product id="fr265"/>
+            <iq:product id="fr265s"/>
+            <iq:product id="fr57042mm"/>
+            <iq:product id="fr57047mm"/>
+            <iq:product id="fr955"/>
+            <iq:product id="fr965"/>
+            <iq:product id="fr970"/>
+            <!-- vívoactive et Venu (identifiants à confirmer avec « Monkey C: Edit Products ») -->
+            <iq:product id="vivoactive5"/>
+            <iq:product id="vivoactive6"/>
+            <iq:product id="venu2"/>
+            <iq:product id="venu2plus"/>
+            <iq:product id="venu2s"/>
+            <iq:product id="venu3"/>
+            <iq:product id="venu3s"/>
         </iq:products>
         <iq:permissions/>
         <iq:languages>
