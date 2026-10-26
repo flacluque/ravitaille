@@ -224,6 +224,55 @@ class StravaServiceTest {
         return URI.create(service.authorize("http://localhost:5173", SERVER)).getQuery().replaceAll(".*state=([^&]+).*", "$1");
     }
 
+    /** Flux d'une sortie de 30 km qui alterne montées et descentes à 10 %, à 10 km/h d'effort, un point toutes les 5 s. */
+    private static String streams() {
+        StringBuilder time = new StringBuilder(), dist = new StringBuilder(), alt = new StringBuilder(), moving = new StringBuilder();
+        double t = 0, d = 0, a = 300;
+        while (d < 30000) {
+            String sep = time.isEmpty() ? "" : ",";
+            time.append(sep).append(t);
+            dist.append(sep).append(Math.round(d * 10) / 10.0);
+            alt.append(sep).append(Math.round(a * 10) / 10.0);
+            moving.append(sep).append("true");
+            double grade = ((int) (d / 1000)) % 2 == 0 ? 0.1 : -0.1;
+            double speed = 10 / 3.6 / fr.trailplanner.engine.TerrainEffort.factor(grade);
+            t += 5;
+            d += speed * 5;
+            a += grade * speed * 5;
+        }
+        return "{\"time\":{\"data\":[%s]},\"distance\":{\"data\":[%s]},\"altitude\":{\"data\":[%s]},\"moving\":{\"data\":[%s]}}"
+                .formatted(time, dist, alt, moving);
+    }
+
+    @Test
+    void mesureLeProfilDuCoureurSurSesSortiesQuiSyPretent() {
+        fake.pages = List.of("""
+                [{"id": 1, "name": "Trail", "sport_type": "TrailRun", "start_date_local": "2026-09-01T07:00:00Z",
+                  "distance": 30000, "total_elevation_gain": 1500, "elapsed_time": 11000, "moving_time": 10800},
+                 {"id": 2, "name": "Footing", "sport_type": "Run", "start_date_local": "2026-09-02T18:00:00Z",
+                  "distance": 8000, "total_elevation_gain": 50, "elapsed_time": 2900, "moving_time": 2800},
+                 {"id": 3, "name": "Vélo", "sport_type": "Ride", "start_date_local": "2026-09-03T07:00:00Z",
+                  "distance": 60000, "total_elevation_gain": 900, "elapsed_time": 9000, "moving_time": 8000}]""");
+        fake.streams = streams();
+
+        var profile = service.profile(connected("acces-1", 1));
+
+        assertEquals(1, profile.activities());
+        assertEquals(LocalDate.of(2026, 9, 1), profile.from());
+        assertFalse(profile.slope().isEmpty());
+        // Une seule sortie lue en détail : ni le footing (trop court, trop plat) ni le vélo.
+        assertEquals(1, fake.requests.stream().filter(r -> r.startsWith("GET /api/v3/activities/")).count());
+        assertTrue(fake.requests.stream().anyMatch(r -> r.startsWith("GET /api/v3/activities/1/streams?")
+                && r.contains("time,distance,altitude,moving")));
+    }
+
+    @Test
+    void sansSortieQuiSyPretePasDeProfil() {
+        fake.pages = List.of("[" + run(2, "2026-09-02") + "]");
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> service.profile(connected("acces-1", 1)));
+        assertTrue(e.getMessage().startsWith("Pas encore de sortie"));
+    }
+
     private static String run(int id, String date) {
         return """
                 {"id": %d, "name": "Footing", "sport_type": "Run", "start_date_local": "%sT18:00:00Z",

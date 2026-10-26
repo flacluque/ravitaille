@@ -348,8 +348,9 @@ et pourra être réutilisé tel quel (CLI, appli mobile via une API, batch de ca
   références repliées, PDF résumé d'une page
 - [x] **v0.4.x** : lisibilité « roadbook terrain », vue « En course », onglets en bas sur téléphone
 - [x] **v0.5** : mode assistance : lien de suivi pour l'équipe, rendez-vous recalés, temps de route (OSRM)
-- [ ] **v0.6** : pente et descente dans le modèle : chaque tronçon découpé selon la pente de la trace (D+ et D-
-  comptés séparément, descente technique), vitesses par tranche de pente calibrées sur tes flux d'activité Strava
+- [x] **v0.6** : pente et descente dans le modèle : chaque tronçon découpé selon la pente de la trace (D+ et D-
+  comptés séparément, descente technique) ; **profil de coureur** mesuré sur tes sorties Strava (coût par tranche de
+  pente et fatigue, rapprochés du coureur moyen quand les mesures sont peu nombreuses)
 - [ ] **v0.7** : la montre : plan envoyé sur la montre (ravitos, barrières, heures du plan), suivi du plan au poignet
   pendant la course (à concevoir)
 - [x] **v0.7c** : ravitos placés sur la trace : un ravito se fait glisser sur la carte jusqu'à sa vraie place (roadbook

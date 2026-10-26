@@ -1,6 +1,6 @@
 import type {
   CourseView, ElevationSource, ExtractedGear, ExtractedRoadbook, ExtractorStatus, RaceDefinition, RacePlan, Reference,
-  StravaActivity, StravaStatus, TrainingOptions,
+  RunnerProfile, StravaActivity, StravaStatus, TrainingOptions,
 } from './types';
 import type { NightWindow } from '../lib/draft';
 
@@ -62,6 +62,7 @@ export function fetchCustomPlans(
   refs: Reference[],
   source: ElevationSource,
   training: TrainingOptions | null = null,
+  runner: RunnerProfile | null = null,
 ): Promise<{ course: CourseView; plans: RacePlan[] }> {
   const request = {
     race,
@@ -69,6 +70,7 @@ export function fetchCustomPlans(
     elevationSource: source,
     references: toApi(refs),
     training,
+    runner,
   };
   const form = new FormData();
   form.append('request', new Blob([JSON.stringify(request)], { type: 'application/json' }));
@@ -92,6 +94,11 @@ export function stravaConnectUrl(): string {
 /** Sorties de course à pied et de trail depuis une date ("2024-10-12"). */
 export function fetchStravaActivities(after: string): Promise<StravaActivity[]> {
   return getJson(`/api/strava/activities?after=${encodeURIComponent(after)}`);
+}
+
+/** Profil personnel (pente et fatigue) mesuré sur les sorties Strava : une quinzaine de requêtes à Strava. */
+export function fetchRunnerProfile(): Promise<RunnerProfile> {
+  return getJson('/api/strava/profile');
 }
 
 export async function disconnectStrava(): Promise<void> {

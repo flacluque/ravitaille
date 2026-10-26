@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.DoubleUnaryOperator;
 
 /**
  * Calcule les heures de passage à chaque point du roadbook.
@@ -49,9 +50,33 @@ public class RacePlanner {
                          TrainingHistory history,
                          LocalDate today,
                          int weeks) {
+        return plan(race, track, references, scenario, night, requestedSource, history, today, weeks, null);
+    }
 
+    /**
+     * @param runner profil personnel du coureur (pente et fatigue mesurées sur ses sorties) ; null pour le modèle
+     *               standard
+     */
+    public RacePlan plan(RaceDefinition race,
+                         TrackProfile track,
+                         List<ReferencePerformance> references,
+                         Scenario scenario,
+                         NightWindow night,
+                         ElevationSource requestedSource,
+                         TrainingHistory history,
+                         LocalDate today,
+                         int weeks,
+                         RunnerProfile runner) {
+
+        // Son profil : son coût selon la pente pour la course comme pour ses références, sa fatigue sur chaque scénario.
+        DoubleUnaryOperator slope = RunnerProfile.factor(runner);
+        if (runner != null) {
+            double exponent = Math.max(1.0, Math.min(1.3, scenario.fatigueExponent() + runner.fatigueShift()));
+            scenario = new Scenario(scenario.name(), scenario.paceFactor(), exponent, scenario.nightFactor(),
+                    scenario.lightStopMinutes(), scenario.fullStopMinutes());
+        }
         ElevationSource source = CourseBuilder.resolve(requestedSource, race, track);
-        List<Leg> legs = CourseBuilder.legs(race, track, source);
+        List<Leg> legs = CourseBuilder.legs(race, track, source, slope);
         double raceEffort = legs.stream().mapToDouble(Leg::effortKm).sum();
         LocalDate raceDate = race.start().toLocalDate();
 
@@ -62,6 +87,13 @@ public class RacePlanner {
         List<ReferenceWeighting.Weighted> weighted = useForm
                 ? ReferenceWeighting.weigh(references, raceEffort, raceDate, form.factors(), ReferenceWeighting.HALF_LIFE_DAYS_WITH_FORM)
                 : ReferenceWeighting.weigh(references, raceEffort, raceDate);
+        if (runner != null) {
+            weighted = weighted.stream()
+                    .map(w -> new ReferenceWeighting.Weighted(w.reference(), w.effortKm(), w.raceMinutes(), w.weight(),
+                            w.recencyFactor(), w.distanceFactor(), w.formFactor(),
+                            TerrainEffort.ofReference(w.reference().distanceKm(), w.reference().elevationGainM(), slope)))
+                    .toList();
+        }
         // Sortie longue trop courte pour la distance : le scénario prudent en tient compte.
         if (useForm && form.lowSpecificity() && scenario.equals(Scenario.PRUDENT)) {
             scenario = new Scenario(scenario.name(), scenario.paceFactor() * TrainingForm.LOW_SPECIFICITY_PENALTY,
@@ -89,7 +121,7 @@ public class RacePlanner {
         return new RacePlan(plan.raceName(), plan.scenario(), plan.elevationSource(), plan.totalDistanceKm(),
                 plan.totalGainM(), plan.totalEffortKm(), plan.start(), plan.finish(), plan.totalDuration(),
                 plan.totalStops(), plan.nightDuration(), plan.checkpoints(), plan.warnings(), List.copyOf(insights),
-                form == null ? null : TrainingSummary.of(form));
+                form == null ? null : TrainingSummary.of(form), runner);
     }
 
     private RacePlan simulate(RaceDefinition race, List<Leg> legs, ElevationSource source, EffortModel model,

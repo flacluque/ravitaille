@@ -50,7 +50,7 @@ export function buildCiqPlan(course: CourseView, plan: RacePlan): CiqPlan | null
   if (!track || course.markers.length !== plan.checkpoints.length) return null;
   const start = localMinutes(plan.start);
   const maxKm = track.profile[track.profile.length - 1]?.km ?? 0;
-  const effort = Array.from({ length: Math.ceil(maxKm) + 1 }, (_, km) => terrainEffortAt(track.profile, km));
+  const effort = Array.from({ length: Math.ceil(maxKm) + 1 }, (_, km) => terrainEffortAt(track.profile, km, plan.runner));
   const last = plan.checkpoints.length - 1;
   const ravitos = plan.checkpoints.map((eta, i) => {
     return {

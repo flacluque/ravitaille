@@ -67,7 +67,7 @@ public class PlanningService {
         int weeks = request.training() == null ? TrainingHistory.BLOCK_WEEKS : request.training().weeksOrDefault();
         return request.scenariosOrDefault().stream()
                 .map(s -> planner.plan(request.race(), track, request.references(), s,
-                        request.night(), request.elevationSource(), history, today, weeks))
+                        request.night(), request.elevationSource(), history, today, weeks, request.runner()))
                 .map(p -> warnings.isEmpty() ? p : withWarnings(p, warnings))
                 .toList();
     }
@@ -106,7 +106,7 @@ public class PlanningService {
         all.addAll(p.warnings());
         return new RacePlan(p.raceName(), p.scenario(), p.elevationSource(), p.totalDistanceKm(), p.totalGainM(),
                 p.totalEffortKm(), p.start(), p.finish(), p.totalDuration(), p.totalStops(), p.nightDuration(),
-                p.checkpoints(), List.copyOf(all), p.references(), p.training());
+                p.checkpoints(), List.copyOf(all), p.references(), p.training(), p.runner());
     }
 
     /** Charge une course d'exemple embarquée (src/main/resources/samples/&lt;id&gt;/). */

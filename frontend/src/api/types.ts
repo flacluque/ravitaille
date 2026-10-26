@@ -124,6 +124,29 @@ export interface RacePlan {
   references: ReferenceInsight[];
   /** Préparation du coureur (historique Strava), null sans historique. */
   training?: TrainingSummary | null;
+  /** Profil personnel utilisé (pente et fatigue), null pour le modèle standard. */
+  runner?: RunnerProfile | null;
+}
+
+/** Rapport au coût standard à une pente (fr.trailplanner.engine.RunnerProfile.SlopePoint). */
+export interface SlopePoint {
+  /** Pente moyenne de la tranche (m/m, négative en descente). */
+  grade: number;
+  /** Coût du coureur / coût standard (0,8 = 20 % plus rapide que la moyenne). */
+  ratio: number;
+  km: number;
+}
+
+/** Profil personnel du coureur, mesuré sur ses sorties Strava (fr.trailplanner.engine.RunnerProfile). */
+export interface RunnerProfile {
+  slope: SlopePoint[];
+  /** Exposant de fatigue du scénario réaliste pour ce coureur (1,07 pour le modèle standard). */
+  fatigueExponent: number;
+  activities: number;
+  km: number;
+  longActivities: number;
+  from: string | null;
+  to: string | null;
 }
 
 /** Bloc de préparation : les 12 semaines avant la semaine de course (fr.trailplanner.engine.TrainingHistory.PrepBlock). */

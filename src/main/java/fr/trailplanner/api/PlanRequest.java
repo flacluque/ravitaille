@@ -3,6 +3,7 @@ package fr.trailplanner.api;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import fr.trailplanner.engine.TrainingHistory;
 import fr.trailplanner.engine.ElevationSource;
+import fr.trailplanner.engine.RunnerProfile;
 import fr.trailplanner.model.NightWindow;
 import fr.trailplanner.model.RaceDefinition;
 import fr.trailplanner.model.ReferencePerformance;
@@ -19,6 +20,8 @@ import java.util.List;
  * @param elevationSource AUTO (défaut), ROADBOOK ou TRACK
  * @param scenarios       scénarios personnalisés (optionnel ; sinon optimiste / réaliste / prudent)
  * @param training        tenir compte de l'entraînement (historique Strava) ; null pour s'en passer
+ * @param runner          profil personnel du coureur (pente et fatigue mesurées sur ses sorties) ; null pour le
+ *                        modèle standard
  */
 public record PlanRequest(
         RaceDefinition race,
@@ -26,15 +29,21 @@ public record PlanRequest(
         NightWindow night,
         ElevationSource elevationSource,
         List<Scenario> scenarios,
-        TrainingOptions training) {
+        TrainingOptions training,
+        RunnerProfile runner) {
 
     @JsonCreator
     public PlanRequest {
     }
 
     public PlanRequest(RaceDefinition race, List<ReferencePerformance> references, NightWindow night,
+                       ElevationSource elevationSource, List<Scenario> scenarios, TrainingOptions training) {
+        this(race, references, night, elevationSource, scenarios, training, null);
+    }
+
+    public PlanRequest(RaceDefinition race, List<ReferencePerformance> references, NightWindow night,
                        ElevationSource elevationSource, List<Scenario> scenarios) {
-        this(race, references, night, elevationSource, scenarios, null);
+        this(race, references, night, elevationSource, scenarios, null, null);
     }
 
     /**

@@ -1,4 +1,4 @@
-import type { CheckpointEta, Marker, ProfilePoint, RacePlan } from '../api/types';
+import type { CheckpointEta, Marker, ProfilePoint, RacePlan, RunnerProfile } from '../api/types';
 import { durationMinutes, localMinutes } from './format';
 
 /** Barrière qui compte pour un point : la plus serrée des deux (entrée / sortie). */
@@ -61,7 +61,7 @@ export function estimatedMinutesAt(trackKm: number, plan: RacePlan, markers: Mar
     if (trackKm <= k1 || i === etas.length - 1) {
       const t0 = localMinutes(etas[i - 1].departure);
       const t1 = localMinutes(etas[i].arrival);
-      return t0 + (t1 - t0) * effortShare(trackKm, k0, k1, profile);
+      return t0 + (t1 - t0) * effortShare(trackKm, k0, k1, profile, plan.runner);
     }
   }
   return null;
@@ -72,56 +72,79 @@ export function estimatedMinutesAt(trackKm: number, plan: RacePlan, markers: Mar
  * vite dans les montées et les descentes raides, plus vite dans les descentes douces, comme dans le calcul du plan.
  * Sans profil, la part de distance.
  */
-export function effortShare(km: number, k0: number, k1: number, profile?: ProfilePoint[]): number {
+export function effortShare(km: number, k0: number, k1: number, profile?: ProfilePoint[], runner?: RunnerProfile | null): number {
   if (k1 <= k0) return 0;
   const x = Math.min(k1, Math.max(k0, km));
   if (!profile || profile.length < 2) return (x - k0) / (k1 - k0);
-  const total = terrainEffortAt(profile, k1) - terrainEffortAt(profile, k0);
-  return total > 0 ? (terrainEffortAt(profile, x) - terrainEffortAt(profile, k0)) / total : (x - k0) / (k1 - k0);
+  const at = (k: number) => terrainEffortAt(profile, k, runner);
+  const total = at(k1) - at(k0);
+  return total > 0 ? (at(x) - at(k0)) / total : (x - k0) / (k1 - k0);
 }
 
 /**
  * Coefficient de temps selon la pente g (m/m, négative en descente), 1 = plat. Même règle que le serveur
  * (TerrainEffort) : montée 1 + 10 g (ITRA) ; descente 0,7 à −10 %, puis 0,9 à −20 %, 1,1 à −30 %, 1,3 à −40 %.
  */
-export function terrainFactor(grade: number): number {
-  if (grade >= 0) return 1 + 10 * grade;
-  const down = -grade;
-  return down <= 0.1 ? 1 - 3 * down : 0.7 + 2 * (down - 0.1);
+export function terrainFactor(grade: number, runner?: RunnerProfile | null): number {
+  const standard = grade >= 0 ? 1 + 10 * grade : (-grade <= 0.1 ? 1 + 3 * grade : 0.7 + 2 * (-grade - 0.1));
+  return runner ? standard * runnerRatio(runner, grade) : standard;
+}
+
+/**
+ * Rapport du coureur au coût standard à une pente (RunnerProfile.ratioAt côté serveur) : interpolé entre les
+ * tranches mesurées, constant au-delà.
+ */
+export function runnerRatio(runner: RunnerProfile, grade: number): number {
+  const pts = runner.slope;
+  if (pts.length === 0) return 1;
+  if (grade <= pts[0].grade) return pts[0].ratio;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1];
+    const b = pts[i];
+    if (grade <= b.grade) return a.ratio + ((grade - a.grade) / (b.grade - a.grade)) * (b.ratio - a.ratio);
+  }
+  return pts[pts.length - 1].ratio;
 }
 
 /** Effort d'un bout de parcours (km, D+ et D- en m) : montée et descente à pente moyenne. */
-export function terrainOfTotals(distanceKm: number, gainM: number, lossM: number): number {
+export function terrainOfTotals(distanceKm: number, gainM: number, lossM: number, runner?: RunnerProfile | null): number {
   const gain = Math.max(0, gainM);
   const loss = Math.max(0, lossM);
   if (distanceKm <= 0) return gain / 100;
   if (gain + loss <= 0) return distanceKm;
   const up = (distanceKm * gain) / (gain + loss);
   const down = distanceKm - up;
-  return (up > 0 ? up * terrainFactor(gain / (up * 1000)) : gain / 100)
-    + (down > 0 ? down * terrainFactor(-loss / (down * 1000)) : 0);
+  return (up > 0 ? up * terrainFactor(gain / (up * 1000), runner) : gain / 100)
+    + (down > 0 ? down * terrainFactor(-loss / (down * 1000), runner) : 0);
 }
 
-const cumulative = new WeakMap<ProfilePoint[], number[]>();
+// Par trace, puis par profil de coureur (« standard » sans profil).
+const cumulative = new WeakMap<ProfilePoint[], Map<string, number[]>>();
 
-/** Effort selon la pente cumulé à chaque point du profil (calculé une fois par profil). */
-function cumulativeTerrain(profile: ProfilePoint[]): number[] {
-  let out = cumulative.get(profile);
+/** Effort selon la pente cumulé à chaque point du profil (calculé une fois par trace et par profil de coureur). */
+function cumulativeTerrain(profile: ProfilePoint[], runner?: RunnerProfile | null): number[] {
+  let byRunner = cumulative.get(profile);
+  if (!byRunner) {
+    byRunner = new Map();
+    cumulative.set(profile, byRunner);
+  }
+  const key = runner ? JSON.stringify(runner.slope) : 'standard';
+  let out = byRunner.get(key);
   if (!out) {
     out = [0];
     for (let i = 1; i < profile.length; i++) {
       const a = profile[i - 1];
       const b = profile[i];
-      out.push(out[i - 1] + terrainOfTotals(b.km - a.km, b.cumulativeGainM - a.cumulativeGainM, b.cumulativeLossM - a.cumulativeLossM));
+      out.push(out[i - 1] + terrainOfTotals(b.km - a.km, b.cumulativeGainM - a.cumulativeGainM, b.cumulativeLossM - a.cumulativeLossM, runner));
     }
-    cumulative.set(profile, out);
+    byRunner.set(key, out);
   }
   return out;
 }
 
 /** Effort selon la pente cumulé au km `km` de la trace, interpolé entre deux points du profil. */
-export function terrainEffortAt(profile: ProfilePoint[], km: number): number {
-  const c = cumulativeTerrain(profile);
+export function terrainEffortAt(profile: ProfilePoint[], km: number, runner?: RunnerProfile | null): number {
+  const c = cumulativeTerrain(profile, runner);
   let lo = 0;
   let hi = profile.length - 1;
   if (km <= profile[0].km) return 0;

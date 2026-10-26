@@ -28,6 +28,8 @@ interface Props {
 
 const PREP_WEEKS = Array.from({ length: MAX_PREP_WEEKS - MIN_PREP_WEEKS + 1 }, (_, i) => MIN_PREP_WEEKS + i);
 const LOOKBACK_YEARS = [1, 2, 3, 5];
+/** Sorties d'avant la préparation montrées d'emblée (les plus proches de la course) ; les autres sur demande. */
+const OLDER_SHOWN = 15;
 
 const frDate = (iso: string) => iso.split('-').reverse().join('/');
 
@@ -50,7 +52,7 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
     return prep.start < years ? prep.start : years;
   }, [lookback, prep.start]);
   const [showAllBlock, setShowAllBlock] = useState(false);
-  const [olderTrainings, setOlderTrainings] = useState(false);
+  const [showAllOlder, setShowAllOlder] = useState(false);
   /** Sorties cochées, avec le type choisi. */
   const [selected, setSelected] = useState<Map<number, ReferenceKind>>(new Map());
 
@@ -92,8 +94,9 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
   const key = useMemo(() => keySessions(block, target, existing), [block, target, existingSig]);
   const keyIds = useMemo(() => new Set(key.map((a) => a.id)), [key]);
   const otherBlock = useMemo(() => block.filter((a) => !keyIds.has(a.id)), [block, keyIds]);
-  const olderShown = useMemo(
-    () => sortActivities(older.filter((a) => olderTrainings || a.race), target), [older, olderTrainings, target]);
+  // Courses et entraînements ensemble : presque personne ne marque sa course en « Course » dans Strava.
+  const olderSorted = useMemo(() => sortActivities(older, target), [older, target]);
+  const olderShown = showAllOlder ? olderSorted : olderSorted.slice(0, OLDER_SHOWN);
   const near = useMemo(() => closest(activities ?? [], target), [activities, target]);
 
   // Sorties clés du bloc cochées d'office ; on garde ce qui a été coché plus tôt hors du bloc.
@@ -263,22 +266,26 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
               </section>
 
               <section className="strava-step">
-                <h3>2. Anciennes courses <span className="muted small">(facultatif)</span></h3>
+                <h3>2. Sorties plus anciennes <span className="muted small">(facultatif)</span></h3>
                 <div className="strava-filters">
                   <label><span>Sur les</span>
                     <select value={lookback} onChange={(e) => setLookback(Number(e.target.value))}>
                       {LOOKBACK_YEARS.map((y) => <option key={y} value={y}>{y === 1 ? 'douze derniers mois' : `${y} dernières années`}</option>)}
                     </select></label>
-                  <label className="check"><input type="checkbox" checked={olderTrainings} onChange={(e) => setOlderTrainings(e.target.checked)} />
-                    Afficher aussi les entraînements</label>
                 </div>
-                {olderShown.length === 0 ? (
-                  <p className="muted small">
-                    Aucune {olderTrainings ? 'sortie' : 'course'} avant ta préparation sur cette période.
-                    {!olderTrainings && ' Dans Strava, une course se marque avec le type de sortie « Course ».'}
-                  </p>
+                <p className="muted small">
+                  Courses et entraînements d'avant ta préparation, les plus proches de ta course d'abord. Une fois la sortie
+                  cochée, indique à côté si c'était une course (déjà fait si tu l'as marquée « Course » dans Strava).
+                </p>
+                {olderSorted.length === 0 ? (
+                  <p className="muted small">Aucune sortie avant ta préparation sur cette période.</p>
                 ) : (
                   <ul className="strava-list">{olderShown.map(row)}</ul>
+                )}
+                {olderSorted.length > OLDER_SHOWN && (
+                  <button type="button" className="link-btn" onClick={() => setShowAllOlder((v) => !v)} aria-expanded={showAllOlder}>
+                    {showAllOlder ? 'Ne montrer que les plus proches' : `Voir les ${olderSorted.length - OLDER_SHOWN} autres sorties`}
+                  </button>
                 )}
               </section>
             </>}

@@ -1,6 +1,6 @@
 import { normalizeDraft, type RaceDraft } from '../lib/draft';
 import { plain, type GearItem } from '../lib/gear';
-import type { TrainingOptions } from './types';
+import type { RunnerProfile, TrainingOptions } from './types';
 import { DEFAULT_PROFILE, normalizeProfile, type NutritionProfile } from '../lib/nutrition';
 
 // Ta course reste dans ton navigateur : le roadbook (petit) dans localStorage, la trace GPX
@@ -196,5 +196,40 @@ export function saveRunnerName(name: string): void {
     localStorage.setItem(RUNNER_KEY, name.trim());
   } catch {
     // stockage indisponible
+  }
+}
+
+// Profil personnel du coureur (pente et fatigue, mesuré sur Strava) : gardé dans le navigateur et envoyé avec chaque
+// calcul de sa course quand il choisit de l'utiliser.
+const RUNNER_PROFILE_KEY = 'trail-planner:profil-coureur';
+
+export interface StoredRunnerProfile {
+  profile: RunnerProfile | null;
+  use: boolean;
+  /** Date de la mesure (ISO). */
+  measuredAt: string | null;
+}
+
+export const NO_RUNNER_PROFILE: StoredRunnerProfile = { profile: null, use: false, measuredAt: null };
+
+export function loadRunnerProfile(): StoredRunnerProfile {
+  try {
+    const raw = localStorage.getItem(RUNNER_PROFILE_KEY);
+    if (!raw) return NO_RUNNER_PROFILE;
+    const saved = JSON.parse(raw) as Partial<StoredRunnerProfile>;
+    const profile = saved.profile && Array.isArray(saved.profile.slope) && typeof saved.profile.fatigueExponent === 'number'
+      ? saved.profile : null;
+    return { profile, use: !!profile && saved.use !== false, measuredAt: saved.measuredAt ?? null };
+  } catch {
+    return NO_RUNNER_PROFILE;
+  }
+}
+
+export function saveRunnerProfile(stored: StoredRunnerProfile): void {
+  try {
+    if (stored.profile) localStorage.setItem(RUNNER_PROFILE_KEY, JSON.stringify(stored));
+    else localStorage.removeItem(RUNNER_PROFILE_KEY);
+  } catch {
+    // Stockage indisponible : le profil vaut pour cette visite seulement.
   }
 }
