@@ -174,6 +174,9 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
             <textarea className="garmin-code" readOnly value={ciqCode} rows={3} aria-label="Code du plan pour le champ Trail Planner"
               onFocus={(e) => e.currentTarget.select()} />
             <button type="button" className="ghost" onClick={() => void copyCode()}>{copied ? '✓ Code copié' : 'Copier le code'}</button>
+            <p><strong>Une seule fois, sur la montre :</strong> pour que l'alerte « Ravito dans 300 m » s'affiche par-dessus
+              l'écran en cours, active-la dans les réglages de ton activité Trail : <strong>Alertes › Ajouter › Connect IQ ›
+              Trail Planner</strong> (le libellé varie selon les modèles). Sans ce réglage, la montre vibre seulement.</p>
           </section>
         </>}
       </div>

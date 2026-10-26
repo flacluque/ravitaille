@@ -8,15 +8,15 @@ Garmin Connect ne le gênent pas, et il marche même sans parcours chargé.
 ## Le calcul
 
 Le site génère un **code du plan** (`TP1;…`, voir `frontend/src/lib/ciq.ts`, qui sert de référence testée) :
-l'heure du départ, le km-effort cumulé à chaque km de la trace, et pour chaque ravito son km et ses heures
+l'heure du départ, l'effort selon la pente cumulé à chaque km de la trace, et pour chaque ravito son km et ses heures
 d'arrivée et de départ prévues.
 
 Avec la distance et le temps écoulé donnés par la montre :
 
 - **prochain ravito** : le premier dont le km est au-delà de ta position ;
 - **écart au plan** = ton temps écoulé − le temps prévu au même km. Entre deux ravitos, le temps prévu suit le
-  terrain (km-effort : 1 km + 1 par 100 m de D+), pas une allure régulière. Au ravito, l'arrêt prévu ne compte pas
-  comme du retard ;
+  terrain (montées et descentes, comme le calcul du plan), pas une allure régulière. Au ravito, l'arrêt prévu ne
+  compte pas comme du retard ;
 - **arrivée estimée** = heure prévue au ravito + écart.
 
 ## Compiler et installer (sur ton ordinateur)
@@ -46,10 +46,18 @@ Avec la distance et le temps écoulé donnés par la montre :
 2. Appli Connect IQ du téléphone › Trail Planner › **Réglages** : colle le code, enregistre.
 3. Sur la montre : réglages de l'activité Trail › Écrans de données : ajoute le champ (seul pour la version
    complète, ou dans un écran à 2 champs pour la version compacte).
+4. Une seule fois, sur la montre : réglages de l'activité Trail › **Alertes › Ajouter › Connect IQ** › Trail Planner
+   (le libellé varie selon le modèle). Sans ce réglage, la montre vibre à 300 m du ravito mais n'affiche pas l'alerte
+   par-dessus l'écran en cours : la vibration vient du champ, l'affichage de l'alerte est soumis à ce réglage.
 
 ## À vérifier sur la montre
 
 Le champ tourne sur le simulateur et sur une Fenix 7X Pro (installé en bêta depuis le store). Reste à vérifier :
-que les réglages de l'appli Connect IQ acceptent un code de 500 à 1 000 caractères, l'alerte à 300 m et la
-lisibilité en course. Le code de la trace de test est la valeur par défaut du réglage : à vider avant une
-publication publique (qui demandera aussi un autre identifiant d'appli dans `manifest.xml`).
+que les réglages de l'appli Connect IQ acceptent un code de 500 à 1 000 caractères, et l'alerte plein écran à 300 m
+une fois activée dans les alertes de l'activité (au Trail des Troubadours, sans ce réglage : vibration seule).
+
+## Publication sur le store
+
+`manifest.xml` porte l'identifiant de la **version publique** et le réglage « Code du plan » est vide par défaut.
+Pour une version bêta de test, remettre l'identifiant bêta (en commentaire dans `manifest.xml`). Textes de la fiche
+du store : `STORE.md`.
