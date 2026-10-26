@@ -3,7 +3,7 @@ import { localMinutes } from './format';
 import { terrainEffortAt } from './plan';
 
 /**
- * Plan pour le champ de données Connect IQ « Trail Planner » : un texte compact que le coureur colle dans les
+ * Plan pour le champ de données Connect IQ « Prochain Ravito » : un texte compact que le coureur colle dans les
  * réglages du champ (appli Connect IQ du téléphone). Le champ en déduit, avec la distance et le temps de la
  * montre, le prochain ravito, l'écart au plan et l'heure d'arrivée estimée. Ce module en est aussi la
  * référence : le code Monkey C (connectiq/) reprend les mêmes calculs.

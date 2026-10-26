@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!-- Champ de données « Trail Planner » : le prochain ravito du plan, l'écart au plan et l'heure d'arrivée estimée.
+<!-- Champ de données « Prochain Ravito » : le prochain ravito du plan, l'écart au plan et l'heure d'arrivée estimée.
      Identifiant de la version publique (store). La version bêta (tests, visible du seul développeur) utilisait
      351219e39d544d20a58b819ba04c9906 : Garmin demande un identifiant différent pour chacune.
      Montres : celles à écran rond de Connect IQ 3.2 ou plus (l'alerte de champ date de 3.2). Instinct et écrans

@@ -68,7 +68,7 @@ export async function buildPlanPdf({ course, plans, selected, services, nutritio
   const [{ jsPDF }, { autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
   const plan = plans[Math.min(selected, plans.length - 1)];
-  doc.setProperties({ title: `Plan de course : ${course.race.name}`, creator: 'Trail Planner' });
+  doc.setProperties({ title: `Plan de course : ${course.race.name}`, creator: 'Ravitaille' });
 
   let y = header(doc, course, plan);
   y = hero(doc, plans, selected, y + 7);
@@ -827,7 +827,7 @@ function footers(doc: jsPDF) {
     doc.line(M, PAGE_H - M + 1, PAGE_W - M, PAGE_H - M + 1);
     doc.setFontSize(7);
     doc.setTextColor(...MUTED);
-    doc.text(`Trail Planner · plan généré le ${generated}`, M, PAGE_H - M + 5);
+    doc.text(`Ravitaille · plan généré le ${generated}`, M, PAGE_H - M + 5);
     doc.text(`Page ${i} / ${pages}`, PAGE_W - M, PAGE_H - M + 5, { align: 'right' });
   }
 }

@@ -167,16 +167,16 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
           </section>
 
           <section className="garmin-part plan-rule" aria-labelledby="garmin-ciq">
-            <span id="garmin-ciq" className="overline">Champ Trail Planner (Connect IQ, en test)</span>
-            <p>Le champ de données « Trail Planner » affiche le prochain ravito de ton plan, la distance, l'heure d'arrivée
+            <span id="garmin-ciq" className="overline">Champ Prochain Ravito (Connect IQ)</span>
+            <p>Le champ de données « Prochain Ravito » affiche le prochain ravito de ton plan, la distance, l'heure d'arrivée
               estimée et ton écart au plan, sans les virages de Garmin Connect. Colle ce code dans ses réglages (appli Connect IQ ›
-              Trail Planner › Réglages), pour le scénario {plan.scenario.name.toLowerCase()}.</p>
-            <textarea className="garmin-code" readOnly value={ciqCode} rows={3} aria-label="Code du plan pour le champ Trail Planner"
+              Prochain Ravito › Réglages), pour le scénario {plan.scenario.name.toLowerCase()}.</p>
+            <textarea className="garmin-code" readOnly value={ciqCode} rows={3} aria-label="Code du plan pour le champ Prochain Ravito"
               onFocus={(e) => e.currentTarget.select()} />
             <button type="button" className="ghost" onClick={() => void copyCode()}>{copied ? '✓ Code copié' : 'Copier le code'}</button>
             <p><strong>Une seule fois, sur la montre :</strong> pour que l'alerte « Ravito dans 300 m » s'affiche par-dessus
               l'écran en cours, active-la dans les réglages de ton activité Trail : <strong>Alertes › Ajouter › Connect IQ ›
-              Trail Planner</strong> (le libellé varie selon les modèles). Sans ce réglage, la montre vibre seulement.</p>
+              Prochain Ravito</strong> (le libellé varie selon les modèles). Sans ce réglage, la montre vibre seulement.</p>
           </section>
         </>}
       </div>

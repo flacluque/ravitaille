@@ -73,7 +73,7 @@ class TrailPlannerView extends WatchUi.DataField {
         var center = Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER;
 
         if (plan == null) {
-            dc.drawText(cx, h * 0.4, Graphics.FONT_TINY, "Trail Planner", center);
+            dc.drawText(cx, h * 0.4, Graphics.FONT_TINY, "Prochain Ravito", center);
             dc.drawText(cx, h * 0.6, Graphics.FONT_XTINY, "Colle le code du plan", center);
             return;
         }
