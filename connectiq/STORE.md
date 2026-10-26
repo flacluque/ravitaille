@@ -40,7 +40,7 @@ How to use:
 Captures du simulateur (Fenix 7) : écran plein avec un plan chargé, version à 2 champs, alerte « RAVITO DANS 300 M ».
 
 ## Appareils
-Montres à écran rond : fēnix 6, 7 et 8 (toutes tailles), fēnix E, epix (Gen 2) et epix Pro, Enduro 2 et 3,
+Montres à écran rond : fēnix 6, 7 et 8 (toutes tailles), fēnix E, epix (Gen 2) et epix Pro, Enduro 3,
 Forerunner 165, 255, 265, 570, 955, 965 et 970, vívoactive 5 et 6, Venu 2 et 3 (voir `manifest.xml`).
 
 ## Langue
