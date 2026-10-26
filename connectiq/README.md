@@ -1,6 +1,7 @@
 # Champ de données Connect IQ « Trail Planner »
 
-Champ pour montre Garmin (Fenix 7, 7S, 7X et leurs versions Pro pour l'instant) : le **prochain ravito de ton plan**, la distance pour y arriver,
+Champ pour montre Garmin à écran rond (fēnix 6, 7 et 8, epix, Enduro, Forerunner, vívoactive et Venu : liste dans
+`manifest.xml`) : le **prochain ravito de ton plan**, la distance pour y arriver,
 l'**heure d'arrivée estimée** et ton **écart au plan**. À 300 m d'un ravito, la montre vibre et affiche une alerte
 « RAVITO DANS 300 M ». Il ne lit pas les points du parcours : les virages ajoutés par
 Garmin Connect ne le gênent pas, et il marche même sans parcours chargé.
@@ -22,8 +23,9 @@ Avec la distance et le temps écoulé donnés par la montre :
 ## Compiler et installer (sur ton ordinateur)
 
 1. Installe le **SDK Connect IQ** avec le *SDK Manager* (developer.garmin.com/connect-iq/sdk, compte Garmin),
-   puis télécharge dans le SDK Manager les appareils de la gamme **fēnix 7** (7, 7S, 7X, et les versions Pro) :
-   l'export compile le champ pour chacun.
+   puis télécharge dans le SDK Manager **tous les appareils listés dans `manifest.xml`** : l'export compile le champ
+   pour chacun. Un appareil inconnu de ton SDK bloque la compilation : `Ctrl/Cmd+Shift+P` → « Monkey C: Edit Products »
+   pour cocher ou décocher les montres (certaines, comme la vívoactive 6 ou la Forerunner 970, demandent un SDK récent).
 2. Installe **Visual Studio Code** et l'extension **Monkey C** (Garmin). `Ctrl/Cmd+Shift+P` →
    « Monkey C: Generate a Developer Key » (une seule fois).
 3. Ouvre le dossier `connectiq/`. Pour essayer sur le **simulateur** : Exécuter › Exécuter sans débogage, puis
@@ -39,6 +41,12 @@ Avec la distance et le temps écoulé donnés par la montre :
 
    Chaque modèle de montre est un appareil distinct (la 7X Pro n'est pas la 7X) : il doit figurer dans
    `manifest.xml`, sinon le champ est invisible pour lui.
+
+## Avant d'ajouter des montres au store
+
+Dans le simulateur, vérifier au moins un petit écran (`fr255s`, 218 px), un grand AMOLED (`fr965`, 454 px) et une
+ancienne montre (`fenix6`) : textes qui ne débordent pas de l'écran rond, et mémoire (File › View Memory) avec le code
+d'une longue course (100 km et plus). Instinct et écrans rectangulaires ne sont pas encore pris en charge.
 
 ## Pour chaque course
 
