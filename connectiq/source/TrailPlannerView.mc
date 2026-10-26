@@ -58,7 +58,13 @@ class TrailPlannerView extends WatchUi.DataField {
 
     function onUpdate(dc as Graphics.Dc) as Void {
         var bg = getBackgroundColor();
-        var fg = bg == Graphics.COLOR_BLACK ? Graphics.COLOR_WHITE : Graphics.COLOR_BLACK;
+        // Couleurs selon le fond de l'écran (noir ou blanc, réglage de la montre) : sur fond blanc, le gris clair,
+        // le vert et le bleu vifs ne se lisent pas ; on passe à leurs versions foncées.
+        var dark = bg == Graphics.COLOR_BLACK;
+        var fg = dark ? Graphics.COLOR_WHITE : Graphics.COLOR_BLACK;
+        var muted = dark ? Graphics.COLOR_LT_GRAY : Graphics.COLOR_DK_GRAY;
+        var green = dark ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN;
+        var blue = dark ? Graphics.COLOR_BLUE : Graphics.COLOR_DK_BLUE;
         dc.setColor(fg, bg);
         dc.clear();
         var w = dc.getWidth();
@@ -83,29 +89,33 @@ class TrailPlannerView extends WatchUi.DataField {
         var full = h > 150;
         var near = started && dist <= $.APPROACH_KM + 0.001;
 
-        var gapColor = gap > 1 ? Graphics.COLOR_ORANGE : Graphics.COLOR_GREEN;
+        var gapColor = gap > 1 ? Graphics.COLOR_ORANGE : green;
         if (full) {
-            // En approche, le bandeau du haut passe en vert et grossit : visible même sans l'alerte de la montre.
+            // En approche, le bandeau du haut passe en vert : visible même sans l'alerte de la montre.
             if (near) {
-                dc.setColor(Graphics.COLOR_GREEN, Graphics.COLOR_TRANSPARENT);
-                dc.drawText(cx, h * 0.18, Graphics.FONT_TINY, "RAVITO DANS " + (dist * 1000).toNumber() + " M", center);
+                dc.setColor(green, Graphics.COLOR_TRANSPARENT);
+                dc.drawText(cx, h * 0.16, Graphics.FONT_TINY, "RAVITO DANS " + (dist * 1000).toNumber() + " M", center);
             } else {
-                dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
-                dc.drawText(cx, h * 0.18, Graphics.FONT_XTINY, "PROCHAIN RAVITO", center);
+                dc.setColor(muted, Graphics.COLOR_TRANSPARENT);
+                dc.drawText(cx, h * 0.16, Graphics.FONT_XTINY, "PROCHAIN RAVITO", center);
             }
-            dc.setColor(near ? Graphics.COLOR_GREEN : fg, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.32, Graphics.FONT_MEDIUM, r.name, center);
-            // Distance et heure d'arrivée estimée en grand, côte à côte ; sous chacune, l'unité et l'heure du plan.
+            dc.setColor(near ? green : fg, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(cx, h * 0.29, Graphics.FONT_MEDIUM, r.name, center);
+            // Distance et heure d'arrivée estimée en grand, côte à côte, avec leur légende en petit dessous.
             // Police de texte : celles des grands chiffres n'ont ni virgule ni « h ».
-            dc.setColor(Graphics.COLOR_BLUE, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(w * 0.3, h * 0.5, Graphics.FONT_LARGE, formatKm(dist), center);
+            dc.setColor(blue, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(w * 0.3, h * 0.46, Graphics.FONT_LARGE, formatKm(dist), center);
             dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(w * 0.68, h * 0.5, Graphics.FONT_LARGE, eta, center);
-            dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(w * 0.3, h * 0.645, Graphics.FONT_SMALL, "km", center);
-            dc.drawText(w * 0.68, h * 0.645, Graphics.FONT_SMALL, "prévu " + p.clock(r.arr), center);
+            dc.drawText(w * 0.68, h * 0.46, Graphics.FONT_LARGE, eta, center);
+            dc.setColor(muted, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(w * 0.3, h * 0.58, Graphics.FONT_XTINY, "km", center);
+            dc.drawText(w * 0.68, h * 0.58, Graphics.FONT_XTINY, "estimée", center);
+            // L'heure prévue par le plan : sa propre ligne, dans la couleur du texte (noir sur fond blanc, blanc sur fond
+            // noir) : le gris se lit mal en course.
+            dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(cx, h * 0.71, Graphics.FONT_MEDIUM, "prévu " + p.clock(r.arr), center);
             dc.setColor(gapColor, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.8, Graphics.FONT_SMALL, started ? gapText(gap) : "au départ", center);
+            dc.drawText(cx, h * 0.85, Graphics.FONT_SMALL, started ? gapText(gap) : "au départ", center);
         } else {
             dc.drawText(cx, h * 0.3, Graphics.FONT_SMALL, r.name + " " + formatKm(dist), center);
             dc.setColor(gapColor, Graphics.COLOR_TRANSPARENT);
