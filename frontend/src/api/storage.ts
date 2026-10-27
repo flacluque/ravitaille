@@ -249,3 +249,24 @@ export function saveRunnerProfile(stored: StoredRunnerProfile): void {
     // Stockage indisponible : le profil vaut pour cette visite seulement.
   }
 }
+
+// Marque de la montre choisie dans « Envoyer le plan sur ta montre » : Garmin (.fit et champ) ou une autre (.gpx).
+const WATCH_KEY = 'trail-planner:montre';
+
+export type WatchBrand = 'garmin' | 'other';
+
+export function loadWatchBrand(): WatchBrand {
+  try {
+    return localStorage.getItem(WATCH_KEY) === 'other' ? 'other' : 'garmin';
+  } catch {
+    return 'garmin';
+  }
+}
+
+export function saveWatchBrand(brand: WatchBrand): void {
+  try {
+    localStorage.setItem(WATCH_KEY, brand);
+  } catch {
+    // Stockage indisponible : le choix vaut pour cette visite.
+  }
+}
