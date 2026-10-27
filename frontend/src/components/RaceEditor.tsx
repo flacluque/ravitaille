@@ -1,4 +1,5 @@
 import { DatePicker } from './DatePicker';
+import { saveFile } from '../lib/files';
 import { todayIso } from '../lib/dates';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { extractRoadbook, fetchExtractorStatus, humanError } from '../api/client';
@@ -87,12 +88,7 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
 
   function exportRoadbook() {
     if (!exported) return;
-    const url = URL.createObjectURL(new Blob([exported], { type: 'application/json' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${slug(draft.name) || 'roadbook'}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    void saveFile(new Blob([exported], { type: 'application/json' }), `${slug(draft.name) || 'roadbook'}.json`, 'Roadbook');
   }
 
   function chooseScan(e: ChangeEvent<HTMLInputElement>) {

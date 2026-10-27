@@ -103,6 +103,15 @@ class StravaServiceTest {
     }
 
     @Test
+    void lAppliMobileRevientParSonLien() {
+        String url = service.authorize("app", SERVER);
+        // Strava revient toujours sur le serveur, qui rouvre ensuite l'appli.
+        assertTrue(URI.create(url).getQuery().contains("redirect_uri=" + SERVER + "/api/strava/callback"), url);
+        String state = URI.create(url).getQuery().replaceAll(".*state=([^&]+).*", "$1");
+        assertEquals("app:/?strava=denied", service.callback(state, null, "access_denied", null, StravaSession.none()));
+    }
+
+    @Test
     void accepteLAdresseDuServeurEnLigneEtRefuseLesAutres() {
         String url = service.authorize(SERVER + "/", SERVER);
         assertTrue(URI.create(url).getQuery().contains("redirect_uri=" + SERVER + "/api/strava/callback"), url);

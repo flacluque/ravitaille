@@ -6,6 +6,7 @@ import { buildCourseFit, fitCoursePoints, fitFilename, type FitPointKind } from 
 import { buildCourseGpx, gpxFilename, gpxWaypoints } from '../lib/gpx';
 import { loadWatchBrand, saveWatchBrand, type WatchBrand } from '../api/storage';
 import { WatchFieldPreview } from './WatchFieldPreview';
+import { saveFile } from '../lib/files';
 
 interface Props {
   course: CourseView;
@@ -126,13 +127,8 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
         if (!gpx) throw new Error('sans trace');
         blob = new Blob([gpx], { type: 'application/gpx+xml' });
       }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-      setState('done');
+      const outcome = await saveFile(blob, filename, `Parcours · ${course.race.name}`);
+      setState(outcome === 'cancelled' ? 'idle' : 'done');
     } catch {
       setState('failed');
     }

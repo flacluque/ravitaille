@@ -1,4 +1,5 @@
 import type { jsPDF } from 'jspdf';
+import { saveFile } from './files';
 import type { CellHookData, RowInput, UserOptions } from 'jspdf-autotable';
 import type { CourseView, CutoffStatus, RacePlan, Service } from '../api/types';
 import { ACCENT_COLOR, STATUS_COLORS, TRACK_COLOR } from './colors';
@@ -55,7 +56,7 @@ type RGB = [number, number, number];
 
 export async function downloadPlanPdf(input: PdfInput): Promise<void> {
   const doc = await buildPlanPdf(input);
-  doc.save(pdfFilename(input.course.race.name, input.variant));
+  await saveFile(doc.output('blob'), pdfFilename(input.course.race.name, input.variant), `Plan · ${input.course.race.name}`);
 }
 
 export function pdfFilename(raceName: string, variant: PdfInput['variant'] = 'full'): string {

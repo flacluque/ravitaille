@@ -13,3 +13,17 @@ config/
 
 # Front copié dans le jar par le Dockerfile
 src/main/resources/static/
+
+# Appli mobile (Capacitor) : fichiers générés et secrets de signature, jamais dans le dépôt
+frontend/ios/App/Pods/
+frontend/ios/App/build/
+frontend/ios/DerivedData/
+frontend/android/.gradle/
+frontend/android/app/build/
+frontend/android/build/
+frontend/android/local.properties
+*.p12
+*.mobileprovision
+*.keystore
+*.jks
+frontend/.env.local
