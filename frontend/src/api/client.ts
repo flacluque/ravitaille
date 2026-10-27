@@ -33,9 +33,10 @@ async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
     const body = await res.json().catch(() => null);
     // Sans message lisible (erreur interne, requête refusée par Spring), on reste compréhensible pour le coureur.
     const detail = typeof body?.detail === 'string' && body.detail && !/^(Failed|Bad Request|Internal)/.test(body.detail) ? body.detail : null;
+    // Le code de l'erreur reste affiché : c'est ce qui permet de retrouver la cause quand le coureur la signale.
     throw new ApiError(detail ?? (res.status >= 500
-      ? 'le serveur a rencontré un problème. Réessaie dans un instant.'
-      : 'une donnée de ta course ou de tes références n\'est pas valide. Vérifie la saisie.'));
+      ? `le serveur a rencontré un problème (erreur ${res.status}). Réessaie dans un instant.`
+      : `une donnée de ta course ou de tes références n'est pas valide (erreur ${res.status}). Vérifie la saisie.`));
   }
   return res.json() as Promise<T>;
 }
