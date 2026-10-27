@@ -70,7 +70,7 @@ export function fetchPlans(sampleId: string, refs: Reference[], source: Elevatio
  * Plan d'une course chargée par le coureur : roadbook saisi + trace GPX optionnelle.
  * Une seule requête, pour n'envoyer la trace (plusieurs Mo) qu'une fois.
  */
-export function fetchCustomPlans(
+export async function fetchCustomPlans(
   race: RaceDefinition,
   night: NightWindow,
   gpx: File | null,
@@ -89,8 +89,20 @@ export function fetchCustomPlans(
   };
   const form = new FormData();
   form.append('request', new Blob([JSON.stringify(request)], { type: 'application/json' }));
-  if (gpx) form.append('gpx', gpx);
+  if (gpx) form.append('gpx', await readableGpx(gpx), gpx.name);
   return getJson('/api/plans/full?stepKm=0.1', { method: 'POST', body: form });
+}
+
+/**
+ * La trace relue en mémoire avant l'envoi : un fichier que le navigateur ne sait plus lire (Safari, trace gardée par
+ * une ancienne version) partirait vide, avec le reste de la demande.
+ */
+async function readableGpx(gpx: File): Promise<Blob> {
+  const bytes = await gpx.arrayBuffer().catch(() => null);
+  if (bytes === null || (bytes.byteLength === 0 && gpx.size > 0)) {
+    throw new ApiError('ta trace GPX n\'a pas pu être relue par le navigateur. Recharge-la dans « Modifier ma course ».');
+  }
+  return new Blob([bytes], { type: gpx.type || 'application/gpx+xml' });
 }
 
 export function fetchExtractorStatus(): Promise<ExtractorStatus> {
