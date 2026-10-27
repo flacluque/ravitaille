@@ -1170,7 +1170,7 @@ button.cv-secondary { width: 100%; min-height: 48px; background: var(--surface);
 
 /* v0.7 : export du parcours pour montre Garmin */
 .pdf-menu-list hr { width: 100%; border: 0; border-top: 1px solid var(--border); margin: 4px 0; }
-dialog.garmin { width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 24px); padding: 0; border: 0; border-radius: 14px;
+dialog.garmin { width: min(1080px, calc(100vw - 32px)); max-height: calc(100vh - 24px); padding: 0; border: 0; border-radius: 14px;
   background: var(--bg); color: var(--text); box-shadow: 0 16px 48px rgb(0 0 0 / 0.25); }
 dialog.garmin::backdrop { background: rgb(28 31 29 / 0.4); }
 .garmin-body { position: relative; display: flex; flex-direction: column; gap: 16px; padding: 24px; }
@@ -1240,4 +1240,43 @@ button.garmin-download { min-height: 52px; font-size: var(--fs-lead); font-weigh
 .watch-brand button.active { border-color: var(--accent); background: #e6efe8; box-shadow: inset 0 0 0 1px var(--accent); }
 @media (max-width: 560px) {
   .watch-brand { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Fenêtre d'export large sur ordinateur : le parcours à gauche, le champ Prochain Ravito (ou l'import) à droite. */
+.watch-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px 36px; align-items: start; }
+.watch-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.watch-step { margin: 0; font-family: var(--font-display); font-size: var(--fs-lead); font-weight: 700; padding-bottom: 6px;
+  border-bottom: 3px solid var(--text); }
+.watch-step .muted { font-size: var(--fs-body); font-weight: 500; }
+.watch-field-steps { gap: 12px !important; }
+.garmin-points.full-names { grid-template-columns: minmax(0, 1fr); }
+.garmin-next-head .watch-step { flex: 1 1 auto; }
+.watch-code { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 6px; }
+.watch-preview { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.watch-faces { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
+.watch-face { width: 196px; height: 196px; border-radius: 50%; background: #2b2e2c; display: grid; place-items: center;
+  box-shadow: 0 0 0 3px #1c1f1d, inset 0 0 0 5px #444845, 0 8px 20px rgb(0 0 0 / 0.22); }
+.watch-screen { width: 168px; height: 168px; border-radius: 50%; background: #000; color: #fff; overflow: hidden;
+  font-family: var(--font-display); display: flex; flex-direction: column; align-items: center; text-align: center; }
+.watch-full { justify-content: center; gap: 1px; }
+.watch-screen .w-label { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: #9ca3af; }
+.watch-screen .w-name { font-size: 15px; font-weight: 800; line-height: 1.1; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.watch-screen .w-row { display: flex; gap: 14px; align-items: baseline; }
+.watch-screen .w-dist { font-size: 26px; font-weight: 800; color: #38bdf8; line-height: 1.05; }
+.watch-screen .w-eta { font-size: 26px; font-weight: 800; line-height: 1.05; }
+.watch-screen .w-legend { font-size: 9px; color: #9ca3af; gap: 40px; }
+.watch-screen .w-planned { font-size: 14px; font-weight: 700; }
+.watch-screen .w-gap { font-size: 11px; font-weight: 700; }
+.watch-screen .late { color: #fb923c; }
+.watch-compact .w-half { height: 50%; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.watch-compact .w-other { border-bottom: 2px solid #374151; justify-content: flex-end; padding-bottom: 6px; box-sizing: border-box; }
+.watch-compact .w-big { font-size: 26px; font-weight: 800; line-height: 1; }
+.watch-compact .w-line { font-size: 15px; font-weight: 800; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.watch-compact .w-dist-s { color: #38bdf8; }
+@media (max-width: 900px) {
+  .watch-cols { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 460px) {
+  /* Les deux cadrans côte à côte, comme le dit la légende. */
+  .watch-faces { zoom: 0.78; flex-wrap: nowrap; }
 }
