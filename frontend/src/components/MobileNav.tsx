@@ -7,7 +7,7 @@ interface Props {
   tab: string;
   hrefs: Record<string, string>;
   onPdf: (variant: 'summary' | 'full') => void;
-  /** Ouvre l'export du parcours pour montre Garmin. */
+  /** Ouvre l'export du parcours pour la montre (Garmin ou autre marque). */
   onGarmin: () => void;
   pdfDisabled: boolean;
   /** Pourquoi le PDF n'est pas disponible (plan pas calculé ou périmé). */
@@ -67,7 +67,7 @@ export function MobileNav({ tab, hrefs, onPdf, onGarmin, pdfDisabled, pdfReason,
           <button type="button" disabled={pdfDisabled} onClick={() => { setOpen(false); onPdf('full'); }}>
             PDF complet<span className="muted small">tout le plan</span></button>
           <button type="button" disabled={pdfDisabled} onClick={() => { setOpen(false); onGarmin(); }}>
-            Parcours pour ma Garmin (.fit)<span className="muted small">trace, ravitos et partenaire virtuel</span></button>
+            Parcours pour ma montre<span className="muted small">Garmin (.fit) ou autres marques (.gpx)</span></button>
           {pdfReason && <p className="muted small">{pdfReason}</p>}
           {feedbackUrl && <><hr /><a href={feedbackUrl} target="_blank" rel="noreferrer">Donner mon avis</a></>}
         </div>

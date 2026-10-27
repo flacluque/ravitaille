@@ -1230,3 +1230,14 @@ button.garmin-download { min-height: 52px; font-size: var(--fs-lead); font-weigh
 .review-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 .review-late { color: var(--tight-fg); font-weight: 600; }
 .review-early { color: var(--ok-fg); font-weight: 600; }
+
+/* Choix de la marque de montre (Garmin ou autre) en tête de la fenêtre d'export. */
+.watch-brand { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.watch-brand button { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 14px; min-height: 64px;
+  background: var(--surface); color: var(--text); border: 2px solid var(--border); border-radius: 12px; text-align: left; font-weight: 400; }
+.watch-brand button strong { font-size: var(--fs-lead); font-family: var(--font-display); }
+.watch-brand button span { font-size: var(--fs-small); color: var(--muted); }
+.watch-brand button.active { border-color: var(--accent); background: #e6efe8; box-shadow: inset 0 0 0 1px var(--accent); }
+@media (max-width: 560px) {
+  .watch-brand { grid-template-columns: minmax(0, 1fr); }
+}

@@ -351,8 +351,9 @@ et pourra être réutilisé tel quel (CLI, appli mobile via une API, batch de ca
 - [x] **v0.6** : pente et descente dans le modèle : chaque tronçon découpé selon la pente de la trace (D+ et D-
   comptés séparément, descente technique) ; **profil de coureur** : coût par tranche de pente mesuré sur tes sorties
   Strava, fatigue mesurée sur tes courses (**retour de course** : la course réelle comparée au plan, ravito par ravito)
-- [ ] **v0.7** : la montre : plan envoyé sur la montre (ravitos, barrières, heures du plan), suivi du plan au poignet
-  pendant la course (à concevoir)
+- [x] **v0.7** : la montre : parcours Garmin (.fit : trace, ravitos, partenaire virtuel au rythme du plan), champ
+  Connect IQ « Prochain Ravito » (prochain ravito, heure estimée, écart au plan, vibration à 300 m), et parcours .gpx
+  pour les autres marques (COROS, Suunto, Polar…), ravitos nommés avec leur heure prévue
 - [x] **v0.7c** : ravitos placés sur la trace : un ravito se fait glisser sur la carte jusqu'à sa vraie place (roadbook
   faux), les waypoints du GPX au nom des ravitos sont repris, et le site signale un ravito dont le D+ ou le waypoint ne
   colle pas avec le km du roadbook. Le plan, le parcours Garmin et le code du champ suivent la position sur la trace

@@ -420,7 +420,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
         <div className="pdf-menu no-print" hidden={tab === 'accueil'}>
           <button type="button" className="ghost" onClick={() => setPdfMenu((m) => !m)} disabled={savingPdf}
             aria-disabled={pdfBlocked ? true : undefined} aria-expanded={pdfMenu} aria-haspopup="menu"
-            title="Télécharger le plan en PDF, ou le parcours pour ta montre Garmin">
+            title="Télécharger le plan en PDF, ou le parcours pour ta montre">
             {savingPdf ? 'PDF…' : 'Télécharger ▾'}
           </button>
           {pdfMenu && (pdfBlocked ? (
@@ -439,8 +439,8 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
               </button>
               <hr />
               <button type="button" role="menuitem" onClick={() => { setPdfMenu(false); setGarminOpen(true); }}>
-                <strong>Parcours pour ma Garmin (.fit)</strong>
-                <span className="muted small">Trace, ravitos et partenaire virtuel au rythme du plan</span>
+                <strong>Parcours pour ma montre</strong>
+                <span className="muted small">Garmin (.fit et champ Prochain Ravito) ou autres marques (.gpx)</span>
               </button>
             </div>
           ))}

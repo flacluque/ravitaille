@@ -51,7 +51,8 @@ export function fitPointName(name: string, kind: FitPointKind, timeIso: string |
   return base.slice(0, room).trim() + tail;
 }
 
-function pointKind(i: number, last: number, services: Service[]): FitPointKind {
+/** Type d'un point : départ, arrivée, ravito (solide ou boisson), ou simple pointage. */
+export function pointKind(i: number, last: number, services: Service[]): FitPointKind {
   if (i === 0) return 'start';
   if (i === last) return 'finish';
   if (services.some((s) => s === 'COLD_FOOD' || s === 'HOT_FOOD' || s === 'DROP_BAG')) return 'aid';
