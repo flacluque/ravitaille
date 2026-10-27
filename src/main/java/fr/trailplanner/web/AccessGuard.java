@@ -17,7 +17,8 @@ import java.time.Duration;
 /**
  * Code d'invitation : tant que le navigateur ne l'a pas donné, l'API répond 401 (sauf {@code /api/app},
  * qui permet de le saisir). Le code accepté est retenu dans un cookie signé ; changer le code
- * (trailplanner.access-code) redemande le nouveau à tout le monde.
+ * (trailplanner.access-code) redemande le nouveau à tout le monde. L'appli mobile, sans cookie, garde la même
+ * signature et la renvoie dans l'en-tête {@value WebConfig#APP_ACCESS_HEADER}.
  */
 public class AccessGuard extends OncePerRequestFilter {
 
@@ -40,6 +41,10 @@ public class AccessGuard extends OncePerRequestFilter {
         if (!required()) {
             return true;
         }
+        String header = request.getHeader(WebConfig.APP_ACCESS_HEADER);
+        if (header != null && cipher.verify("access:" + props.accessCode(), header)) {
+            return true;
+        }
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie c : cookies) {
@@ -57,9 +62,12 @@ public class AccessGuard extends OncePerRequestFilter {
         boolean ok = required() && MessageDigest.isEqual(
                 given.getBytes(StandardCharsets.UTF_8), props.accessCode().toLowerCase().getBytes(StandardCharsets.UTF_8));
         if (ok) {
-            ResponseCookie cookie = ResponseCookie.from(COOKIE, cipher.sign("access:" + props.accessCode()))
+            String signed = cipher.sign("access:" + props.accessCode());
+            ResponseCookie cookie = ResponseCookie.from(COOKIE, signed)
                     .httpOnly(true).secure(request.isSecure()).sameSite("Lax").path("/").maxAge(MAX_AGE).build();
             response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+            // L'appli mobile ne garde pas les cookies : elle reprend la signature dans cet en-tête.
+            response.setHeader(WebConfig.APP_ACCESS_HEADER, signed);
         }
         return ok;
     }

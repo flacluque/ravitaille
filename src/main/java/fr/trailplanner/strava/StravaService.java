@@ -48,6 +48,12 @@ public class StravaService {
     static final Duration PROFILE_MIN_DURATION = Duration.ofHours(1);
     static final double PROFILE_MIN_GAIN_M = 200;
 
+    /**
+     * Origine de l'appli mobile : au retour de Strava, on la rouvre par son lien ({@code ravitaille://strava?…}) au lieu
+     * d'une adresse web.
+     */
+    public static final String APP_ORIGIN = "app:";
+
     /** En local, l'appli peut être servie par Vite sur un autre port que l'API. */
     private static final Pattern LOCAL_ORIGIN = Pattern.compile("^http://(localhost|127\\.0\\.0\\.1)(:\\d{1,5})?$");
     private static final int MAX_PENDING = 200;
@@ -87,8 +93,8 @@ public class StravaService {
         if (!props.configured()) {
             throw StravaException.notConfigured(props.problem());
         }
-        String base = trim(origin);
-        if (!LOCAL_ORIGIN.matcher(base).matches() && !base.equals(trim(serverOrigin))) {
+        String base = "app".equals(origin) ? APP_ORIGIN : trim(origin);
+        if (!base.equals(APP_ORIGIN) && !LOCAL_ORIGIN.matcher(base).matches() && !base.equals(trim(serverOrigin))) {
             throw new IllegalArgumentException("Adresse de l'appli inconnue : " + origin);
         }
         byte[] bytes = new byte[24];
@@ -100,7 +106,9 @@ public class StravaService {
             }
             pending.put(state, base);
         }
-        return client.authorizeUrl(base + "/api/strava/callback", state);
+        // Strava revient toujours sur l'API : sur le serveur lui-même pour l'appli mobile, qui est rouverte ensuite.
+        String api = base.equals(APP_ORIGIN) ? trim(serverOrigin) : base;
+        return client.authorizeUrl(api + "/api/strava/callback", state);
     }
 
     private static String trim(String origin) {

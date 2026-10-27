@@ -7,3 +7,7 @@ config
 requests
 docs
 *.md
+# Projets natifs de l'appli mobile (Capacitor) : inutiles au site
+frontend/ios
+frontend/android
+connectiq

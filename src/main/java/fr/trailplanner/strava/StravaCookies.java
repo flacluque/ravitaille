@@ -3,6 +3,7 @@ package fr.trailplanner.strava;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.trailplanner.api.JsonSupport;
 import fr.trailplanner.web.CookieCipher;
+import fr.trailplanner.web.WebConfig;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,6 +16,9 @@ import java.time.Duration;
 /**
  * Jetons Strava gardés chez le coureur, dans un cookie chiffré (illisible par le navigateur et par
  * les autres sites) : chacun voit ses propres activités, le serveur ne garde aucun compte.
+ * <p>
+ * L'appli mobile ne garde pas les cookies : elle conserve le même texte chiffré et l'envoie dans l'en-tête
+ * {@value WebConfig#APP_STRAVA_HEADER} ; la réponse lui renvoie, dans le même en-tête, la connexion renouvelée.
  */
 public class StravaCookies {
 
@@ -30,6 +34,10 @@ public class StravaCookies {
     }
 
     public StravaSession read(HttpServletRequest request) {
+        String header = request.getHeader(WebConfig.APP_STRAVA_HEADER);
+        if (header != null && !header.isBlank()) {
+            return cipher.decrypt(header).map(this::parse).orElseGet(StravaSession::none);
+        }
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie c : cookies) {
@@ -46,7 +54,12 @@ public class StravaCookies {
         if (!session.changed()) {
             return;
         }
-        String value = session.token().map(this::seal).orElse("");
+        String value = sealed(session);
+        if (request.getHeader(WebConfig.APP_STRAVA_HEADER) != null) {
+            // Appli mobile : la connexion renouvelée (ou vide si elle est oubliée) repart dans l'en-tête.
+            response.setHeader(WebConfig.APP_STRAVA_HEADER, value);
+            return;
+        }
         ResponseCookie cookie = ResponseCookie.from(NAME, value)
                 .httpOnly(true)
                 .secure(request.isSecure())
@@ -55,6 +68,11 @@ public class StravaCookies {
                 .maxAge(value.isEmpty() ? Duration.ZERO : MAX_AGE)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    /** La connexion chiffrée, telle que la garde le cookie (vide sans connexion). */
+    public String sealed(StravaSession session) {
+        return session.token().map(this::seal).orElse("");
     }
 
     private StravaSession parse(String json) {

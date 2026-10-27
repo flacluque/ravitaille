@@ -1,4 +1,5 @@
 import type { CourseView, RacePlan, Service } from '../api/types';
+import { siteUrl } from '../api/platform';
 import { buildShare, encodeShare } from './crew';
 import { formatClock } from './format';
 import { computeNutrition, describeFill, describeTake, type NutritionProfile } from './nutrition';
@@ -31,7 +32,7 @@ export async function shareWithCrew(args: {
   const base = args.plans[args.likely] ?? args.plans[0];
   const share = buildShare(args.plans, args.likely, args.course, args.crew,
     crewPrepare(base, args.services, args.profile, args.crew), args.fix, args.runner);
-  const url = `${window.location.origin}/${await encodeShare(share)}`;
+  const url = `${siteUrl()}/${await encodeShare(share)}`;
   const places = share.crew.map((i) => share.points[i].name);
   const text = args.update
     ?? `Suis-moi sur ${share.race} (départ ${formatClock(share.start)}) : heures de passage${places.length ? `, rendez-vous à ${places.join(' et ')}` : ''}, et ce qu'il faut me préparer.`;

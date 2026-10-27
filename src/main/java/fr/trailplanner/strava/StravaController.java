@@ -3,6 +3,7 @@ package fr.trailplanner.strava;
 import fr.trailplanner.engine.RunnerProfile;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -28,10 +31,14 @@ public class StravaController {
 
     private final StravaService strava;
     private final StravaCookies cookies;
+    /** Lien qui rouvre l'appli mobile après Strava ({@code ravitaille://strava?…}). */
+    private final String appScheme;
 
-    public StravaController(StravaService strava, StravaCookies cookies) {
+    public StravaController(StravaService strava, StravaCookies cookies,
+                            @Value("${trailplanner.app-scheme:ravitaille}") String appScheme) {
         this.strava = strava;
         this.cookies = cookies;
+        this.appScheme = appScheme;
     }
 
     @GetMapping("/status")
@@ -55,6 +62,13 @@ public class StravaController {
                                          HttpServletRequest request, HttpServletResponse response) {
         StravaSession session = StravaSession.none();
         String back = strava.callback(state, code, error, scope, session);
+        if (back.startsWith(StravaService.APP_ORIGIN + "/")) {
+            // Appli mobile : pas de cookie ; la connexion chiffrée repart avec le lien qui rouvre l'appli, qui la garde.
+            String query = back.substring(StravaService.APP_ORIGIN.length() + 1);
+            String sealed = cookies.sealed(session);
+            return redirect(appScheme + "://strava" + query
+                    + (sealed.isEmpty() ? "" : "&session=" + URLEncoder.encode(sealed, StandardCharsets.UTF_8)));
+        }
         cookies.save(session, request, response);
         return redirect(back);
     }

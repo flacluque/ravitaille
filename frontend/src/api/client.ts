@@ -3,6 +3,7 @@ import type {
   RaceReview, RunnerProfile, StravaActivity, StravaStatus, TrainingOptions,
 } from './types';
 import type { NightWindow } from '../lib/draft';
+import { API_BASE, apiUrl, appHeaders, isNativeApp, rememberFromResponse } from './platform';
 
 export class ApiError extends Error {}
 
@@ -12,8 +13,21 @@ export function humanError(e: unknown): string {
   return 'Pas de réponse du serveur : vérifie ta connexion et réessaie (s\'il dormait, il met environ une minute à se réveiller).';
 }
 
+/**
+ * Appel de l'API, sur le site comme dans l'appli : dans l'appli, à l'adresse du serveur, avec la connexion Strava et le
+ * code d'accès dans les en-têtes (gardés à chaque réponse).
+ */
+export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  if (!isNativeApp()) return fetch(apiUrl(path), init);
+  const headers = new Headers(init.headers);
+  for (const [k, v] of Object.entries(appHeaders())) headers.set(k, v);
+  const res = await fetch(apiUrl(path), { ...init, headers });
+  rememberFromResponse(res.headers);
+  return res;
+}
+
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  const res = await apiFetch(url, init);
   if (!res.ok) {
     // Les erreurs de l'API sont des ProblemDetail : { detail: "..." }
     const body = await res.json().catch(() => null);
@@ -88,7 +102,9 @@ export function fetchStravaStatus(): Promise<StravaStatus> {
 
 /** Page à ouvrir pour connecter Strava : l'API renvoie vers Strava, qui revient ensuite sur l'appli. */
 export function stravaConnectUrl(): string {
-  return `/api/strava/authorize?origin=${encodeURIComponent(window.location.origin)}`;
+  // Dans l'appli, Strava revient sur le serveur, qui rouvre l'appli par son lien (ravitaille://strava?…).
+  if (isNativeApp()) return `${API_BASE}/api/strava/authorize?origin=app`;
+  return `${API_BASE}/api/strava/authorize?origin=${encodeURIComponent(window.location.origin)}`;
 }
 
 /** Sorties de course à pied et de trail depuis une date ("2024-10-12"). */
@@ -111,7 +127,7 @@ export function fetchRaceReview(activityId: number, runner: RunnerProfile | null
 }
 
 export async function disconnectStrava(): Promise<void> {
-  const res = await fetch('/api/strava/connection', { method: 'DELETE' });
+  const res = await apiFetch('/api/strava/connection', { method: 'DELETE' });
   if (!res.ok) throw new ApiError('La déconnexion de Strava a échoué : réessaie dans un instant.');
 }
 
@@ -183,7 +199,7 @@ export function fetchAppInfo(): Promise<AppInfo> {
 
 /** Envoie le code d'invitation ; le serveur le retient dans un cookie. */
 export async function enterAccessCode(code: string): Promise<void> {
-  const res = await fetch('/api/app/access', {
+  const res = await apiFetch('/api/app/access', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code }),

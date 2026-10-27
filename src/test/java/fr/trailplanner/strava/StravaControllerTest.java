@@ -83,6 +83,38 @@ class StravaControllerTest {
     }
 
     @Test
+    void lAppliMobileGardeLaConnexionHorsCookie() throws Exception {
+        when(strava.authorize(eq("app"), any())).thenReturn("https://www.strava.com/oauth/authorize?state=a");
+        mvc.perform(get("/api/strava/authorize").param("origin", "app")).andExpect(status().isFound());
+
+        when(strava.callback(eq("a"), eq("c"), eq(null), eq("activity:read_all"), any())).thenAnswer(call -> {
+            call.<StravaSession>getArgument(4).update(TOKEN);
+            return StravaService.APP_ORIGIN + "/?strava=connected";
+        });
+        MvcResult result = mvc.perform(get("/api/strava/callback").param("state", "a").param("code", "c").param("scope", "activity:read_all"))
+                .andExpect(status().isFound())
+                .andExpect(header().doesNotExist("Set-Cookie"))
+                .andReturn();
+        String location = result.getResponse().getHeader("Location");
+        assertTrue(location.startsWith("ravitaille://strava?strava=connected&session="), location);
+        assertFalse(location.contains("acces"), "jetons illisibles dans le lien");
+
+        // L'appli renvoie la connexion dans l'en-tête ; une connexion oubliée lui revient vide.
+        String sealed = java.net.URLDecoder.decode(location.substring(location.indexOf("session=") + 8), java.nio.charset.StandardCharsets.UTF_8);
+        when(strava.status(any())).thenAnswer(call -> new StravaStatus(true,
+                call.<StravaSession>getArgument(0).token().isPresent(), call.<StravaSession>getArgument(0).token().map(StravaToken::athlete).orElse(null)));
+        mvc.perform(get("/api/strava/status").header("X-Ravitaille-Strava", sealed)).andExpect(jsonPath("$.athlete").value("Flavien L."));
+        doAnswer(call -> {
+            call.<StravaSession>getArgument(0).clear();
+            return null;
+        }).when(strava).disconnect(any());
+        mvc.perform(delete("/api/strava/connection").header("X-Ravitaille-Strava", sealed))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string("X-Ravitaille-Strava", ""))
+                .andExpect(header().doesNotExist("Set-Cookie"));
+    }
+
+    @Test
     void listeLesActivitesEnJson() throws Exception {
         when(strava.activities(any(), eq(LocalDate.of(2025, 1, 1)))).thenReturn(List.of(new StravaActivity(
                 7, "Trail des Cathares", LocalDate.of(2026, 4, 12), "TrailRun", 60.4, 3210,
