@@ -9,9 +9,9 @@ import Toybox.WatchUi;
 const APPROACH_KM = 0.3;
 
 // Le champ : prochain ravito du plan, distance, heure d'arrivée estimée et écart au plan.
-// Plein écran ou en version compacte selon la place ; à 300 m d'un ravito, une vibration et une alerte plein écran.
-// L'alerte ne s'affiche que si le coureur l'a activée sur la montre (réglages de l'activité › Alertes › Connect IQ) ;
-// la vibration, elle, vient du champ et ne dépend pas de ce réglage.
+// Plein écran ou en version compacte selon la place ; à 300 m d'un ravito, une vibration en trois temps, sensible
+// quel que soit l'écran affiché. Pas d'écran d'alerte : celui d'un champ Connect IQ ne s'affiche que sur la page du
+// champ (constaté sur une fēnix 7 Pro), la vibration suffit à prévenir.
 class TrailPlannerView extends WatchUi.DataField {
     var plan as TrailPlannerPlan?;
     var km as Float = 0.0;
@@ -43,14 +43,15 @@ class TrailPlannerView extends WatchUi.DataField {
         if (plan != null) {
             var p = plan as TrailPlannerPlan;
             var i = p.nextIndex(km);
-            // Une seule alerte par ravito, en entrant dans les 300 derniers mètres.
+            // Une seule vibration par ravito, en entrant dans les 300 derniers mètres : trois impulsions, pour ne pas la
+            // confondre avec une notification ou une alerte d'allure.
             if (i > 0 && i != alerted && p.ravitos[i].km - km <= $.APPROACH_KM + 0.001) {
                 alerted = i;
                 if (Attention has :vibrate) {
-                    Attention.vibrate([new Attention.VibeProfile(60, 700)]);
-                }
-                if (WatchUi.DataField has :showAlert) {
-                    showAlert(new TrailPlannerAlert(p.ravitos[i].name));
+                    Attention.vibrate([
+                        new Attention.VibeProfile(100, 300), new Attention.VibeProfile(0, 200),
+                        new Attention.VibeProfile(100, 300), new Attention.VibeProfile(0, 200),
+                        new Attention.VibeProfile(100, 300)]);
                 }
             }
         }
@@ -91,7 +92,7 @@ class TrailPlannerView extends WatchUi.DataField {
 
         var gapColor = gap > 1 ? Graphics.COLOR_ORANGE : green;
         if (full) {
-            // En approche, le bandeau du haut passe en vert : visible même sans l'alerte de la montre.
+            // En approche, le bandeau du haut passe en vert.
             if (near) {
                 dc.setColor(green, Graphics.COLOR_TRANSPARENT);
                 dc.drawText(cx, h * 0.16, Graphics.FONT_TINY, "RAVITO DANS " + (dist * 1000).toNumber() + " M", center);
@@ -152,27 +153,5 @@ class TrailPlannerView extends WatchUi.DataField {
             return m.toString() + " min";
         }
         return (m / 60).toString() + "h" + (m % 60).format("%02d");
-    }
-}
-
-// Alerte plein écran à 300 m d'un ravito (affichée par la montre par-dessus l'écran en cours).
-class TrailPlannerAlert extends WatchUi.DataFieldAlert {
-    var name as String;
-
-    function initialize(name as String) {
-        DataFieldAlert.initialize();
-        self.name = name;
-    }
-
-    function onUpdate(dc as Graphics.Dc) as Void {
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.clear();
-        var cx = dc.getWidth() / 2;
-        var h = dc.getHeight();
-        var center = Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER;
-        dc.setColor(Graphics.COLOR_GREEN, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, h * 0.38, Graphics.FONT_SMALL, "RAVITO DANS 300 M", center);
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, h * 0.55, Graphics.FONT_MEDIUM, name, center);
     }
 }
