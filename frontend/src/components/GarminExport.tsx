@@ -5,6 +5,7 @@ import { buildCiqPlan, encodeCiqPlan } from '../lib/ciq';
 import { buildCourseFit, fitCoursePoints, fitFilename, type FitPointKind } from '../lib/fit';
 import { buildCourseGpx, gpxFilename, gpxWaypoints } from '../lib/gpx';
 import { loadWatchBrand, saveWatchBrand, type WatchBrand } from '../api/storage';
+import { WatchFieldPreview } from './WatchFieldPreview';
 
 interface Props {
   course: CourseView;
@@ -152,8 +153,9 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
           </button>
         </div>
         {garmin ? (
-          <p className="muted">Un fichier de parcours <strong>.fit</strong> : la trace, tes ravitos et les heures de ton plan. La montre te
-            guide, te montre le prochain ravito et te dit si tu es en avance.</p>
+          <p className="muted">Deux outils, à prendre ensemble ou séparément : le <strong>parcours .fit</strong> (la trace, tes ravitos
+            et un partenaire virtuel qui court au rythme de ton plan), et le <strong>champ Prochain Ravito</strong> (le prochain ravito et
+            ton avance ou ton retard, toujours sous les yeux).</p>
         ) : (
           <p className="muted">Un fichier de parcours <strong>.gpx</strong>, que toutes les marques importent : la trace, et chaque ravito
             en point du parcours avec son nom et son heure de passage prévue. Le partenaire virtuel et le champ Prochain Ravito sont
@@ -163,100 +165,114 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
         {!course.track ? (
           <p className="banner warn" role="status">Ajoute la trace GPX de ta course (« Modifier ma course ») : la montre en a besoin pour
             te guider.</p>
-        ) : <>
-          <section className="garmin-part" aria-labelledby="garmin-vp">
-            <span id="garmin-vp" className="overline">{garmin ? 'Partenaire virtuel' : 'Heures prévues'}</span>
-            <div className="plan-hero-scenarios garmin-scenarios" role="group" aria-labelledby="garmin-vp">
-              {plans.map((p, i) => (
-                <button key={p.scenario.name} type="button" aria-pressed={i === scenario} className={i === scenario ? 'active' : ''}
-                  onClick={() => setScenario(i)}>
-                  {p.scenario.name}<span>arrivée {formatClock(p.finish)}</span>
-                </button>
-              ))}
-            </div>
-            {plans.length === 3 && garmin && <span className="muted small">{HELP[scenario]}</span>}
-          </section>
-
-          <section className="garmin-part" aria-labelledby="garmin-opts">
-            <span id="garmin-opts" className="overline">Sur la montre</span>
-            <label className="check"><input type="checkbox" checked={timeInName} onChange={(e) => setTimeInName(e.target.checked)} />
-              Heure de passage prévue dans le nom des points</label>
-            <span className="muted small">Celle du scénario choisi ci-dessus, par exemple « Greffeil 21h58 ».</span>
-            <label className="check"><input type="checkbox" checked={checkpoints} onChange={(e) => setCheckpoints(e.target.checked)} />
-              Aussi les pointages sans ravito</label>
-          </section>
-
-          <section className="garmin-part" aria-labelledby="garmin-preview">
-            <span id="garmin-preview" className="overline">Aperçu des points ({garmin ? points.length : waypoints.length})</span>
-            <ul className="garmin-points">
-              {(garmin ? points : waypoints).map((p) => (
-                <li key={p.index}><span aria-hidden className={`garmin-icon garmin-${p.kind}`}>{ICON[p.kind]}</span> {p.name}</li>
-              ))}
-            </ul>
-            <span className="muted small">{garmin ? 'Comme sur la montre : 15 caractères, sans accents.'
-              : 'Nom complet : selon le modèle, la montre peut le raccourcir.'}</span>
-          </section>
-
-          <button type="button" className="garmin-download" onClick={() => void download()} disabled={state === 'busy'}>
-            {state === 'busy' ? 'Préparation…' : state === 'done' ? '✓ Parcours téléchargé'
-              : `Télécharger le parcours (${garmin ? '.fit' : '.gpx'})`}
-          </button>
-          {state === 'done' && <p className="muted small" role="status">Fichier : {filename}, dans tes téléchargements.</p>}
-          {state === 'failed' && <p className="field-error" role="alert">Le fichier n'a pas pu être préparé : réessaie.</p>}
-
-          {!garmin && (
-            <section className="garmin-part plan-rule" aria-labelledby="garmin-next">
-              <div className="garmin-next-head">
-                <span id="garmin-next" className="overline">Et ensuite</span>
-                <div className="plan-hero-scenarios garmin-how" role="group" aria-label="Ta marque">
-                  {OTHER_HOWS.map(([id, label]) => (
-                    <button key={id} type="button" aria-pressed={otherHow === id} className={otherHow === id ? 'active' : ''}
-                      onClick={() => setOtherHow(id)}>{label}</button>
+        ) : (
+          <div className="watch-cols">
+            <div className="watch-col">
+              <h3 className="watch-step">{garmin ? '1. Le parcours (.fit)' : 'Le parcours (.gpx)'}</h3>
+              <section className="garmin-part" aria-labelledby="garmin-vp">
+                <span id="garmin-vp" className="overline">{garmin ? 'Partenaire virtuel' : 'Heures prévues'}</span>
+                <div className="plan-hero-scenarios garmin-scenarios" role="group" aria-labelledby="garmin-vp">
+                  {plans.map((p, i) => (
+                    <button key={p.scenario.name} type="button" aria-pressed={i === scenario} className={i === scenario ? 'active' : ''}
+                      onClick={() => setScenario(i)}>
+                      {p.scenario.name}<span>arrivée {formatClock(p.finish)}</span>
+                    </button>
                   ))}
                 </div>
-              </div>
-              <ol>{OTHER_STEPS[otherHow].map((s) => <li key={s}>{s}</li>)}</ol>
-              <p className="garmin-dday"><strong>Le jour J :</strong> lance la navigation sur l'itinéraire « {course.race.name} » :
-                {' '}chaque ravito s'affiche avec son heure prévue.</p>
-              <p className="muted small">Tu as recalculé ton plan ? Renvoie le fichier : les heures des ravitos viennent du plan.</p>
-            </section>
-          )}
+                {plans.length === 3 && garmin && <span className="muted small">{HELP[scenario]}</span>}
+              </section>
 
-          {garmin && <>
-          <section className="garmin-part plan-rule" aria-labelledby="garmin-next">
-            <div className="garmin-next-head">
-              <span id="garmin-next" className="overline">Et ensuite</span>
-              <div className="plan-hero-scenarios garmin-how" role="group" aria-label="Comment l'envoyer">
-                {HOWS.map(([id, label]) => (
-                  <button key={id} type="button" aria-pressed={how === id} className={how === id ? 'active' : ''}
-                    onClick={() => setHow(id)}>{label}</button>
-                ))}
-              </div>
+              <section className="garmin-part" aria-labelledby="garmin-opts">
+                <span id="garmin-opts" className="overline">Sur la montre</span>
+                <label className="check"><input type="checkbox" checked={timeInName} onChange={(e) => setTimeInName(e.target.checked)} />
+                  Heure de passage prévue dans le nom des points</label>
+                <span className="muted small">Celle du scénario choisi ci-dessus, par exemple « Greffeil 21h58 ».</span>
+                <label className="check"><input type="checkbox" checked={checkpoints} onChange={(e) => setCheckpoints(e.target.checked)} />
+                  Aussi les pointages sans ravito</label>
+              </section>
+
+              <section className="garmin-part" aria-labelledby="garmin-preview">
+                <span id="garmin-preview" className="overline">Aperçu des points ({garmin ? points.length : waypoints.length})</span>
+                <ul className={garmin ? 'garmin-points' : 'garmin-points full-names'}>
+                  {(garmin ? points : waypoints).map((p) => (
+                    <li key={p.index}><span aria-hidden className={`garmin-icon garmin-${p.kind}`}>{ICON[p.kind]}</span> {p.name}</li>
+                  ))}
+                </ul>
+                <span className="muted small">{garmin ? 'Comme sur la montre : 15 caractères, sans accents.'
+                  : 'Nom complet : selon le modèle, la montre peut le raccourcir.'}</span>
+              </section>
+
+              <button type="button" className="garmin-download" onClick={() => void download()} disabled={state === 'busy'}>
+                {state === 'busy' ? 'Préparation…' : state === 'done' ? '✓ Parcours téléchargé'
+                  : `Télécharger le parcours (${garmin ? '.fit' : '.gpx'})`}
+              </button>
+              {state === 'done' && <p className="muted small" role="status">Fichier : {filename}, dans tes téléchargements.</p>}
+              {state === 'failed' && <p className="field-error" role="alert">Le fichier n'a pas pu être préparé : réessaie.</p>}
+
+              {garmin && (
+                <section className="garmin-part plan-rule" aria-labelledby="garmin-next">
+                  <div className="garmin-next-head">
+                    <span id="garmin-next" className="overline">Et ensuite</span>
+                    <div className="plan-hero-scenarios garmin-how" role="group" aria-label="Comment l'envoyer">
+                      {HOWS.map(([id, label]) => (
+                        <button key={id} type="button" aria-pressed={how === id} className={how === id ? 'active' : ''}
+                          onClick={() => setHow(id)}>{label}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <ol>{STEPS[how].map((s) => <li key={s}>{s}</li>)}</ol>
+                  <p className="garmin-dday"><strong>Le jour J :</strong> lance une activité Trail, puis <strong>Navigation › Parcours ›
+                    {' '}{course.race.name} › Suivre le parcours</strong>.</p>
+                  <p className="muted small">Tu as recalculé ton plan ? Renvoie le fichier : les heures du partenaire virtuel viennent du
+                    plan.</p>
+                </section>
+              )}
             </div>
-            <ol>{STEPS[how].map((s) => <li key={s}>{s}</li>)}</ol>
-            <p><strong>Une seule fois, sur la montre :</strong> dans les réglages de ton activité Trail, ajoute un écran de données
-              personnalisé avec le champ « Waypoint suivant » (le nom du prochain ravito, avec l'heure où tu dois y arriver), et les champs de
-              navigation qui t'intéressent, comme la distance jusqu'à ce point. Les noms des champs varient selon les modèles.</p>
-            <p className="garmin-dday"><strong>Le jour J :</strong> lance une activité Trail, puis <strong>Navigation › Parcours ›
-              {' '}{course.race.name} › Suivre le parcours</strong>.</p>
-            <p className="muted small">Tu as recalculé ton plan ? Renvoie le fichier : les heures du partenaire virtuel viennent du plan.</p>
-          </section>
 
-          <section className="garmin-part plan-rule" aria-labelledby="garmin-ciq">
-            <span id="garmin-ciq" className="overline">Champ Prochain Ravito (Connect IQ)</span>
-            <p>Le champ de données « Prochain Ravito » affiche le prochain ravito de ton plan, la distance, l'heure d'arrivée
-              estimée et ton écart au plan, sans les virages de Garmin Connect. Colle ce code dans ses réglages (appli Connect IQ ›
-              Prochain Ravito › Réglages), pour le scénario {plan.scenario.name.toLowerCase()}.</p>
-            <textarea className="garmin-code" readOnly value={ciqCode} rows={3} aria-label="Code du plan pour le champ Prochain Ravito"
-              onFocus={(e) => e.currentTarget.select()} />
-            <button type="button" className="ghost" onClick={() => void copyCode()}>{copied ? '✓ Code copié' : 'Copier le code'}</button>
-            <p><strong>À 300 m de chaque ravito, la montre vibre trois fois</strong>, quel que soit l'écran affiché. Pas d'écran
-              d'alerte : jette un œil au champ, il affiche alors « Ravito dans … m ». Le plus simple est de le mettre sur l'écran
-              que tu regardes le plus (réglages de ton activité Trail › Écrans de données), en version compacte à côté de tes
-              autres champs.</p>
-          </section>
-          </>}
-        </>}
+            {garmin ? (
+              <section className="watch-col watch-field" aria-labelledby="garmin-ciq">
+                <h3 className="watch-step" id="garmin-ciq">2. Le champ Prochain Ravito <span className="muted">(Connect IQ, facultatif)</span></h3>
+                <p>Un champ de données à ajouter sur ta montre : le prochain ravito de ton plan, la distance pour y arriver, ton heure
+                  d'arrivée estimée et ton avance ou ton retard. À 300 m de chaque ravito, la montre vibre trois fois.</p>
+                {ciqPlan && <WatchFieldPreview plan={ciqPlan} />}
+                <ol className="watch-field-steps">
+                  <li><strong>Installe le champ, une seule fois :</strong> appli <strong>Connect IQ</strong> sur ton téléphone (celle du store
+                    Garmin, à télécharger si tu ne l'as pas) › recherche <strong>« Prochain Ravito »</strong> › Installer, puis synchronise ta
+                    montre.</li>
+                  <li><strong>Copie le code de ton plan</strong> ({plan.scenario.name.toLowerCase()}) :
+                    <div className="watch-code">
+                      <textarea className="garmin-code" readOnly value={ciqCode} rows={3} aria-label="Code du plan pour le champ Prochain Ravito"
+                        onFocus={(e) => e.currentTarget.select()} />
+                      <button type="button" className="ghost" onClick={() => void copyCode()}>{copied ? '✓ Code copié' : 'Copier le code'}</button>
+                    </div>
+                  </li>
+                  <li><strong>Colle-le dans le champ :</strong> appli Connect IQ › ta montre › Prochain Ravito (dans les champs de
+                    données) › Réglages › Code du plan, puis enregistre.</li>
+                  <li><strong>Mets le champ sur un écran :</strong> sur la montre, réglages de ton activité Trail › Écrans de données ›
+                    choisis un champ › Connect IQ › Prochain Ravito. Le plus pratique : sur l'écran que tu regardes le plus, à côté de
+                    tes autres champs.</li>
+                </ol>
+                <p className="muted small">Tu as recalculé ton plan ? Recopie le code : les heures prévues viennent du plan.</p>
+              </section>
+            ) : (
+              <section className="watch-col garmin-part" aria-labelledby="garmin-next">
+                <div className="garmin-next-head">
+                  <h3 className="watch-step" id="garmin-next">Et ensuite</h3>
+                  <div className="plan-hero-scenarios garmin-how" role="group" aria-label="Ta marque">
+                    {OTHER_HOWS.map(([id, label]) => (
+                      <button key={id} type="button" aria-pressed={otherHow === id} className={otherHow === id ? 'active' : ''}
+                        onClick={() => setOtherHow(id)}>{label}</button>
+                    ))}
+                  </div>
+                </div>
+                <ol>{OTHER_STEPS[otherHow].map((s) => <li key={s}>{s}</li>)}</ol>
+                <p className="garmin-dday"><strong>Le jour J :</strong> lance la navigation sur l'itinéraire « {course.race.name} » :
+                  {' '}chaque ravito s'affiche avec son heure prévue.</p>
+                <p className="muted small">Tu as recalculé ton plan ? Renvoie le fichier : les heures des ravitos viennent du plan.</p>
+              </section>
+            )}
+          </div>
+        )}
       </div>
     </dialog>
   );
