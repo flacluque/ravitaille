@@ -174,9 +174,10 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
             <textarea className="garmin-code" readOnly value={ciqCode} rows={3} aria-label="Code du plan pour le champ Prochain Ravito"
               onFocus={(e) => e.currentTarget.select()} />
             <button type="button" className="ghost" onClick={() => void copyCode()}>{copied ? '✓ Code copié' : 'Copier le code'}</button>
-            <p><strong>Une seule fois, sur la montre :</strong> pour que l'alerte « Ravito dans 300 m » s'affiche par-dessus
-              l'écran en cours, active-la dans les réglages de ton activité Trail : <strong>Alertes › Ajouter › Connect IQ ›
-              Prochain Ravito</strong> (le libellé varie selon les modèles). Sans ce réglage, la montre vibre seulement.</p>
+            <p><strong>À 300 m de chaque ravito, la montre vibre trois fois</strong>, quel que soit l'écran affiché. Pas d'écran
+              d'alerte : jette un œil au champ, il affiche alors « Ravito dans … m ». Le plus simple est de le mettre sur l'écran
+              que tu regardes le plus (réglages de ton activité Trail › Écrans de données), en version compacte à côté de tes
+              autres champs.</p>
           </section>
         </>}
       </div>

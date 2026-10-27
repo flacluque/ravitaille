@@ -2,8 +2,8 @@
 
 Champ pour montre Garmin à écran rond (fēnix 6, 7 et 8, epix, Enduro, Forerunner, vívoactive et Venu : liste dans
 `manifest.xml`) : le **prochain ravito de ton plan**, la distance pour y arriver,
-l'**heure d'arrivée estimée** et ton **écart au plan**. À 300 m d'un ravito, la montre vibre et affiche une alerte
-« RAVITO DANS 300 M ». Il ne lit pas les points du parcours : les virages ajoutés par
+l'**heure d'arrivée estimée** et ton **écart au plan**. À 300 m d'un ravito, la montre vibre trois fois, quel que
+soit l'écran affiché (et le champ affiche « RAVITO DANS xxx M »). Il ne lit pas les points du parcours : les virages ajoutés par
 Garmin Connect ne le gênent pas, et il marche même sans parcours chargé.
 
 ## Le calcul
@@ -53,16 +53,17 @@ d'une longue course (100 km et plus). Instinct et écrans rectangulaires ne sont
 1. Sur le site : « Télécharger ▾ › Parcours pour ma Garmin », section **Champ Prochain Ravito** : copie le code.
 2. Appli Connect IQ du téléphone › Prochain Ravito › **Réglages** : colle le code, enregistre.
 3. Sur la montre : réglages de l'activité Trail › Écrans de données : ajoute le champ (seul pour la version
-   complète, ou dans un écran à 2 champs pour la version compacte).
-4. Une seule fois, sur la montre : réglages de l'activité Trail › **Alertes › Ajouter › Connect IQ** › Prochain Ravito
-   (le libellé varie selon le modèle). Sans ce réglage, la montre vibre à 300 m du ravito mais n'affiche pas l'alerte
-   par-dessus l'écran en cours : la vibration vient du champ, l'affichage de l'alerte est soumis à ce réglage.
+   complète, ou dans un écran à 2 champs pour la version compacte, de préférence sur l'écran que tu regardes le plus).
+
+Pas d'écran d'alerte à 300 m : celui d'un champ Connect IQ ne s'affiche que si l'on regarde déjà la page du champ, et
+aucun réglage de la montre ne le change (fēnix 7 Pro : pas de Connect IQ dans Réglages › Alarmes). La vibration en
+trois temps prévient, quel que soit l'écran.
 
 ## À vérifier sur la montre
 
 Le champ tourne sur le simulateur et sur une Fenix 7X Pro (installé en bêta depuis le store). Reste à vérifier :
-que les réglages de l'appli Connect IQ acceptent un code de 500 à 1 000 caractères, et l'alerte plein écran à 300 m
-une fois activée dans les alertes de l'activité (au Trail des Troubadours, sans ce réglage : vibration seule).
+que les réglages de l'appli Connect IQ acceptent un code de 500 à 1 000 caractères, et que la vibration en trois temps
+se distingue bien en course.
 
 ## Publication sur le store
 
