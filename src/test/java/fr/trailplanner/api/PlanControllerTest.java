@@ -118,6 +118,15 @@ class PlanControllerTest {
     }
 
     @Test
+    void uneRequeteRefuseeParSpringDitPourquoi() throws Exception {
+        // Partie « request » absente : refusée avant le contrôleur, la raison reste lisible (et journalisée).
+        mvc.perform(multipart("/api/plans/full"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.startsWith("Requête refusée par le serveur (erreur 400) : ")))
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("request")));
+    }
+
+    @Test
     void laDemoAccepteDesReferencesDateesEtDesEntrainements() throws Exception {
         String body = """
                 {"elevationSource": "AUTO", "references": [
