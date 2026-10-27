@@ -51,10 +51,25 @@ async function withStore<T>(mode: IDBTransactionMode, run: (store: IDBObjectStor
   }
 }
 
+/**
+ * Trace gardée en octets, pas en File : Safari perd le contenu d'un fichier relu depuis IndexedDB et l'envoie vide au
+ * serveur (le calcul était alors refusé sans explication).
+ */
+interface StoredGpx {
+  name: string;
+  type: string;
+  bytes: ArrayBuffer;
+}
+
+function isStoredGpx(value: unknown): value is StoredGpx {
+  return typeof value === 'object' && value !== null && (value as StoredGpx).bytes instanceof ArrayBuffer;
+}
+
 /** Enregistre (ou efface, avec null) la trace GPX de ta course. Les échecs sont silencieux. */
 export async function saveGpx(file: File | null): Promise<void> {
   try {
-    await withStore<unknown>('readwrite', (s) => (file ? s.put(file, GPX_KEY) : s.delete(GPX_KEY)) as IDBRequest<unknown>);
+    const value: StoredGpx | null = file ? { name: file.name, type: file.type, bytes: await file.arrayBuffer() } : null;
+    await withStore<unknown>('readwrite', (s) => (value ? s.put(value, GPX_KEY) : s.delete(GPX_KEY)) as IDBRequest<unknown>);
   } catch {
     // IndexedDB indisponible : il faudra resélectionner la trace au prochain chargement.
   }
@@ -63,7 +78,20 @@ export async function saveGpx(file: File | null): Promise<void> {
 export async function loadGpx(): Promise<File | null> {
   try {
     const value = await withStore<unknown>('readonly', (s) => s.get(GPX_KEY));
-    return value instanceof File ? value : value instanceof Blob ? new File([value], 'trace.gpx') : null;
+    if (isStoredGpx(value)) return new File([value.bytes], value.name || 'trace.gpx', { type: value.type });
+    if (!(value instanceof Blob)) return null;
+    // Trace gardée par une version précédente (un File) : relue tout de suite et gardée en octets. Illisible, elle est
+    // rendue telle quelle, et le calcul demandera de la recharger.
+    const file = value instanceof File ? value : new File([value], 'trace.gpx');
+    try {
+      const bytes = await file.arrayBuffer();
+      if (bytes.byteLength === 0 && file.size > 0) return file;
+      const copy = new File([bytes], file.name, { type: file.type });
+      void saveGpx(copy);
+      return copy;
+    } catch {
+      return file;
+    }
   } catch {
     return null;
   }
