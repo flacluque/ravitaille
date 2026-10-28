@@ -283,9 +283,20 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .editor-fields .grow { flex: 1 1 220px; }
 .editor-fields .narrow { width: 90px; }
 
-.gpx-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 12px; background: var(--surface-2); border-radius: 8px; }
-.gpx-label { font-weight: 600; font-size: var(--fs-small); }
-.gpx-file { font-size: var(--fs-small); }
+.gpx-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px 14px; padding: 14px 16px;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, var(--border)); border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+.gpx-card.has-gpx { border-style: solid; border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); }
+.gpx-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: #1f4d3a; color: #fff; }
+.gpx-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gpx-text span { color: var(--muted); font-size: var(--fs-small); overflow-wrap: anywhere; }
+.gpx-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.gpx-actions button { min-height: 44px; padding: 0 16px; }
+@media (max-width: 640px) {
+  .gpx-card { grid-template-columns: auto minmax(0, 1fr); }
+  .gpx-actions { grid-column: 1 / -1; }
+  .gpx-actions button { flex: 1; }
+}
 .small-btn { padding: 5px 10px; font-size: var(--fs-small); }
 
 .cp-grid { display: flex; flex-direction: column; gap: 6px; }
@@ -478,7 +489,7 @@ button.legend-btn[aria-expanded='true'] { background: var(--accent); color: var(
 
 /* Import Strava */
 .modal-backdrop { position: fixed; inset: 0; z-index: 2000; background: rgb(0 0 0 / 0.45); display: flex;
-  align-items: flex-start; justify-content: center; padding: 5vh 16px; overflow-y: auto; }
+  align-items: flex-start; justify-content: center; padding: max(5vh, calc(env(safe-area-inset-top) + 12px)) 16px 5vh; overflow-y: auto; }
 .modal { background: var(--surface); color: var(--text); border-radius: 12px; width: min(760px, 100%); padding: 16px 18px;
   display: flex; flex-direction: column; gap: 10px; box-shadow: 0 12px 40px rgb(0 0 0 / 0.3); }
 .modal-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
@@ -863,9 +874,9 @@ button.plan-hero-worst { padding: 0; min-height: 44px; background: transparent; 
 .ravitos-timeline { display: flex; flex-direction: column; }
 .ravitos-start { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; border-radius: var(--radius); background: var(--accent); color: var(--accent-contrast); }
 .ravitos-step { display: flex; flex-direction: column; }
-.ravitos-leg { margin: 10px 0 10px 36px; position: relative; padding: 14px 16px; border-radius: var(--radius); background: var(--surface);
-  border: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
-.ravitos-leg::before { content: ''; position: absolute; left: -26px; top: -10px; bottom: -10px; width: 3px; background: var(--border); }
+.ravitos-leg { margin: 0 0 0 22px; position: relative; padding: 14px 0 14px 18px; display: flex; flex-direction: column; gap: 6px; }
+/* Le tronçon se lit comme le chemin entre deux points : un trait, pas une carte. */
+.ravitos-leg::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 2px; background: var(--track); opacity: 0.55; }
 .ravitos-leg-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
 .ravitos-tags { display: flex; gap: 6px; flex-wrap: wrap; }
 .tag-night, .tag-dry { font-size: var(--fs-micro); font-weight: 700; border-radius: 999px; padding: 2px 8px; }
@@ -877,11 +888,17 @@ button.plan-hero-worst { padding: 0; min-height: 44px; background: transparent; 
 .ravitos-seq li.gel { background: var(--ok-bg); color: var(--ok-fg); }
 .ravitos-seq li.solid { background: var(--tight-bg); color: var(--tight-fg); }
 .ravitos-meta { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 18px; }
-.ravitos-arrival { margin-left: 36px; padding: 10px 14px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); }
+.ravitos-arrival { padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); }
 .ravitos-arrival.crew { border: 2px solid #f4b48c; background: #fff8f2; color: #1c1f1d; }
 .ravitos-arrival.finish { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
-.ravitos-arrival-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; }
-.ravitos-arrival.crew .ravitos-arrival-head span { color: #8a3b07; font-weight: 700; }
+.ravitos-arrival-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.ravitos-arrival-name { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ravitos-arrival-name strong { font-size: var(--fs-body); line-height: 1.25; }
+.ravitos-arrival-name .small { color: var(--muted); }
+.ravitos-arrival-time { flex: none; font-family: var(--font-display); font-size: 1.625rem; font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums; }
+.ravitos-arrival.crew .ravitos-arrival-name .small { color: #8a3b07; font-weight: 700; }
+.ravitos-arrival.finish .ravitos-arrival-name .small { color: inherit; opacity: 0.85; }
 .ravitos-chips { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .ravitos-chips li { padding: 6px 10px; border-radius: 8px; background: var(--surface-2); font-size: var(--fs-small); }
 .ravitos-chips li.crew { background: #fff1e8; border: 1px solid #f4b48c; color: #1c1f1d; font-weight: 600; }
@@ -892,9 +909,8 @@ button.plan-hero-worst { padding: 0; min-height: 44px; background: transparent; 
 .crew-sheet-where { flex: 0 0 180px; display: flex; flex-direction: column; }
 .crew-sheet li > span:last-child { flex: 1 1 260px; }
 @media (max-width: 640px) {
-  .ravitos-leg { margin-left: 18px; }
-  .ravitos-leg::before { left: -14px; }
-  .ravitos-arrival { margin-left: 18px; }
+  .ravitos-leg { margin-left: 14px; padding-left: 16px; }
+  .ravitos-rhythm { font-size: var(--fs-body); }
 }
 
 /* ---------- Code d'invitation, avis ---------- */
@@ -1041,36 +1057,24 @@ a.brand { text-decoration: none; }
 .race-actions { position: sticky; bottom: 12px; display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 12px;
   background: var(--surface); border: 1px solid var(--border); box-shadow: 0 8px 24px rgb(0 0 0 / 0.12); }
 .race-actions button { min-height: 52px; font-size: var(--fs-lead); }
-.ravitos-parts { align-self: stretch; display: grid; grid-template-columns: 1fr 1fr; }
-.ravitos-basis { margin: 0; }
-button.ravitos-done { align-self: flex-start; }
 
-/* ---------- Téléphone : onglets en bas ---------- */
-.mobile-nav, .more-sheet, .sheet-backdrop { display: none; }
+/* ---------- Téléphone : une appli, avec sa barre d'onglets ---------- */
+.mobile-nav { display: none; }
 @media (max-width: 860px) {
   .tabs { display: none; }
-  .topbar { flex-wrap: nowrap; gap: 10px; }
-  .topbar .pdf-menu, .topbar a.feedback { display: none; }
-  .race-title h1 { font-size: var(--fs-lead); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .race-title p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-micro); }
+  /* Chaque écran porte son grand titre : plus de bandeau de site en haut. */
+  .topbar { display: none; }
   .app { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
-  .mobile-nav { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 1200;
-    padding: 4px 4px calc(4px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--border);
-    box-shadow: 0 -4px 16px rgb(0 0 0 / 0.06); }
-  .mobile-nav a, .mobile-nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    min-height: 56px; padding: 4px 2px; border: 0; border-radius: 10px; background: transparent; color: var(--muted);
-    font-size: var(--fs-micro); font-weight: 600; text-decoration: none; }
-  .mobile-nav [aria-current='page'] { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
-  .sheet-backdrop { display: block; position: fixed; inset: 0; z-index: 1190; background: rgb(0 0 0 / 0.35); }
-  .more-sheet { display: flex; flex-direction: column; gap: 2px; position: fixed; left: 8px; right: 8px; z-index: 1195;
-    bottom: calc(72px + env(safe-area-inset-bottom)); padding: 8px; border-radius: 16px; background: var(--surface);
-    box-shadow: 0 12px 40px rgb(0 0 0 / 0.25); }
-  .more-sheet a, .more-sheet button { display: flex; flex-direction: column; align-items: flex-start; min-height: 48px; justify-content: center;
-    padding: 8px 12px; border-radius: 10px; color: var(--text); background: transparent; text-decoration: none; font-weight: 600;
-    font-size: var(--fs-body); text-align: left; }
-  .more-sheet a[aria-current='page'] { color: var(--accent); }
-  .more-sheet hr { width: 100%; border: 0; border-top: 1px solid var(--border); margin: 4px 0; }
-  .more-sheet p { margin: 0 12px 4px; }
+  .mobile-nav { display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 1200;
+    padding: 2px 6px env(safe-area-inset-bottom); border-top: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface) 95%, transparent); backdrop-filter: saturate(1.6) blur(18px);
+    -webkit-backdrop-filter: saturate(1.6) blur(18px); }
+  .mobile-nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    min-height: 54px; padding: 4px 2px; color: var(--muted); font-size: var(--fs-micro); font-weight: 600; text-decoration: none; }
+  /* L'onglet actif se voit d'un coup d'œil : l'icône dans une pastille pleine, le nom en gras. */
+  .mobile-nav a svg { box-sizing: content-box; padding: 4px 16px; border-radius: 999px; transition: background-color 0.2s ease-out; }
+  .mobile-nav [aria-current='page'] { color: var(--accent); font-weight: 800; }
+  .mobile-nav [aria-current='page'] svg { background: var(--accent); color: var(--accent-contrast); }
   .undo-toast { bottom: calc(132px + env(safe-area-inset-bottom)); }
   .race-actions { bottom: calc(80px + env(safe-area-inset-bottom)); }
   .editor-footer { bottom: calc(68px + env(safe-area-inset-bottom)); margin: 0 -12px -12px; padding: 10px 12px; }
@@ -1165,7 +1169,7 @@ button.cv-secondary { width: 100%; min-height: 48px; background: var(--surface);
 .race-finish p { margin: 0; font-size: var(--fs-lead); }
 .race-finish p.small { font-size: var(--fs-small); }
 .example-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
-  padding: 10px 14px; border-left: 4px solid var(--text); background: var(--surface-2); }
+  padding: 12px 14px; border-radius: 10px; background: var(--surface-2); }
 .product-add-error { flex-basis: 100%; margin: 0; }
 
 /* v0.7 : export du parcours pour montre Garmin */
@@ -1196,8 +1200,13 @@ button.garmin-download { min-height: 52px; font-size: var(--fs-lead); font-weigh
 .garmin ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
 .garmin-dday { padding: 10px 12px; background: var(--surface-2); border-left: 4px solid var(--text); }
 @media (max-width: 640px) {
-  dialog.garmin { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0; }
-  .garmin-body { padding: 16px 16px 32px; }
+  /* Plein écran sur téléphone : rien sous l'encoche, et la croix reste en haut quand on fait défiler. */
+  dialog.garmin { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0;
+    padding-top: env(safe-area-inset-top); }
+  .garmin-body { padding: 8px 16px calc(32px + env(safe-area-inset-bottom)); }
+  button.garmin-close { position: sticky; top: 8px; align-self: flex-end; margin-bottom: -60px; z-index: 3;
+    background: var(--surface-2); border-radius: 50%; box-shadow: 0 2px 8px rgb(0 0 0 / 0.15); }
+  .garmin-body h2 { padding-right: 52px; }
 }
 .garmin-code { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--fs-micro); padding: 8px;
   border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text); resize: vertical; word-break: break-all; }
@@ -1286,3 +1295,147 @@ html.native #root { padding-top: env(safe-area-inset-top); }
 /* Rien ne doit déborder sur les côtés : l'appli ne défile qu'en hauteur (clip garde les en-têtes collants). */
 html.native body { overflow-x: clip; }
 html.native #root { overflow-x: clip; max-width: 100vw; }
+
+/* ---------- Téléphone : écrans d'appli (grand titre, listes groupées, accueil, Moi) ---------- */
+.screen-title { padding: 4px 4px 0; }
+.screen-title h1 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 2.125rem; line-height: 1.05;
+  text-wrap: balance; }
+.screen-title p { margin: 4px 0 0; color: var(--muted); font-size: var(--fs-small); }
+.back-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; min-height: 44px;
+  margin: -6px -6px 0; }
+.back-bar a { display: inline-flex; align-items: center; gap: 2px; justify-self: start; min-height: 44px; padding: 0 6px;
+  color: var(--accent); font-weight: 600; text-decoration: none; }
+.back-bar h1 { margin: 0; font-family: var(--font-body); font-size: var(--fs-body); font-weight: 700; text-align: center; }
+
+.list-group { display: flex; flex-direction: column; gap: 6px; }
+.list-group > h2 { margin: 0 14px; font-family: var(--font-body); font-size: var(--fs-micro); font-weight: 600;
+  letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.list-rows { overflow: hidden; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); }
+.list-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 10px 14px; border: 0;
+  border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; color: var(--text); font: inherit;
+  text-align: left; text-decoration: none; }
+.list-row:last-child { border-bottom: 0; }
+a.list-row:active, button.list-row:active:not(:disabled) { background: var(--surface-2); }
+.row-icon { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: #fff;
+  background: #1f4d3a; }
+.row-icon.strava { background: #fc4c02; }
+.row-icon.warm { background: #b85a12; }
+.row-icon.calm { background: #3d6884; }
+.row-icon.neutral { background: #646a63; }
+.row-text { display: flex; flex: 1; flex-direction: column; gap: 1px; min-width: 0; }
+.row-title { font-weight: 600; line-height: 1.25; }
+.row-detail { color: var(--muted); font-size: var(--fs-small); line-height: 1.3; }
+.row-value { flex: none; color: var(--muted); font-size: var(--fs-small); }
+.row-action { color: var(--strava-text); font-weight: 700; }
+.row-badge { padding: 2px 8px; border-radius: 999px; background: var(--tight-bg); color: var(--tight-fg); font-size: var(--fs-micro);
+  font-weight: 700; }
+.row-chevron { display: flex; flex: none; color: var(--muted); opacity: 0.55; }
+.list-footer { margin: 0 14px; color: var(--muted); font-size: var(--fs-micro); }
+
+.home, .me { display: flex; flex-direction: column; gap: 20px; }
+.home-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tile { display: flex; flex-direction: column; gap: 3px; min-height: 100px; padding: 12px 14px; border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text); text-decoration: none; }
+.tile-label { color: var(--muted); font-size: var(--fs-micro); font-weight: 600; }
+.tile-value { font-family: var(--font-display); font-size: 1.75rem; font-weight: 800; line-height: 1.05;
+  font-variant-numeric: tabular-nums; }
+.tile-sub { margin-top: auto; color: var(--muted); font-size: var(--fs-micro); line-height: 1.3; }
+.tile-go { background: #1f4d3a; border-color: #1f4d3a; color: #f6f4ef; }
+.tile-go .tile-label, .tile-go .tile-sub { color: #c9ddd0; }
+.tile.margin.ok .tile-value { color: var(--ok-fg); }
+.tile.margin.tight { background: var(--tight-bg); border-color: color-mix(in srgb, var(--tight-fg) 25%, transparent); }
+.tile.margin.tight .tile-value, .tile.margin.tight .tile-label { color: var(--tight-fg); }
+.tile.margin.missed { background: var(--missed-bg); border-color: color-mix(in srgb, var(--missed-fg) 25%, transparent); }
+.tile.margin.missed .tile-value, .tile.margin.missed .tile-label { color: var(--missed-fg); }
+.home-note { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 14px; background: var(--surface-2); }
+.home-note p, .home-strava p, .home-empty p { margin: 0; }
+.home-note button { align-self: flex-start; min-height: 44px; padding: 0 16px; }
+.home-strava { display: flex; gap: 12px; padding: 14px; border-radius: 14px;
+  background: color-mix(in srgb, var(--strava) 8%, var(--surface)); border: 1px solid color-mix(in srgb, var(--strava) 28%, var(--border)); }
+.home-strava-mark { flex: none; margin-top: 2px; color: var(--strava); }
+.home-strava > div { display: flex; flex-direction: column; gap: 10px; }
+.home-strava .strava-btn { align-self: flex-start; min-height: 44px; padding: 0 16px; }
+.home-empty { display: flex; flex-direction: column; gap: 14px; }
+
+.big-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px; border-radius: 12px;
+  font-size: 1.0625rem; font-weight: 700; }
+.big-btn.ghost { background: var(--surface); }
+.big-btn.strava { background: var(--strava-ink); color: #fff; }
+
+.segmented { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 2px; border-radius: 10px;
+  background: var(--surface-2); border: 1px solid var(--border); }
+.segmented a { display: grid; place-items: center; min-height: 36px; padding: 4px; border-radius: 8px; color: var(--muted);
+  font-size: var(--fs-small); font-weight: 600; text-align: center; text-decoration: none; }
+.segmented a[aria-current='page'] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+
+.references-page { display: flex; flex-direction: column; gap: 12px; }
+
+/* Premier lancement : plein écran, les boutons sous le pouce. */
+.onboarding { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; padding: 24px 22px
+  calc(28px + env(safe-area-inset-bottom)); }
+.onb-steps { display: flex; justify-content: center; gap: 6px; }
+.onb-steps i { width: 24px; height: 4px; border-radius: 2px; background: var(--border); }
+.onb-steps i.on { background: var(--accent); }
+.onb-body { display: flex; flex: 1; flex-direction: column; justify-content: center; gap: 16px; }
+.onb-body h1 { margin: 0; font-family: var(--font-display); font-size: 2.5rem; font-weight: 800; line-height: 1.02; text-wrap: balance; }
+.onb-body p { margin: 0; color: var(--muted); font-size: 1.0625rem; }
+.onb-body img { border-radius: 14px; }
+button.onb-back { align-self: flex-start; min-height: 44px; padding: 0; background: none; color: var(--accent); font-weight: 600; }
+.onb-actions { display: flex; flex-direction: column; gap: 10px; }
+.onb-later { align-self: center; min-height: 44px; }
+.segmented { width: 100%; }
+.back-wrap { padding: 8px 12px 0; }
+.ref-strava { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 12px 14px;
+  border-radius: 12px; background: color-mix(in srgb, var(--strava) 7%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--strava) 26%, var(--border)); }
+.ref-strava p { flex: 1 1 220px; margin: 0; }
+.ref-strava .strava-btn { min-height: 44px; padding: 0 16px; }
+@media (max-width: 860px) {
+  /* L'exemple se signale comme une note d'appli, pas comme un bandeau de site. */
+  .example-banner { padding: 14px; border: 0; border-radius: 14px; background: var(--surface-2); }
+}
+.row-action-accent { color: var(--accent); font-weight: 700; }
+
+/* Plan sur téléphone : le scénario d'abord, l'arrivée dans une carte, ce qui coince en encadré, puis les heures de passage. */
+@media (max-width: 860px) {
+  .plan-page { grid-template-areas: "hero" "notes" "road" "profile" "map"; gap: 20px; }
+  .plan-hero { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+  .plan-hero-side { display: contents; }
+  .plan-hero-scenarios { order: -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; padding: 2px;
+    border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+  .plan-hero-scenarios button { min-height: 40px; border-radius: 8px; color: var(--muted); font-size: var(--fs-small); font-weight: 600; }
+  .plan-hero-scenarios button.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+  .plan-hero-help { order: 0; margin-top: -4px; padding: 0 4px; }
+  .plan-hero-main { order: 1; padding: 14px 16px 6px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); }
+  .plan-hero-finish { font-size: 3.75rem; }
+  .plan-hero-watch { order: 2; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--tight-fg) 25%, var(--border));
+    border-radius: 14px; background: color-mix(in srgb, var(--tight-bg) 55%, var(--surface)); }
+  .plan-hero-watch-title { font-size: var(--fs-small); letter-spacing: 0; text-transform: none; color: var(--text); }
+  .plan-rule { border-top: 0; padding-top: 0; }
+  .plan-page > .roadbook { margin-top: 4px; }
+}
+.touch-only { display: none; }
+@media (hover: none) { .hover-only { display: none; } .touch-only { display: inline; } }
+.ravitos-edit-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; min-height: 44px; }
+.ravitos-edit-bar strong { text-align: center; }
+button.ravitos-back { justify-self: start; display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 4px;
+  background: none; color: var(--accent); font-weight: 600; }
+button.ravitos-back.done { justify-self: end; font-weight: 700; }
+
+/* ---------- Ouverture de l'appli (LaunchIntro) ---------- */
+/* Mêmes proportions que l'image de lancement d'iOS : 2732 px de côté, ramenés à la hauteur de l'écran. */
+.launch { --u: calc(100vh / 2732); position: fixed; inset: 0; z-index: 5000; display: grid; place-items: center;
+  background: #1f4d3a; transition: opacity 550ms cubic-bezier(0.22, 1, 0.36, 1); }
+.launch-mark { display: flex; flex-direction: column; align-items: center; gap: calc(40 * var(--u));
+  transition: transform 550ms cubic-bezier(0.22, 1, 0.36, 1); }
+.launch-mark svg { display: block; width: calc(420 * var(--u)); height: calc(420 * var(--u)); }
+.launch-name { font-family: 'Barlow Semi Condensed', 'Barlow', sans-serif; font-weight: 800; font-size: calc(150 * var(--u));
+  line-height: 1.2; color: #f6f4ef; }
+.launch-trace { stroke-dasharray: 1 1.1; stroke-dashoffset: 1.05; animation: launch-draw 900ms cubic-bezier(0.65, 0, 0.35, 1) 120ms forwards; }
+@keyframes launch-draw { to { stroke-dashoffset: 0; } }
+.launch-fade { opacity: 0; pointer-events: none; }
+.launch-fade .launch-mark { transform: scale(1.06); }
+@media (prefers-reduced-motion: reduce) {
+  .launch-trace { animation: none; stroke-dashoffset: 0; }
+  .launch-fade .launch-mark { transform: none; }
+}

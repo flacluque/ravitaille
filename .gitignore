@@ -27,3 +27,6 @@ frontend/android/local.properties
 *.keystore
 *.jks
 frontend/.env.local
+
+# Outil de design : cache local
+.impeccable/hook.cache.json

@@ -52,7 +52,7 @@ export function RunnerProfileCard({ stored, onChange, isExample }: Props) {
       </div>
 
       {p ? <ProfileDetail profile={p} /> : (
-        <p>Pas encore de profil de pente.{connected === false && ' Connecte Strava (dans « Mon plan », Importer depuis Strava) pour le mesurer.'}</p>
+        <p>Pas encore de profil de pente.{connected === false && ' Connecte Strava pour le mesurer.'}</p>
       )}
       <FatigueDetail races={stored.races} />
 
