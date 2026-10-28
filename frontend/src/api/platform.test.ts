@@ -3,6 +3,18 @@ import { apiFetch } from './client';
 import { appHeaders, handleAppLink, isNativeApp, rememberFromResponse } from './platform';
 import { saveFile } from '../lib/files';
 
+// Fichiers et feuille de partage d'iOS simulés.
+const written: { path: string; data: string }[] = [];
+let shareResult: () => Promise<void> = async () => undefined;
+const sharedFiles: string[][] = [];
+vi.mock('@capacitor/filesystem', () => ({
+  Directory: { Cache: 'CACHE' },
+  Filesystem: { writeFile: async (o: { path: string; data: string }) => { written.push(o); return { uri: `file:///cache/${o.path}` }; } },
+}));
+vi.mock('@capacitor/share', () => ({
+  Share: { share: async (o: { files: string[] }) => { sharedFiles.push(o.files); return shareResult(); } },
+}));
+
 // Stockage du navigateur et Capacitor simulés (les tests tournent sous Node).
 const store = new Map<string, string>();
 const g = globalThis as Record<string, unknown>;
@@ -65,11 +77,10 @@ describe("appli mobile : connexions dans les en-têtes", () => {
 
   it("partage les fichiers dans l'appli", async () => {
     inApp();
-    const shared: ShareData[] = [];
-    vi.stubGlobal('navigator', { canShare: () => true, share: async (d: ShareData) => void shared.push(d) });
-    expect(await saveFile(new Blob(['x']), 'course.fit', 'Parcours')).toBe('shared');
-    expect(shared[0].files?.[0].name).toBe('course.fit');
-    vi.stubGlobal('navigator', { canShare: () => true, share: async () => { throw new DOMException('fermé', 'AbortError'); } });
+    expect(await saveFile(new Blob(['xyz']), 'course.fit', 'Parcours')).toBe('shared');
+    expect(written[0]).toEqual({ path: 'course.fit', data: btoa('xyz'), directory: 'CACHE' });
+    expect(sharedFiles[0]).toEqual(['file:///cache/course.fit']);
+    shareResult = async () => { throw new Error('Share canceled'); };
     expect(await saveFile(new Blob(['x']), 'course.fit')).toBe('cancelled');
   });
 });

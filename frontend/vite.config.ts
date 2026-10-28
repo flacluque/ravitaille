@@ -2,11 +2,13 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig({
+// `vite build --mode app` : la version embarquée dans l'appli iPhone (Capacitor), qui appelle le serveur en ligne
+// (.env.app) et n'a pas besoin du service worker de la PWA (ses fichiers sont déjà dans l'appli).
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     // PWA : l'appli et le dernier plan consulté restent disponibles sans réseau (le jour J, en montagne).
-    VitePWA({
+    mode !== 'app' && VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
@@ -53,4 +55,4 @@ export default defineConfig({
   test: {
     environment: 'node',
   },
-});
+}));

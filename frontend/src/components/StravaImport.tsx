@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ApiError, disconnectStrava, fetchStravaActivities, fetchStravaStatus, stravaConnectUrl } from '../api/client';
+import { ApiError, disconnectStrava, fetchStravaActivities, fetchStravaStatus } from '../api/client';
 import { MAX_PREP_WEEKS, MIN_PREP_WEEKS } from '../api/storage';
 import type { Reference, ReferenceKind, StravaActivity, StravaStatus, TrainingOptions } from '../api/types';
 import { durationMinutes, formatHm, formatKm, formatMeters } from '../lib/format';
@@ -9,6 +9,7 @@ import {
   activityTime, activityToReference, blockSummary, closest, connectionMessage, isAlreadyReference, keySessions, sortActivities,
   splitByBlock, SPORT_LABELS, yearsAgo, type Target,
 } from '../lib/strava';
+import { connectStrava } from '../api/native';
 import { addDays, isIsoDate, prepWindow, todayIso } from '../lib/dates';
 import { DatePicker } from './DatePicker';
 
@@ -199,7 +200,7 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
           <div className="strava-connect">
             <p>Autorise Ravitaille à lire tes activités. Tes identifiants Strava ne passent jamais par l'appli,
               et tu peux révoquer l'accès à tout moment.</p>
-            <button type="button" className="strava-btn" onClick={() => window.location.assign(stravaConnectUrl())}>
+            <button type="button" className="strava-btn" onClick={connectStrava}>
               <StravaLogo /> Se connecter avec Strava
             </button>
             {error && <p className="field-error" role="alert">{error}</p>}

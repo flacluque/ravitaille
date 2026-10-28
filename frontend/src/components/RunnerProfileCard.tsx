@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { fetchRunnerProfile, fetchStravaStatus, humanError, stravaConnectUrl } from '../api/client';
+import { fetchRunnerProfile, fetchStravaStatus, humanError } from '../api/client';
 import type { RaceResult, StoredRunnerProfile } from '../api/storage';
 import type { RunnerProfile, SlopePoint } from '../api/types';
 import { formatKm } from '../lib/format';
 import { STANDARD_FATIGUE, fatigueEffect, racesFatigue, slopeLabel, slopeVerdict } from '../lib/runner';
+import { connectStrava } from '../api/native';
 import { StravaLogo } from './StravaLogo';
 
 interface Props {
@@ -69,7 +70,7 @@ export function RunnerProfileCard({ stored, onChange, isExample }: Props) {
             {measuring ? 'Mesure en cours…' : p ? 'Remesurer sur Strava' : 'Mesurer mon profil sur Strava'}
           </button>
         ) : connected === false && (
-          <a className="strava-btn" href={stravaConnectUrl()}><StravaLogo /> Connecter Strava</a>
+          <button type="button" className="strava-btn" onClick={connectStrava}><StravaLogo /> Connecter Strava</button>
         )}
         {p && (
           <button type="button" className="link-btn"

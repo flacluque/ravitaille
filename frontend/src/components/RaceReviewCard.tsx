@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { fetchRaceReview, fetchStravaActivities, fetchStravaStatus, humanError, stravaConnectUrl } from '../api/client';
+import { fetchRaceReview, fetchStravaActivities, fetchStravaStatus, humanError } from '../api/client';
 import type { RaceResult, StoredRunnerProfile } from '../api/storage';
 import type { CourseView, RacePlan, RaceReview, StravaActivity } from '../api/types';
 import { formatClockFromMinutes, formatHm, formatKm, formatMeters, localMinutes } from '../lib/format';
 import { compareRace } from '../lib/review';
 import { STANDARD_FATIGUE, fatigueEffect } from '../lib/runner';
+import { connectStrava } from '../api/native';
 import { StravaLogo } from './StravaLogo';
 
 interface Props {
@@ -139,7 +140,7 @@ export function RaceReviewCard({ plan, course, stored, onChange }: Props) {
 
       {!review && (
         connected === false ? (
-          <a className="strava-btn" href={stravaConnectUrl()}><StravaLogo /> Connecter Strava</a>
+          <button type="button" className="strava-btn" onClick={connectStrava}><StravaLogo /> Connecter Strava</button>
         ) : activities === null ? (
           <div className="runner-actions">
             <button type="button" onClick={() => void pick()} disabled={busy || connected === null}>

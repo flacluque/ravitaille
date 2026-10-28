@@ -77,7 +77,10 @@ public class AccessGuard extends OncePerRequestFilter {
         String path = request.getRequestURI().substring(request.getContextPath().length());
         return !path.startsWith("/api/") || path.equals("/api/app") || path.startsWith("/api/app/")
                 // Retour de Strava : protégé par son « state », et le cookie peut manquer au retour d'un autre site.
-                || path.equals("/api/strava/callback");
+                || path.equals("/api/strava/callback")
+                // Départ vers Strava : simple redirection. Depuis l'appli, il s'ouvre dans le navigateur intégré, qui n'a
+                // ni le cookie ni l'en-tête du code d'accès.
+                || path.equals("/api/strava/authorize");
     }
 
     @Override
