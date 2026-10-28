@@ -17,6 +17,8 @@ import {
 } from '../lib/draft';
 import { formatClock } from '../lib/format';
 import { ConfirmBar } from './ConfirmBar';
+import { RouteIcon } from './Icons';
+import { isNativeApp } from '../api/platform';
 import { aidFor, SERVICE_INFO, SERVICES, sortServices } from '../lib/services';
 
 interface Props {
@@ -116,6 +118,30 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
     if (file) onGpxChange(file);
   }
 
+  // La trace : une carte bien visible, dans l'état vide comme au-dessus de la saisie.
+  const gpxCard = (
+    <div className={gpx ? 'gpx-card has-gpx' : 'gpx-card'}>
+      <span className="gpx-icon" aria-hidden><RouteIcon size={22} /></span>
+      <div className="gpx-text">
+        <strong>{gpx ? 'Trace GPX chargée' : 'Ajoute la trace GPX du parcours'}</strong>
+        <span>{gpx ? <>{gpx.name} · {formatSize(gpx.size)}</>
+          : 'Pour la carte, le profil et des distances mesurées sur le vrai parcours. Elle se télécharge en général sur le site de la course.'}</span>
+      </div>
+      <div className="gpx-actions">
+        {gpx ? (
+          <>
+            <button type="button" className="ghost" onClick={() => gpxInput.current?.click()}>Changer</button>
+            <button type="button" className="ghost" onClick={() => onGpxChange(null)}>Retirer</button>
+          </>
+        ) : (
+          <button type="button" onClick={() => gpxInput.current?.click()}>Choisir la trace (.gpx)</button>
+        )}
+      </div>
+      {/* L'iPhone ne connaît pas toujours le type .gpx et griserait le fichier : dans l'appli, tout fichier est proposé. */}
+      <input ref={gpxInput} type="file" accept={isNativeApp() ? undefined : '.gpx,application/gpx+xml'} hidden onChange={chooseGpx} />
+    </div>
+  );
+
   return (
     <section className="card editor">
       <div className="editor-head">
@@ -171,7 +197,9 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
             <button type="button" className="link-btn" onClick={() => roadbookInput.current?.click()}>Importer un fichier .json</button>
           </p>
         </div>
-      ) : <>
+      ) : null}
+      {gpxCard}
+      {empty ? null : <>
       <div className="editor-fields">
         <label className="grow">
           <span>Nom de la course <Req /></span>
@@ -201,23 +229,6 @@ export function RaceEditor({ draft, onChange, gpx, onGpxChange, errors, loading,
         <FieldError id="err-night" message={err('night')} />
       </div>
       <p className="muted small required-note"><Req /> obligatoire{gpx ? '' : ' (le D+ aussi, tant qu\'il n\'y a pas de trace GPX)'}</p>
-
-      <div className="gpx-row">
-        <span className="gpx-label">Trace GPX</span>
-        {gpx ? (
-          <>
-            <span className="gpx-file">{gpx.name} <span className="muted">({formatSize(gpx.size)})</span></span>
-            <button type="button" className="ghost small-btn" onClick={() => gpxInput.current?.click()}>Changer</button>
-            <button type="button" className="ghost small-btn" onClick={() => onGpxChange(null)}>Retirer</button>
-          </>
-        ) : (
-          <>
-            <button type="button" className="ghost small-btn" onClick={() => gpxInput.current?.click()}>Choisir un fichier .gpx</button>
-            <span className="muted small">Facultatif. Sans trace : pas de carte ni de profil, et le D+ du roadbook est obligatoire partout.</span>
-          </>
-        )}
-        <input ref={gpxInput} type="file" accept=".gpx,application/gpx+xml" hidden onChange={chooseGpx} />
-      </div>
 
       <p className="muted small cp-help">
         Type de point : <strong>pointage</strong> = contrôle de passage sans ravitaillement, <strong>ravito</strong> = eau et

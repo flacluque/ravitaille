@@ -27,7 +27,7 @@ import { MePage } from './components/MePage';
 import { Onboarding } from './components/Onboarding';
 import { connectStrava } from './api/native';
 import { ListGroup, ListRow } from './components/AppScreen';
-import { RouteIcon } from './components/Icons';
+import { FlagIcon, RouteIcon } from './components/Icons';
 import { StravaLogo } from './components/StravaLogo';
 import { isExampleReference } from './lib/strava';
 import { RaceView } from './components/RaceView';
@@ -428,13 +428,11 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   const exampleReferences = references.some(isExampleReference);
   // Sur téléphone, les références sont dans Moi : le plan y renvoie par une ligne « Ton rythme ».
   const rhythmRow = (
-    <ListGroup>
       <ListRow icon={exampleReferences ? <StravaLogo size={18} /> : <RouteIcon size={18} />} tone={exampleReferences ? 'strava' : 'accent'}
         title={exampleReferences ? 'Ton rythme : course d\'exemple' : 'Ton rythme'}
         detail={exampleReferences ? 'Importe tes courses depuis Strava pour un plan à ton rythme'
           : `${references.length} référence${references.length > 1 ? 's' : ''}${plan?.runner ? ' · profil de coureur' : ''}`}
         href={TAB_HASH.references} />
-    </ListGroup>
   );
   const finishOnboarding = () => {
     try {
@@ -606,6 +604,12 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
                 course (Accueil, « Préparer ma course »).</p>}
           </>}
           {tab === 'analyse' && subPage('Analyse détaillée')}
+          {tab === 'plan' && mode === 'demo' && (
+            <div className="example-banner no-print" role="note">
+              <span>Tu regardes <strong>un exemple</strong> : {course?.race.name ?? 'une course type'}, avec des références types.</span>
+              <button type="button" onClick={() => switchMode('custom')}>Préparer ma course</button>
+            </div>
+          )}
           {tab !== 'plan' ? null : mode === 'custom' && (editorOpen || !shown) ? (
             <RaceEditor
               draft={draft}
@@ -618,6 +622,15 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
               onCancel={shown ? () => setEditorOpen(false) : null}
               onLoaded={(d) => void loadedRoadbook(d)}
             />
+          ) : phone ? (
+            <ListGroup>
+              {mode === 'custom' && (
+                <ListRow icon={<FlagIcon size={18} />} title="Ta course"
+                  detail={gpx ? `Roadbook et trace GPX (${gpx.name})` : 'Sans trace GPX : ajoute-la pour la carte et le profil'}
+                  value={<span className="row-action-accent">Modifier</span>} onClick={() => setEditorOpen(true)} />
+              )}
+              {rhythmRow}
+            </ListGroup>
           ) : mode === 'custom' && (
             <div className="editor-summary no-print">
               <span className="muted small">
@@ -627,14 +640,8 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
             </div>
           )}
 
-          {tab === 'plan' && mode === 'demo' && (
-            <div className="example-banner no-print" role="note">
-              <span>Tu regardes <strong>un exemple</strong> : {course?.race.name ?? 'une course type'}, avec des références types.</span>
-              <button type="button" onClick={() => switchMode('custom')}>Préparer ma course</button>
-            </div>
-          )}
 
-          {tab === 'plan' && !planReady && (phone ? rhythmRow : <div className="plan-refs plan-refs-alone no-print">{side}</div>)}
+          {tab === 'plan' && !planReady && !phone && <div className="plan-refs plan-refs-alone no-print">{side}</div>}
 
           {!['plan', 'ravitos', 'sac', 'analyse'].includes(tab) ? null : otherRace ? (
             <div className="banner warn stale-banner" role="status">
@@ -698,7 +705,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
                 </section>
               )}
 
-              {phone ? <div className="plan-refs no-print">{rhythmRow}</div> : <div className="plan-refs no-print">{side}</div>}
+              {!phone && <div className="plan-refs no-print">{side}</div>}
             </div>
           )}
 

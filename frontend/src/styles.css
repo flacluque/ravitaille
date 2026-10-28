@@ -283,9 +283,20 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .editor-fields .grow { flex: 1 1 220px; }
 .editor-fields .narrow { width: 90px; }
 
-.gpx-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 12px; background: var(--surface-2); border-radius: 8px; }
-.gpx-label { font-weight: 600; font-size: var(--fs-small); }
-.gpx-file { font-size: var(--fs-small); }
+.gpx-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px 14px; padding: 14px 16px;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, var(--border)); border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+.gpx-card.has-gpx { border-style: solid; border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); }
+.gpx-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: #1f4d3a; color: #fff; }
+.gpx-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gpx-text span { color: var(--muted); font-size: var(--fs-small); overflow-wrap: anywhere; }
+.gpx-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.gpx-actions button { min-height: 44px; padding: 0 16px; }
+@media (max-width: 640px) {
+  .gpx-card { grid-template-columns: auto minmax(0, 1fr); }
+  .gpx-actions { grid-column: 1 / -1; }
+  .gpx-actions button { flex: 1; }
+}
 .small-btn { padding: 5px 10px; font-size: var(--fs-small); }
 
 .cp-grid { display: flex; flex-direction: column; gap: 6px; }
@@ -478,7 +489,7 @@ button.legend-btn[aria-expanded='true'] { background: var(--accent); color: var(
 
 /* Import Strava */
 .modal-backdrop { position: fixed; inset: 0; z-index: 2000; background: rgb(0 0 0 / 0.45); display: flex;
-  align-items: flex-start; justify-content: center; padding: 5vh 16px; overflow-y: auto; }
+  align-items: flex-start; justify-content: center; padding: max(5vh, calc(env(safe-area-inset-top) + 12px)) 16px 5vh; overflow-y: auto; }
 .modal { background: var(--surface); color: var(--text); border-radius: 12px; width: min(760px, 100%); padding: 16px 18px;
   display: flex; flex-direction: column; gap: 10px; box-shadow: 0 12px 40px rgb(0 0 0 / 0.3); }
 .modal-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
@@ -1184,8 +1195,13 @@ button.garmin-download { min-height: 52px; font-size: var(--fs-lead); font-weigh
 .garmin ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
 .garmin-dday { padding: 10px 12px; background: var(--surface-2); border-left: 4px solid var(--text); }
 @media (max-width: 640px) {
-  dialog.garmin { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0; }
-  .garmin-body { padding: 16px 16px 32px; }
+  /* Plein écran sur téléphone : rien sous l'encoche, et la croix reste en haut quand on fait défiler. */
+  dialog.garmin { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0;
+    padding-top: env(safe-area-inset-top); }
+  .garmin-body { padding: 8px 16px calc(32px + env(safe-area-inset-bottom)); }
+  button.garmin-close { position: sticky; top: 8px; align-self: flex-end; margin-bottom: -60px; z-index: 3;
+    background: var(--surface-2); border-radius: 50%; box-shadow: 0 2px 8px rgb(0 0 0 / 0.15); }
+  .garmin-body h2 { padding-right: 52px; }
 }
 .garmin-code { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--fs-micro); padding: 8px;
   border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text); resize: vertical; word-break: break-all; }
@@ -1373,3 +1389,25 @@ button.onb-back { align-self: flex-start; min-height: 44px; padding: 0; backgrou
   /* L'exemple se signale comme une note d'appli, pas comme un bandeau de site. */
   .example-banner { padding: 14px; border: 0; border-radius: 14px; background: var(--surface-2); }
 }
+.row-action-accent { color: var(--accent); font-weight: 700; }
+
+/* Plan sur téléphone : le scénario d'abord, l'arrivée dans une carte, ce qui coince en encadré, puis les heures de passage. */
+@media (max-width: 860px) {
+  .plan-page { grid-template-areas: "hero" "notes" "road" "profile" "map"; gap: 20px; }
+  .plan-hero { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+  .plan-hero-side { display: contents; }
+  .plan-hero-scenarios { order: -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; padding: 2px;
+    border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+  .plan-hero-scenarios button { min-height: 40px; border-radius: 8px; color: var(--muted); font-size: var(--fs-small); font-weight: 600; }
+  .plan-hero-scenarios button.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+  .plan-hero-help { order: 0; margin-top: -4px; padding: 0 4px; }
+  .plan-hero-main { order: 1; padding: 14px 16px 6px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); }
+  .plan-hero-finish { font-size: 3.75rem; }
+  .plan-hero-watch { order: 2; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--tight-fg) 25%, var(--border));
+    border-radius: 14px; background: color-mix(in srgb, var(--tight-bg) 55%, var(--surface)); }
+  .plan-hero-watch-title { font-size: var(--fs-small); letter-spacing: 0; text-transform: none; color: var(--text); }
+  .plan-rule { border-top: 0; padding-top: 0; }
+  .plan-page > .roadbook { margin-top: 4px; }
+}
+.touch-only { display: none; }
+@media (hover: none) { .hover-only { display: none; } .touch-only { display: inline; } }

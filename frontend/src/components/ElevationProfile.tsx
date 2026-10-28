@@ -165,7 +165,7 @@ export function ElevationProfile({ track, markers, plan, hoverKm, onHover }: Pro
             {hoverTime !== null && <span>passage ≈ {formatClockFromMinutes(hoverTime)}</span>}
           </>
         ) : (
-          <span className="muted">Survole le profil ou la carte (ou parcours le profil au clavier) pour voir l'heure de passage estimée.</span>
+          <span className="muted"><span className="hover-only">Survole le profil ou la carte (ou parcours le profil au clavier)</span><span className="touch-only">Touche le profil</span> pour voir l'heure de passage estimée.</span>
         )}
       </div>
     </div>
