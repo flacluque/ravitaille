@@ -19,7 +19,17 @@ import { PassageTable } from './components/PassageTable';
 import { RaceEditor } from './components/RaceEditor';
 import { ReferenceForm } from './components/ReferenceForm';
 import { WelcomePage } from './components/WelcomePage';
-import { MobileNav } from './components/MobileNav';
+import { MobileNav, type Section } from './components/MobileNav';
+import { BackBar, ScreenTitle } from './components/AppScreen';
+
+import { HomeDashboard } from './components/HomeDashboard';
+import { MePage } from './components/MePage';
+import { Onboarding } from './components/Onboarding';
+import { connectStrava } from './api/native';
+import { ListGroup, ListRow } from './components/AppScreen';
+import { RouteIcon } from './components/Icons';
+import { StravaLogo } from './components/StravaLogo';
+import { isExampleReference } from './lib/strava';
 import { RaceView } from './components/RaceView';
 import { isRaceWindow, nowMinutes, type Fix } from './lib/race';
 import { shareWithCrew, type ShareResult } from './lib/crewShare';
@@ -40,20 +50,33 @@ import { defaultServices } from './lib/services';
 // Course d'exemple embarquée (src/main/resources/samples/bogomiles).
 const SAMPLE_ID = 'bogomiles';
 const CUSTOM_ID = 'custom';
-type Tab = 'accueil' | 'plan' | 'course' | 'ravitos' | 'sac' | 'analyse' | 'algo';
+type Tab = 'accueil' | 'plan' | 'course' | 'ravitos' | 'sac' | 'analyse' | 'algo' | 'moi' | 'references' | 'profil' | 'retour';
 const TABS: [Tab, string][] = [['accueil', 'Accueil'], ['plan', 'Mon plan'], ['course', 'En course'], ['ravitos', 'Ravitos'],
   ['sac', 'Sac'], ['analyse', 'Analyse'], ['algo', 'Comment ça marche']];
 const TAB_HASH: Record<Tab, string> = {
   accueil: '#accueil', plan: '#plan', course: '#course', ravitos: '#ravitos', sac: '#sac', analyse: '#analyse', algo: '#algorithme',
+  moi: '#moi', references: '#references', profil: '#profil', retour: '#retour',
 };
+/** Sur téléphone, la section de la barre d'onglets qui contient chaque page. */
+const SECTION_OF: Record<Tab, Section> = {
+  accueil: 'accueil', course: 'accueil', plan: 'plan', ravitos: 'ravitos', sac: 'ravitos',
+  moi: 'moi', references: 'moi', profil: 'moi', retour: 'moi', analyse: 'moi', algo: 'moi',
+};
+/** Largeur de la mise en page téléphone (barre d'onglets en bas, voir styles.css). */
+const PHONE = '(max-width: 860px)';
 const WELCOME_SEEN = 'trail-planner:accueil-vu';
 
-/** Onglet de départ : l'accueil à la première visite, ensuite le plan (sauf lien vers un onglet). */
+/**
+ * Onglet de départ : sur ordinateur, l'accueil à la première visite, ensuite le plan ; sur téléphone, toujours
+ * l'accueil (le tableau de bord de la course). Sauf lien vers un onglet.
+ */
 function initialTab(): Tab {
   const fromHash = window.location.hash ? tabFromHash(window.location.hash) : null;
   if (fromHash) return fromHash;
-  // Retour de la connexion Strava : la fenêtre d'import s'ouvre dans « Mon plan ».
-  if (new URLSearchParams(window.location.search).has('strava')) return 'plan';
+  const phone = window.matchMedia(PHONE).matches;
+  // Retour de la connexion Strava : la fenêtre d'import s'ouvre là où sont les références.
+  if (new URLSearchParams(window.location.search).has('strava')) return phone ? 'references' : 'plan';
+  if (phone) return 'accueil';
   try {
     return localStorage.getItem(WELCOME_SEEN) ? 'plan' : 'accueil';
   } catch {
@@ -65,8 +88,8 @@ function initialTab(): Tab {
 function tabFromHash(hash: string): Tab | null {
   if (hash === '' || hash === '#') return 'plan';
   if (hash.startsWith('#algo')) return 'algo';
-  const found = TABS.find(([id]) => TAB_HASH[id] === hash);
-  return found ? found[0] : null;
+  const found = (Object.keys(TAB_HASH) as Tab[]).find((id) => TAB_HASH[id] === hash);
+  return found ?? null;
 }
 
 const DEFAULT_REFERENCES: Reference[] = [{ label: '', date: null, kind: 'RACE', km: 60, gainM: 3200, time: 'PT8H48M' }];
@@ -91,6 +114,19 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   const [mapOpen, setMapOpen] = useState(false);
   const narrow = useMediaQuery('(max-width: 1100px)');
   const showMap = !narrow || mapOpen;
+  // Téléphone (site ou appli) : barre d'onglets, tableau de bord, Moi ; l'ordinateur garde ses onglets en haut.
+  const phone = useMediaQuery(PHONE);
+  // Premier lancement sur téléphone : bienvenue, puis ton rythme (Strava d'abord).
+  const [onboarding, setOnboarding] = useState(() => {
+    if (!window.matchMedia(PHONE).matches || window.location.hash || new URLSearchParams(window.location.search).has('strava')) return false;
+    try {
+      return !localStorage.getItem(WELCOME_SEEN);
+    } catch {
+      return false;
+    }
+  });
+  // « Importer depuis Strava » depuis l'accueil : la page des références s'ouvre sur l'import.
+  const [stravaRequested, setStravaRequested] = useState(false);
 
   const [mode, setMode] = useState<Mode>(initial?.sampleId === CUSTOM_ID ? 'custom' : 'demo');
   const [draft, setDraft] = useState<RaceDraft>(() => loadDraft() ?? emptyDraft());
@@ -112,13 +148,13 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     return hashless && plan && isRaceWindow(plan, nowMinutes()) ? 'course' : initialTab();
   });
   useEffect(() => {
-    if (tab !== 'accueil') return;
+    if (tab !== 'accueil' || onboarding) return;
     try {
       localStorage.setItem(WELCOME_SEEN, '1');
     } catch {
       // Stockage indisponible : l'accueil reviendra à la prochaine visite.
     }
-  }, [tab]);
+  }, [tab, onboarding]);
   useEffect(() => {
     const onHash = () => {
       const next = tabFromHash(window.location.hash);
@@ -128,6 +164,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
   const goTab = (next: Tab) => { window.location.hash = TAB_HASH[next]; };
+  useEffect(() => { if (tab !== 'references') setStravaRequested(false); }, [tab]);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [tab]);
@@ -378,6 +415,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
         target={plan && !otherRace ? { km: plan.totalDistanceKm, gainM: plan.totalGainM, date: course?.race.start?.slice(0, 10) ?? null } : null}
         training={training}
         onTrainingChange={changeTraining}
+        openStrava={stravaRequested}
       />
       {plan && <SourceNote source={plan.elevationSource} hasTrack={!!course?.track} />}
       {plan?.runner && (
@@ -387,6 +425,38 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     </>
   );
   const planReady = !!plan && !!course && !otherRace;
+  const exampleReferences = references.some(isExampleReference);
+  // Sur téléphone, les références sont dans Moi : le plan y renvoie par une ligne « Ton rythme ».
+  const rhythmRow = (
+    <ListGroup>
+      <ListRow icon={exampleReferences ? <StravaLogo size={18} /> : <RouteIcon size={18} />} tone={exampleReferences ? 'strava' : 'accent'}
+        title={exampleReferences ? 'Ton rythme : course d\'exemple' : 'Ton rythme'}
+        detail={exampleReferences ? 'Importe tes courses depuis Strava pour un plan à ton rythme'
+          : `${references.length} référence${references.length > 1 ? 's' : ''}${plan?.runner ? ' · profil de coureur' : ''}`}
+        href={TAB_HASH.references} />
+    </ListGroup>
+  );
+  const finishOnboarding = () => {
+    try {
+      localStorage.setItem(WELCOME_SEEN, '1');
+    } catch {
+      // Stockage indisponible : la bienvenue reviendra à la prochaine visite.
+    }
+    setOnboarding(false);
+  };
+  const subPage = (title: string) => phone && <BackBar href={TAB_HASH.moi} back="Moi" title={title} />;
+
+  if (onboarding) {
+    return (
+      <div className="app">
+        <Onboarding
+          onExample={() => { finishOnboarding(); goTab('accueil'); }}
+          onStrava={() => { finishOnboarding(); goTab('references'); connectStrava(); }}
+          onManual={() => { finishOnboarding(); goTab('references'); }}
+          onLater={() => { finishOnboarding(); switchMode('custom'); goTab('plan'); }} />
+      </div>
+    );
+  }
   // Les barrières serrées ou dépassées sont déjà dans le bandeau et le roadbook : on ne les répète pas en avertissement.
   const planWarnings = (plan?.warnings ?? []).filter((w) => !/^(Barrière horaire dépassée|Marge de moins d'1 h)/.test(w));
 
@@ -474,8 +544,22 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
         </div>
       )}
 
-      {tab === 'algo' && <AlgorithmPage plan={plan} />}
-      {tab === 'accueil' && (
+      {tab === 'algo' && <>{phone && <div className="back-wrap">{subPage('Comment c\'est calculé')}</div>}<AlgorithmPage plan={plan} /></>}
+      {tab === 'accueil' && phone && (
+        <main className="layout single phone-page">
+          <HomeDashboard mode={mode} course={planReady ? course! : null} plan={planReady ? plan! : null}
+            exampleReferences={exampleReferences} loading={status.kind === 'loading'}
+            hrefs={{ plan: TAB_HASH.plan, course: TAB_HASH.course, sac: TAB_HASH.sac, ravitos: TAB_HASH.ravitos,
+              references: TAB_HASH.references, retour: TAB_HASH.retour }}
+            onMyRace={() => { switchMode('custom'); goTab('plan'); }}
+            onEditRace={() => { if (mode === 'demo') switchMode('custom'); else setEditorOpen(true); goTab('plan'); }}
+            onStrava={() => { setStravaRequested(true); goTab('references'); }}
+            onWatch={() => setGarminOpen(true)}
+            onPdf={() => void savePdf('summary')}
+            exportBlocked={pdfBlocked} />
+        </main>
+      )}
+      {tab === 'accueil' && !phone && (
         <WelcomePage plan={plan} isExample={mode === 'demo'} feedbackUrl={feedbackUrl}
           onOpenPlan={() => goTab('plan')}
           onMyRace={() => { switchMode('custom'); goTab('plan'); }}
@@ -491,6 +575,37 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
       <main className="layout single" hidden={tab === 'algo' || tab === 'accueil' || tab === 'course'}>
 
         <section className="content">
+          {phone && tab === 'plan' && !(mode === 'custom' && (editorOpen || !shown)) && (
+            <ScreenTitle title="Plan" subtitle={course && !otherRace ? `${course.race.name} · ${formatClock(course.race.start)}` : undefined} />
+          )}
+          {phone && (tab === 'ravitos' || tab === 'sac') && <>
+            <ScreenTitle title={tab === 'sac' ? 'Ton sac' : 'Ravitos'} subtitle={course && !otherRace ? course.race.name : undefined} />
+            <nav className="segmented no-print" aria-label="Ravitos ou sac">
+              <a href={TAB_HASH.ravitos} aria-current={tab === 'ravitos' ? 'page' : undefined}>Ravitos et nutrition</a>
+              <a href={TAB_HASH.sac} aria-current={tab === 'sac' ? 'page' : undefined}>Sac et matériel</a>
+            </nav>
+          </>}
+          {tab === 'moi' && (
+            <MePage referenceCount={references.length} exampleReferences={exampleReferences} runner={runner}
+              hrefs={{ references: TAB_HASH.references, profil: TAB_HASH.profil, retour: TAB_HASH.retour, analyse: TAB_HASH.analyse, algo: TAB_HASH.algo }}
+              feedbackUrl={feedbackUrl} onPdf={(v) => void savePdf(v)} onWatch={() => setGarminOpen(true)} exportBlocked={pdfBlocked} />
+          )}
+          {tab === 'references' && <>
+            {subPage('Tes références')}
+            <div className="references-page">{side}</div>
+          </>}
+          {tab === 'profil' && <>
+            {subPage('Profil de coureur')}
+            <RunnerProfileCard stored={runner} onChange={changeRunner} isExample={mode === 'demo'} />
+          </>}
+          {tab === 'retour' && <>
+            {subPage('Retours de course')}
+            {mode === 'custom' && plan && course && !otherRace
+              ? <RaceReviewCard plan={plan} course={course} stored={runner} onChange={changeRunner} />
+              : <p className="muted">Le retour de course compare ton activité Strava au plan de ta course : prépare d'abord ta
+                course (Accueil, « Préparer ma course »).</p>}
+          </>}
+          {tab === 'analyse' && subPage('Analyse détaillée')}
           {tab !== 'plan' ? null : mode === 'custom' && (editorOpen || !shown) ? (
             <RaceEditor
               draft={draft}
@@ -519,9 +634,9 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
             </div>
           )}
 
-          {tab === 'plan' && !planReady && <div className="plan-refs plan-refs-alone no-print">{side}</div>}
+          {tab === 'plan' && !planReady && (phone ? rhythmRow : <div className="plan-refs plan-refs-alone no-print">{side}</div>)}
 
-          {otherRace ? (
+          {!['plan', 'ravitos', 'sac', 'analyse'].includes(tab) ? null : otherRace ? (
             <div className="banner warn stale-banner" role="status">
               Le plan de « {draftName} » n'est pas encore calculé :
               {' '}{draftErrors.length ? 'complète la saisie ci-dessus (voir les erreurs)' : 'clique sur « Calculer mon plan »'}.
@@ -583,7 +698,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
                 </section>
               )}
 
-              <div className="plan-refs no-print">{side}</div>
+              {phone ? <div className="plan-refs no-print">{rhythmRow}</div> : <div className="plan-refs no-print">{side}</div>}
             </div>
           )}
 
@@ -598,12 +713,13 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
 
           {tab === 'analyse' && <>
             <div className="tab-tools"><Legend /></div>
-            <p className="muted tab-intro">Ce que « Mon plan » résume : le poids de chaque référence, ta préparation, le tableau
+            <p className="muted tab-intro">Ce que le plan résume : le poids de chaque référence, ta préparation, le tableau
               complet (tronçons, allures, arrêts) et les trois scénarios côte à côte.</p>
             {plan && <ReferenceInsights plan={plan} />}
             {plan?.training && <TrainingCard plan={plan} />}
-            <RunnerProfileCard stored={runner} onChange={changeRunner} isExample={mode === 'demo'} />
-            {mode === 'custom' && plan && course && !otherRace && (
+            {/* Sur téléphone, le profil et les retours de course ont leur page dans Moi. */}
+            {!phone && <RunnerProfileCard stored={runner} onChange={changeRunner} isExample={mode === 'demo'} />}
+            {!phone && mode === 'custom' && plan && course && !otherRace && (
               <RaceReviewCard plan={plan} course={course} stored={runner} onChange={changeRunner} />
             )}
             {plans.length > 1 && (
@@ -618,8 +734,8 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
             {plans.length > 1 && <CompareTable plans={plans} />}
           </>}
 
-          {tab !== 'plan' && !plan && status.kind !== 'loading' && (
-            <p className="muted">Calcule d'abord ton plan dans l'onglet « Mon plan ».</p>
+          {['ravitos', 'sac', 'analyse'].includes(tab) && !plan && status.kind !== 'loading' && (
+            <p className="muted">Calcule d'abord ton plan dans l'onglet « {phone ? 'Plan' : 'Mon plan'} ».</p>
           )}
           </div>}
 
@@ -629,9 +745,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
       {garminOpen && course && plans.length > 0 && (
         <GarminExport course={course} plans={plans} selected={scenarioIndex} services={services} onClose={() => setGarminOpen(false)} />
       )}
-      <MobileNav tab={tab} hrefs={TAB_HASH} onPdf={(v) => void savePdf(v)} onGarmin={() => setGarminOpen(true)} pdfDisabled={savingPdf || !!pdfBlocked}
-        pdfReason={pdfBlocked}
-        feedbackUrl={feedbackUrl} />
+      <MobileNav section={SECTION_OF[tab]} hrefs={{ accueil: TAB_HASH.accueil, plan: TAB_HASH.plan, ravitos: TAB_HASH.ravitos, moi: TAB_HASH.moi }} />
     </div>
   );
 }

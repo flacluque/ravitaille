@@ -3,7 +3,7 @@ import { fetchStravaStatus } from '../api/client';
 import { MAX_PREP_WEEKS, MIN_PREP_WEEKS } from '../api/storage';
 import type { ElevationSource, Reference, ReferenceKind, TrainingOptions } from '../api/types';
 import { durationMinutes, formatHm, formatKm, parseHmInput } from '../lib/format';
-import type { Target } from '../lib/strava';
+import { isExampleReference, type Target } from '../lib/strava';
 import { DatePicker } from './DatePicker';
 import { StravaImport } from './StravaImport';
 import { StravaLogo } from './StravaLogo';
@@ -18,12 +18,10 @@ interface Props {
   /** Tenir compte de l'entraînement Strava (proposé quand le compte est connecté). */
   training: TrainingOptions;
   onTrainingChange: (options: TrainingOptions) => void;
+  /** Ouvrir tout de suite l'import Strava (bouton « Importer depuis Strava » de l'accueil). */
+  openStrava?: boolean;
 }
 
-/** La référence d'exemple proposée au premier lancement (60 km, 3 200 m D+, 8h48), sans nom ni date. */
-function isExampleReference(ref: Reference): boolean {
-  return !ref.label.trim() && !ref.date && ref.km === 60 && ref.gainM === 3200 && durationMinutes(ref.time) === 528;
-}
 
 const SOURCES: { value: ElevationSource; label: string }[] = [
   { value: 'AUTO', label: 'Automatique' },
@@ -71,7 +69,7 @@ function parseRow(row: Row): { ref: Reference | null; errors: Partial<Record<'km
   return { ref: { label: row.label.trim(), date: row.date || null, kind: row.kind, km, gainM: gain, time: time! }, errors };
 }
 
-export function ReferenceForm({ initialReferences, initialSource, loading, onSubmit, target, training, onTrainingChange }: Props) {
+export function ReferenceForm({ initialReferences, initialSource, loading, onSubmit, target, training, onTrainingChange, openStrava = false }: Props) {
   const [rows, setRows] = useState<Row[]>(() => initialReferences.map(toRow));
   const [source, setSource] = useState<ElevationSource>(initialSource);
   // Repliées en un résumé une fois le plan calculé : on les rouvre pour les modifier.
@@ -80,7 +78,7 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
   // Retour de la page d'autorisation de Strava (?strava=…) : on rouvre l'import là où on l'avait laissé,
   // puis on retire le paramètre de l'adresse (un rechargement ne doit pas rouvrir l'import).
   const [stravaResult, setStravaResult] = useState(() => new URLSearchParams(window.location.search).get('strava'));
-  const [stravaOpen, setStravaOpen] = useState(stravaResult !== null);
+  const [stravaOpen, setStravaOpen] = useState(stravaResult !== null || openStrava);
   // Compte Strava connecté : on propose de tenir compte de l'entraînement.
   const [stravaConnected, setStravaConnected] = useState(false);
   useEffect(() => {
@@ -133,6 +131,14 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
         )}
       </div>
 
+      <div className="ref-strava">
+        <p>Le plus simple : <strong>importe tes courses depuis Strava</strong>. Ravitaille repère celles qui ressemblent à ta
+          course.</p>
+        <button type="button" className="strava-btn" onClick={() => setStravaOpen(true)}>
+          <StravaLogo /> Importer depuis Strava
+        </button>
+      </div>
+
       {!expanded && (
         <ul className="ref-summary">
           {parsed.map((p, i) => p.ref && (
@@ -145,9 +151,9 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
       )}
       {parsed.some((p) => p.ref && isExampleReference(p.ref)) && (
         <p className="example-note small">
-          Référence d'exemple, pas la tienne : remplace-la par une course que tu as faite (ou importe-la depuis Strava)
+          Référence d'exemple, pas la tienne : importe tes courses depuis Strava, ou saisis une course que tu as faite,
           pour un plan à ton rythme.{' '}
-          {!expanded && <button type="button" className="link-btn" onClick={() => setExpanded(true)}>Mettre la mienne</button>}
+          {!expanded && <button type="button" className="link-btn" onClick={() => setExpanded(true)}>Saisir la mienne</button>}
         </p>
       )}
 
@@ -206,10 +212,7 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
 
       <div className="ref-actions">
         <button type="button" className="ghost" onClick={() => setRows((rs) => [...rs, emptyRow()])}>
-          + Ajouter une référence
-        </button>
-        <button type="button" className="strava-btn" onClick={() => setStravaOpen(true)}>
-          <StravaLogo /> Importer depuis Strava
+          + Ajouter une référence à la main
         </button>
       </div>
       <p className="muted small">

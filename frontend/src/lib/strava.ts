@@ -133,3 +133,8 @@ export function connectionMessage(result: string | null): { ok: boolean; text: s
     default: return null;
   }
 }
+
+/** La référence d'exemple proposée au premier lancement (60 km, 3 200 m D+, 8h48), sans nom ni date. */
+export function isExampleReference(ref: Reference): boolean {
+  return !ref.label.trim() && !ref.date && ref.km === 60 && ref.gainM === 3200 && durationMinutes(ref.time) === 528;
+}
