@@ -1,4 +1,6 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { ListGroup, ListRow } from './AppScreen';
+import { BackIcon, BottleIcon, CrewIcon } from './Icons';
 import { UndoToast, useUndo } from './UndoToast';
 import type { ShareResult } from '../lib/crewShare';
 import { loadRunnerName, saveRunnerName } from '../api/storage';
@@ -33,47 +35,38 @@ export function RavitosView({ plan, services, profile, onProfileChange, crew, on
   const firstCrew = n.points.find((p) => p.index > 0 && (p.crew || p.dropBag));
   const startCount = Object.values(n.points[0].take).reduce((s, v) => s + v, 0) + n.points[0].takeDrinkDoses;
   const raceHours = n.legs.reduce((s, l) => s + l.minutes, 0) / 60;
-  const [part, setPart] = useState<'deroule' | 'reglages'>(readPart);
-  const choose = (next: 'deroule' | 'reglages') => {
-    setPart(next);
-    try {
-      localStorage.setItem(PART_KEY, next);
-    } catch {
-      // stockage indisponible
-    }
-  };
-
-  // Onglets au clavier : flèches gauche/droite, Début/Fin (motif « tabs » de l'ARIA APG).
-  function tabKeys(e: KeyboardEvent<HTMLDivElement>) {
-    const i = PARTS.findIndex(([id]) => id === part);
-    const next = e.key === 'ArrowRight' ? (i + 1) % PARTS.length : e.key === 'ArrowLeft' ? (i + PARTS.length - 1) % PARTS.length
-      : e.key === 'Home' ? 0 : e.key === 'End' ? PARTS.length - 1 : -1;
-    if (next < 0) return;
-    e.preventDefault();
-    choose(PARTS[next][0]);
-    document.getElementById(`ravitos-tab-${PARTS[next][0]}`)?.focus();
-  }
+  // Les réglages s'ouvrent comme une page, à la place du déroulé ; « Terminé » y ramène.
+  const [editing, setEditing] = useState<'nutrition' | 'crew' | null>(null);
+  const top = useRef<HTMLDivElement>(null);
+  const opened = useRef(false);
+  useEffect(() => {
+    // Pas au premier affichage : seulement quand on ouvre ou referme les réglages.
+    if (opened.current) top.current?.scrollIntoView({ block: 'start' });
+    opened.current = true;
+  }, [editing]);
+  const crewNames = etas.filter((e) => crew.includes(e.code)).map((e) => e.name);
 
   return (
-    <div className="ravitos">
-      <div className="segmented ravitos-parts" role="tablist" aria-label="Ravitos" onKeyDown={tabKeys}>
-        {PARTS.map(([id, label]) => (
-          <button key={id} type="button" role="tab" id={`ravitos-tab-${id}`} aria-selected={part === id} aria-controls="ravitos-panel"
-            tabIndex={part === id ? 0 : -1} className={part === id ? 'active' : ''} onClick={() => choose(id)}>{label}</button>
-        ))}
-      </div>
-
-      <div className="ravitos-panel" role="tabpanel" id="ravitos-panel" aria-labelledby={`ravitos-tab-${part}`}>
-      {part === 'reglages' ? <>
-        <ProfileCard profile={profile} onChange={onProfileChange} />
-        <CrewCard plan={plan} services={services} crew={crew} onChange={onCrewChange} onShare={onShareCrew} />
-        <button type="button" className="ghost ravitos-done" onClick={() => choose('deroule')}>Voir le déroulé</button>
+    <div className="ravitos" ref={top}>
+      {editing ? <>
+        <div className="ravitos-edit-bar">
+          <button type="button" className="ravitos-back" onClick={() => setEditing(null)}><BackIcon />Ravitos</button>
+          <strong>{editing === 'nutrition' ? 'Nutrition' : 'Ton assistance'}</strong>
+          <button type="button" className="ravitos-back done" onClick={() => setEditing(null)}>Terminé</button>
+        </div>
+        {editing === 'nutrition'
+          ? <ProfileCard profile={profile} onChange={onProfileChange} />
+          : <CrewCard plan={plan} services={services} crew={crew} onChange={onCrewChange} onShare={onShareCrew} />}
+        <button type="button" className="big-btn" onClick={() => setEditing(null)}>Voir le déroulé</button>
       </> : <>
-      <p className="muted small ravitos-basis">
-        Calculé pour {profile.carbsPerHour} g de glucides par heure, {profile.flasks} flasques de {profile.flaskMl} ml
-        {crew.length > 0 ? `, assistance à ${crew.length} point${crew.length > 1 ? 's' : ''}` : ', sans assistance'}.{' '}
-        <button type="button" className="link-btn" onClick={() => choose('reglages')}>Modifier</button>
-      </p>
+      <ListGroup header="Tes réglages">
+        <ListRow icon={<BottleIcon size={18} />} title="Nutrition"
+          detail={`${profile.carbsPerHour} g de glucides par heure · ${profile.flasks} flasques de ${profile.flaskMl} ml`}
+          value={<span className="row-action-accent">Modifier</span>} onClick={() => setEditing('nutrition')} />
+        <ListRow icon={<CrewIcon size={18} />} tone="calm" title="Ton assistance"
+          detail={crewNames.length ? `T'attend à ${crewNames.join(', ')}` : 'Sans assistance : choisis où elle t\'attend'}
+          value={<span className="row-action-accent">{crewNames.length ? 'Modifier' : 'Choisir'}</span>} onClick={() => setEditing('crew')} />
+      </ListGroup>
 
       <section className="ravitos-totals" aria-label="Sur toute la course">
         <div className="stat">
@@ -161,7 +154,6 @@ export function RavitosView({ plan, services, profile, onProfileChange, crew, on
         lente). Le sodium vient de ta boisson énergétique. Repères courants en ultra, à ajuster : pas un conseil médical.
       </p>
       </>}
-      </div>
     </div>
   );
 }
@@ -170,17 +162,6 @@ export function RavitosView({ plan, services, profile, onProfileChange, crew, on
 export function parseGrams(text: string): number {
   const m = /\d+(?:[.,]\d+)?/.exec(text);
   return m ? Number(m[0].replace(',', '.')) : 0;
-}
-
-const PART_KEY = 'trail-planner:ravitos-partie';
-const PARTS: ['deroule' | 'reglages', string][] = [['deroule', 'Déroulé'], ['reglages', 'Réglages']];
-
-function readPart(): 'deroule' | 'reglages' {
-  try {
-    return localStorage.getItem(PART_KEY) === 'reglages' ? 'reglages' : 'deroule';
-  } catch {
-    return 'deroule';
-  }
 }
 
 function ArrivalBox({ plan, n, profile, index }: { plan: RacePlan; n: NutritionPlan; profile: NutritionProfile; index: number }) {
@@ -199,9 +180,12 @@ function ArrivalBox({ plan, n, profile, index }: { plan: RacePlan; n: NutritionP
   return (
     <div className={`ravitos-arrival${point.crew || point.dropBag ? ' crew' : ''}${isLast ? ' finish' : ''}`}>
       <div className="ravitos-arrival-head">
-        <strong>{isLast ? `Arrivée · ${formatClock(eta.arrival)}` : `${eta.name} · ${hour(eta.arrival)}`}</strong>
-        <span className="small">{isLast ? 'Bravo !' : point.crew ? 'ton assistance est là' : point.dropBag ? 'sac de délestage'
-          : `${stop > 0 ? `arrêt ${stop} min` : 'sans arrêt'} · km ${formatKm(eta.km)}`}</span>
+        <span className="ravitos-arrival-name">
+          <strong>{isLast ? 'Arrivée' : eta.name}</strong>
+          <span className="small">{isLast ? `${eta.name} · bravo !` : `${point.crew ? 'ton assistance est là · ' : point.dropBag ? 'sac de délestage · ' : ''}${
+            stop > 0 ? `arrêt ${stop} min` : 'sans arrêt'} · km ${formatKm(eta.km)}`}</span>
+        </span>
+        <span className="ravitos-arrival-time">{isLast ? formatClock(eta.arrival) : hour(eta.arrival)}</span>
       </div>
       {todo.length > 0 && (
         <ul className="ravitos-chips">{todo.map((t) => <li key={t.label} className={t.kind}>{t.label}</li>)}</ul>

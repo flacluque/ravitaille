@@ -874,9 +874,9 @@ button.plan-hero-worst { padding: 0; min-height: 44px; background: transparent; 
 .ravitos-timeline { display: flex; flex-direction: column; }
 .ravitos-start { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; border-radius: var(--radius); background: var(--accent); color: var(--accent-contrast); }
 .ravitos-step { display: flex; flex-direction: column; }
-.ravitos-leg { margin: 10px 0 10px 36px; position: relative; padding: 14px 16px; border-radius: var(--radius); background: var(--surface);
-  border: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
-.ravitos-leg::before { content: ''; position: absolute; left: -26px; top: -10px; bottom: -10px; width: 3px; background: var(--border); }
+.ravitos-leg { margin: 0 0 0 22px; position: relative; padding: 14px 0 14px 18px; display: flex; flex-direction: column; gap: 6px; }
+/* Le tronçon se lit comme le chemin entre deux points : un trait, pas une carte. */
+.ravitos-leg::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 2px; background: var(--track); opacity: 0.55; }
 .ravitos-leg-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
 .ravitos-tags { display: flex; gap: 6px; flex-wrap: wrap; }
 .tag-night, .tag-dry { font-size: var(--fs-micro); font-weight: 700; border-radius: 999px; padding: 2px 8px; }
@@ -888,11 +888,17 @@ button.plan-hero-worst { padding: 0; min-height: 44px; background: transparent; 
 .ravitos-seq li.gel { background: var(--ok-bg); color: var(--ok-fg); }
 .ravitos-seq li.solid { background: var(--tight-bg); color: var(--tight-fg); }
 .ravitos-meta { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 18px; }
-.ravitos-arrival { margin-left: 36px; padding: 10px 14px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); }
+.ravitos-arrival { padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); }
 .ravitos-arrival.crew { border: 2px solid #f4b48c; background: #fff8f2; color: #1c1f1d; }
 .ravitos-arrival.finish { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
-.ravitos-arrival-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; }
-.ravitos-arrival.crew .ravitos-arrival-head span { color: #8a3b07; font-weight: 700; }
+.ravitos-arrival-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.ravitos-arrival-name { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ravitos-arrival-name strong { font-size: var(--fs-body); line-height: 1.25; }
+.ravitos-arrival-name .small { color: var(--muted); }
+.ravitos-arrival-time { flex: none; font-family: var(--font-display); font-size: 1.625rem; font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums; }
+.ravitos-arrival.crew .ravitos-arrival-name .small { color: #8a3b07; font-weight: 700; }
+.ravitos-arrival.finish .ravitos-arrival-name .small { color: inherit; opacity: 0.85; }
 .ravitos-chips { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .ravitos-chips li { padding: 6px 10px; border-radius: 8px; background: var(--surface-2); font-size: var(--fs-small); }
 .ravitos-chips li.crew { background: #fff1e8; border: 1px solid #f4b48c; color: #1c1f1d; font-weight: 600; }
@@ -903,9 +909,8 @@ button.plan-hero-worst { padding: 0; min-height: 44px; background: transparent; 
 .crew-sheet-where { flex: 0 0 180px; display: flex; flex-direction: column; }
 .crew-sheet li > span:last-child { flex: 1 1 260px; }
 @media (max-width: 640px) {
-  .ravitos-leg { margin-left: 18px; }
-  .ravitos-leg::before { left: -14px; }
-  .ravitos-arrival { margin-left: 18px; }
+  .ravitos-leg { margin-left: 14px; padding-left: 16px; }
+  .ravitos-rhythm { font-size: var(--fs-body); }
 }
 
 /* ---------- Code d'invitation, avis ---------- */
@@ -1052,9 +1057,6 @@ a.brand { text-decoration: none; }
 .race-actions { position: sticky; bottom: 12px; display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 12px;
   background: var(--surface); border: 1px solid var(--border); box-shadow: 0 8px 24px rgb(0 0 0 / 0.12); }
 .race-actions button { min-height: 52px; font-size: var(--fs-lead); }
-.ravitos-parts { align-self: stretch; display: grid; grid-template-columns: 1fr 1fr; }
-.ravitos-basis { margin: 0; }
-button.ravitos-done { align-self: flex-start; }
 
 /* ---------- Téléphone : une appli, avec sa barre d'onglets ---------- */
 .mobile-nav { display: none; }
@@ -1411,3 +1413,8 @@ button.onb-back { align-self: flex-start; min-height: 44px; padding: 0; backgrou
 }
 .touch-only { display: none; }
 @media (hover: none) { .hover-only { display: none; } .touch-only { display: inline; } }
+.ravitos-edit-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; min-height: 44px; }
+.ravitos-edit-bar strong { text-align: center; }
+button.ravitos-back { justify-self: start; display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 4px;
+  background: none; color: var(--accent); font-weight: 600; }
+button.ravitos-back.done { justify-self: end; font-weight: 700; }

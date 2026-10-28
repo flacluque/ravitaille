@@ -709,7 +709,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
             </div>
           )}
 
-          {tab === 'ravitos' && plan && course && <div className="tab-tools"><Legend /></div>}
+          {tab === 'ravitos' && plan && course && !phone && <div className="tab-tools"><Legend /></div>}
           {tab === 'ravitos' && plan && course && (
             <RavitosView plan={plan} services={services} profile={nutritionProfile} onProfileChange={changeNutritionProfile}
               onShareCrew={(runner) => shareCrew(loadFix(course.race.name, plan.start), runner)}
