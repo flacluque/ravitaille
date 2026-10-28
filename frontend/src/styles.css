@@ -1067,11 +1067,14 @@ a.brand { text-decoration: none; }
   .app { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
   .mobile-nav { display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 1200;
     padding: 2px 6px env(safe-area-inset-bottom); border-top: 1px solid var(--border);
-    background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: saturate(1.6) blur(18px);
+    background: color-mix(in srgb, var(--surface) 95%, transparent); backdrop-filter: saturate(1.6) blur(18px);
     -webkit-backdrop-filter: saturate(1.6) blur(18px); }
   .mobile-nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
     min-height: 54px; padding: 4px 2px; color: var(--muted); font-size: var(--fs-micro); font-weight: 600; text-decoration: none; }
-  .mobile-nav [aria-current='page'] { color: var(--accent); }
+  /* L'onglet actif se voit d'un coup d'œil : l'icône dans une pastille pleine, le nom en gras. */
+  .mobile-nav a svg { box-sizing: content-box; padding: 4px 16px; border-radius: 999px; transition: background-color 0.2s ease-out; }
+  .mobile-nav [aria-current='page'] { color: var(--accent); font-weight: 800; }
+  .mobile-nav [aria-current='page'] svg { background: var(--accent); color: var(--accent-contrast); }
   .undo-toast { bottom: calc(132px + env(safe-area-inset-bottom)); }
   .race-actions { bottom: calc(80px + env(safe-area-inset-bottom)); }
   .editor-footer { bottom: calc(68px + env(safe-area-inset-bottom)); margin: 0 -12px -12px; padding: 10px 12px; }
@@ -1418,3 +1421,21 @@ button.onb-back { align-self: flex-start; min-height: 44px; padding: 0; backgrou
 button.ravitos-back { justify-self: start; display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 4px;
   background: none; color: var(--accent); font-weight: 600; }
 button.ravitos-back.done { justify-self: end; font-weight: 700; }
+
+/* ---------- Ouverture de l'appli (LaunchIntro) ---------- */
+/* Mêmes proportions que l'image de lancement d'iOS : 2732 px de côté, ramenés à la hauteur de l'écran. */
+.launch { --u: calc(100vh / 2732); position: fixed; inset: 0; z-index: 5000; display: grid; place-items: center;
+  background: #1f4d3a; transition: opacity 550ms cubic-bezier(0.22, 1, 0.36, 1); }
+.launch-mark { display: flex; flex-direction: column; align-items: center; gap: calc(40 * var(--u));
+  transition: transform 550ms cubic-bezier(0.22, 1, 0.36, 1); }
+.launch-mark svg { display: block; width: calc(420 * var(--u)); height: calc(420 * var(--u)); }
+.launch-name { font-family: 'Barlow Semi Condensed', 'Barlow', sans-serif; font-weight: 800; font-size: calc(150 * var(--u));
+  line-height: 1.2; color: #f6f4ef; }
+.launch-trace { stroke-dasharray: 1 1.1; stroke-dashoffset: 1.05; animation: launch-draw 900ms cubic-bezier(0.65, 0, 0.35, 1) 120ms forwards; }
+@keyframes launch-draw { to { stroke-dashoffset: 0; } }
+.launch-fade { opacity: 0; pointer-events: none; }
+.launch-fade .launch-mark { transform: scale(1.06); }
+@media (prefers-reduced-motion: reduce) {
+  .launch-trace { animation: none; stroke-dashoffset: 0; }
+  .launch-fade .launch-mark { transform: none; }
+}

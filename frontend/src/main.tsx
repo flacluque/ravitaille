@@ -14,6 +14,8 @@ import { AccessGate } from './components/AccessGate';
 import { CrewApp } from './components/CrewApp';
 import { isCrewLink } from './lib/crew';
 import { initNativeApp } from './api/native';
+import { isNativeApp } from './api/platform';
+import { LaunchIntro } from './components/LaunchIntro';
 
 void initNativeApp();
 
@@ -23,5 +25,7 @@ createRoot(document.getElementById('root')!).render(
     {isCrewLink(window.location.hash)
       ? <CrewApp />
       : <AccessGate>{(info) => <App feedbackUrl={info?.feedbackUrl ?? null} />}</AccessGate>}
+    {/* Dans l'appli seulement : l'ouverture animée, par-dessus la page qui se charge. */}
+    {isNativeApp() && <LaunchIntro />}
   </StrictMode>,
 );
