@@ -1283,3 +1283,6 @@ button.garmin-download { min-height: 52px; font-size: var(--fs-lead); font-weigh
 
 /* Appli iPhone : la page passe sous la barre d'état (viewport-fit=cover), on lui laisse sa place. */
 html.native #root { padding-top: env(safe-area-inset-top); }
+/* Rien ne doit déborder sur les côtés : l'appli ne défile qu'en hauteur (clip garde les en-têtes collants). */
+html.native body { overflow-x: clip; }
+html.native #root { overflow-x: clip; max-width: 100vw; }
