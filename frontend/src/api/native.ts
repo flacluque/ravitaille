@@ -20,6 +20,9 @@ export function connectStrava(): void {
 export async function initNativeApp(): Promise<void> {
   if (!isNativeApp()) return;
   document.documentElement.classList.add('native');
+  // Une appli ne zoome pas : iOS agrandissait la page en touchant un champ, et elle débordait ensuite sur les côtés.
+  document.querySelector('meta[name=viewport]')?.setAttribute('content',
+    'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
   const [{ App }, { Browser }, { StatusBar, Style }, { SplashScreen }] = await Promise.all([
     import('@capacitor/app'), import('@capacitor/browser'), import('@capacitor/status-bar'), import('@capacitor/splash-screen'),
   ]);
