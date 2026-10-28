@@ -308,6 +308,25 @@ connexion Strava est un cookie chiffré ; le serveur ne garde rien (il peut red�
 
 Pour essayer l'image en local : `docker build -t trail-planner . && docker run -p 8080:8080 trail-planner`.
 
+## Appli iPhone (Capacitor)
+
+Le même site, emballé par [Capacitor](https://capacitorjs.com) dans `frontend/ios/`. L'appli appelle le serveur en
+ligne (`frontend/.env.app`), garde la connexion Strava et le code d'accès dans ses en-têtes (pas de cookies), ouvre
+Strava dans le navigateur intégré et revient par le lien `ravitaille://strava?…`, et partage les fichiers (.fit,
+.gpx, PDF) par la feuille de partage d'iOS.
+
+Sur un Mac avec Xcode :
+
+```bash
+cd frontend
+npm ci
+npm run ios          # construit la version appli, la copie dans ios/ et ouvre Xcode
+```
+
+Dans Xcode : cible **App** → **Signing & Capabilities** → choisir son équipe (un identifiant Apple suffit pour
+essayer sur son iPhone), brancher l'iPhone, puis ▶︎. Après une modification du site : `npm run build:app && npx cap
+sync ios`, puis ▶︎ à nouveau.
+
 ## Architecture
 
 ```

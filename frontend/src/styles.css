@@ -1280,3 +1280,6 @@ button.garmin-download { min-height: 52px; font-size: var(--fs-lead); font-weigh
   /* Les deux cadrans côte à côte, comme le dit la légende. */
   .watch-faces { zoom: 0.78; flex-wrap: nowrap; }
 }
+
+/* Appli iPhone : la page passe sous la barre d'état (viewport-fit=cover), on lui laisse sa place. */
+html.native #root { padding-top: env(safe-area-inset-top); }

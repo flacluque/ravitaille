@@ -90,4 +90,11 @@ class AccessTest {
     void leRetourDeStravaNeDemandePasLeCode() throws Exception {
         mvc.perform(get("/api/strava/callback").param("state", "inconnu")).andExpect(status().isBadRequest());
     }
+
+    @Test
+    void leDepartVersStravaNeDemandePasLeCode() throws Exception {
+        // Depuis l'appli, la page s'ouvre dans le navigateur intégré, sans cookie ni en-tête.
+        mvc.perform(get("/api/strava/authorize").param("origin", "app"))
+                .andExpect(r -> org.junit.jupiter.api.Assertions.assertNotEquals(401, r.getResponse().getStatus()));
+    }
 }

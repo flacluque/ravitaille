@@ -13,6 +13,9 @@ import { App } from './App';
 import { AccessGate } from './components/AccessGate';
 import { CrewApp } from './components/CrewApp';
 import { isCrewLink } from './lib/crew';
+import { initNativeApp } from './api/native';
+
+void initNativeApp();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
