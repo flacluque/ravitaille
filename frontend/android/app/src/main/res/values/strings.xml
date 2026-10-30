@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Ravitaille</string>
+    <string name="title_activity_main">Ravitaille</string>
+    <string name="package_name">fr.ravitaille.app</string>
+    <string name="custom_url_scheme">fr.ravitaille.app</string>
+</resources>
