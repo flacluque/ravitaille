@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { modalCloseMs } from './Motion';
 import type { CourseView, RacePlan, Service } from '../api/types';
 import { formatClock } from '../lib/format';
 import { buildCiqPlan, encodeCiqPlan } from '../lib/ciq';
@@ -111,7 +112,18 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
   useEffect(() => {
     const d = dialog.current;
     if (d && !d.open) d.showModal();
+    // Modal (transitions.dev) : la fenêtre grandit depuis 96 % en apparaissant.
+    const frame = requestAnimationFrame(() => d?.classList.add('is-open'));
+    return () => cancelAnimationFrame(frame);
   }, []);
+  // Fermeture : la fenêtre s'efface, puis le <dialog> se ferme (et le parent la retire).
+  function close() {
+    const d = dialog.current;
+    if (!d || d.classList.contains('is-closing')) return;
+    d.classList.remove('is-open');
+    d.classList.add('is-closing');
+    window.setTimeout(() => d.close(), modalCloseMs());
+  }
   useEffect(() => setState('idle'), [scenario, timeInName, checkpoints, brand]);
 
   async function download() {
@@ -135,10 +147,11 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
   }
 
   return (
-    <dialog ref={dialog} className="garmin" aria-labelledby="garmin-title" onClose={onClose}
-      onClick={(e) => { if (e.target === dialog.current) dialog.current?.close(); }}>
+    <dialog ref={dialog} className="garmin t-modal" aria-labelledby="garmin-title" onClose={onClose}
+      onCancel={(e) => { e.preventDefault(); close(); }}
+      onClick={(e) => { if (e.target === dialog.current) close(); }}>
       <div className="garmin-body">
-        <button type="button" className="garmin-close" aria-label="Fermer" onClick={() => dialog.current?.close()}>✕</button>
+        <button type="button" className="garmin-close" aria-label="Fermer" onClick={close}>✕</button>
         <h2 id="garmin-title">Envoyer le plan sur ta montre</h2>
         <div className="watch-brand" role="group" aria-label="Ta montre">
           <button type="button" aria-pressed={garmin} className={garmin ? 'active' : ''} onClick={() => chooseBrand('garmin')}>
