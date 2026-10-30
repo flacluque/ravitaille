@@ -1,5 +1,6 @@
 import { Fragment, useState } from 'react';
 import { MoonIcon } from './Icons';
+import { SoftText } from './Motion';
 import type { Marker, RacePlan, Service } from '../api/types';
 import { durationMinutes, formatClock, formatDuration, formatKm, formatPace } from '../lib/format';
 import { bindingCutoff } from '../lib/plan';
@@ -84,7 +85,7 @@ export function Roadbook({ plan, markers, services, crew, onHover, onDetails }: 
                   <span className="num roadbook-km">{formatKm(eta.km)}</span>
                   <span className="num roadbook-time">
                     <span className="sr-only">{i === 0 ? 'Départ' : 'Arrivée'} </span>
-                    {formatClock(i === 0 ? eta.departure : eta.arrival).replace(/^\S+ /, '')}
+                    <SoftText value={formatClock(i === 0 ? eta.departure : eta.arrival).replace(/^\S+ /, '')} />
                     {cutoff && (
                       <span className="roadbook-cut rb-m">
                         barrière {formatClock(cutoff.at).replace(/^\S+ /, '')}{cutoff.out ? ' (sortie)' : ''}

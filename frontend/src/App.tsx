@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, fetchCourse, fetchCustomPlans, fetchPlans, loadSnapshot, saveSnapshot, type Snapshot } from './api/client';
 import {
   loadCrew, loadDraft, loadGear, loadGpx, loadNutrition, loadTrainingOptions, saveCrew, saveDraft, saveGpx, saveNutrition,
@@ -30,6 +30,7 @@ import { ListGroup, ListRow } from './components/AppScreen';
 import { FlagIcon, RouteIcon } from './components/Icons';
 import { StravaLogo } from './components/StravaLogo';
 import { isExampleReference } from './lib/strava';
+import { playPageIn, useSlidingPill } from './components/Motion';
 import { RaceView } from './components/RaceView';
 import { isRaceWindow, nowMinutes, type Fix } from './lib/race';
 import { shareWithCrew, type ShareResult } from './lib/crewShare';
@@ -165,6 +166,19 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   }, []);
   const goTab = (next: Tab) => { window.location.hash = TAB_HASH[next]; };
   useEffect(() => { if (tab !== 'references') setStravaRequested(false); }, [tab]);
+  // Sur téléphone, une page ouverte depuis Moi arrive de la droite ; en revenant à Moi, Moi revient de la gauche.
+  const previousTab = useRef(tab);
+  useLayoutEffect(() => {
+    const from = previousTab.current;
+    previousTab.current = tab;
+    if (!window.matchMedia(PHONE).matches || from === tab) return;
+    const sub = (t: Tab) => SECTION_OF[t] === 'moi' && t !== 'moi';
+    const direction = from === 'moi' && sub(tab) ? 'forward' : sub(from) && tab === 'moi' ? 'back' : null;
+    if (direction) playPageIn(document.querySelector<HTMLElement>('.app > main:not([hidden]), .app > .algo-page'), direction);
+  }, [tab]);
+  // Ravitos / Sac : la pastille glisse d'un choix à l'autre.
+  const partsBar = useRef<HTMLElement>(null);
+  useSlidingPill(partsBar, tab);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [tab]);
@@ -542,7 +556,12 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
         </div>
       )}
 
-      {tab === 'algo' && <>{phone && <div className="back-wrap">{subPage('Comment c\'est calculé')}</div>}<AlgorithmPage plan={plan} /></>}
+      {tab === 'algo' && (
+        <div className="algo-page">
+          {phone && <div className="back-wrap">{subPage('Comment c\'est calculé')}</div>}
+          <AlgorithmPage plan={plan} />
+        </div>
+      )}
       {tab === 'accueil' && phone && (
         <main className="layout single phone-page">
           <HomeDashboard mode={mode} course={planReady ? course! : null} plan={planReady ? plan! : null}
@@ -578,7 +597,8 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           )}
           {phone && (tab === 'ravitos' || tab === 'sac') && <>
             <ScreenTitle title={tab === 'sac' ? 'Ton sac' : 'Ravitos'} subtitle={course && !otherRace ? course.race.name : undefined} />
-            <nav className="segmented no-print" aria-label="Ravitos ou sac">
+            <nav className="segmented no-print" aria-label="Ravitos ou sac" ref={partsBar}>
+              <span className="t-tabs-pill" aria-hidden />
               <a href={TAB_HASH.ravitos} aria-current={tab === 'ravitos' ? 'page' : undefined}>Ravitos et nutrition</a>
               <a href={TAB_HASH.sac} aria-current={tab === 'sac' ? 'page' : undefined}>Sac et matériel</a>
             </nav>

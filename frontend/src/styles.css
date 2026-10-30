@@ -1497,3 +1497,166 @@ button.ravitos-back.done { justify-self: end; font-weight: 700; }
 .strip-runner { fill: var(--accent); stroke: var(--surface); stroke-width: 2.5; }
 .strip-runner-line { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 3 3; }
 .tile-wide { min-height: 0; }
+
+/* ---------- Transitions (skill transitions-dev) ----------
+   Jetons de mouvement partagés, puis les transitions retenues : pastille qui glisse (16), changement doux des
+   valeurs (34), page qui arrive (08), coche (25), fenêtre (06). Toutes s'arrêtent avec « Réduire les animations ». */
+:root {
+  --duration-quick: 150ms;
+  --duration-fast: 250ms;
+  --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --distance-base: 8px;
+  --blur-small: 2px;
+  --blur-medium: 3px;
+  --scale-large: 0.96;
+  /* Tabs sliding */
+  --tabs-dur: 250ms;
+  --tabs-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Text swap soft */
+  --text-soft-dur: 200ms;
+  --text-soft-blur: 2px;
+  --text-soft-ease: ease-in-out;
+  --text-soft-resize-dur: 240ms;
+  --text-soft-resize-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Page side-by-side */
+  --page-slide-dur: 250ms;
+  --page-fade-dur: 250ms;
+  --page-slide-distance: 8px;
+  --page-blur: 3px;
+  --page-slide-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --page-fade-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Checkbox check */
+  --check-box: 150ms;
+  --check-draw: 350ms;
+  --check-delay: 0ms;
+  --check-uncheck: 150ms;
+  --check-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Modal */
+  --modal-open-dur: 250ms;
+  --modal-close-dur: 150ms;
+  --modal-scale: 0.96;
+  --modal-scale-close: 0.96;
+  --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Tabs sliding : la pastille (fond de l'option choisie) glisse ; les options restent au-dessus. */
+.t-tabs-pill { display: none; }
+@media (max-width: 860px) {
+  .segmented, .plan-hero-scenarios { position: relative; }
+  .segmented > a, .plan-hero-scenarios > button { position: relative; z-index: 1; transition: color var(--tabs-dur) var(--tabs-ease); }
+  .segmented > a[aria-current='page'], .plan-hero-scenarios > button.active { background: transparent; border-color: transparent; }
+  .t-tabs-pill {
+    display: block;
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 0;
+    width: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transform: translateX(0);
+    transition:
+      transform var(--tabs-dur) var(--tabs-ease),
+      width     var(--tabs-dur) var(--tabs-ease);
+    will-change: transform, width;
+    z-index: 0;
+    pointer-events: none;
+  }
+}
+
+/* Text swap soft : les deux textes partagent une case ; la largeur suit. */
+.t-text-soft {
+  display: inline-grid;
+  justify-items: var(--text-soft-align, start);
+  transition: width var(--text-soft-resize-dur) var(--text-soft-resize-ease);
+}
+.t-text-soft > span {
+  grid-area: 1 / 1;
+  white-space: pre;
+  transition:
+    filter  var(--text-soft-dur) var(--text-soft-ease),
+    opacity var(--text-soft-dur) var(--text-soft-ease);
+}
+.t-text-soft-new {
+  opacity: 0;
+  filter: blur(var(--text-soft-blur));
+}
+.t-text-soft.is-swapping .t-text-soft-old {
+  opacity: 0;
+  filter: blur(var(--text-soft-blur));
+}
+.t-text-soft.is-swapping .t-text-soft-new {
+  opacity: 1;
+  filter: blur(0);
+}
+.roadbook-time .t-text-soft { --text-soft-align: end; }
+
+/* Page side-by-side : la page qui arrive glisse de 8 px dans un léger flou (de la droite en avançant, de la
+   gauche en revenant). */
+.t-page-in { animation: t-page-in var(--page-slide-dur) var(--page-slide-ease); }
+.t-page-in.forward { --t-page-from-x: var(--page-slide-distance); }
+.t-page-in.back { --t-page-from-x: calc(var(--page-slide-distance) * -1); }
+@keyframes t-page-in {
+  from { opacity: 0; transform: translateX(var(--t-page-from-x, 0px)); filter: blur(var(--page-blur)); }
+  to { opacity: 1; transform: translateX(0); filter: blur(0); }
+}
+
+/* Checkbox check : la case se remplit, puis la coche se dessine. La vraie case à cocher reste dessous (clavier,
+   lecteurs d'écran), invisible. */
+.gear-list label { position: relative; }
+.gear-list input[type=checkbox] { position: absolute; opacity: 0; width: 22px; height: 22px; margin: 0; }
+.t-check { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px;
+  border: 1.5px solid color-mix(in srgb, var(--text) 35%, transparent); background: var(--surface); }
+.t-check svg { width: 12px; height: 12px; overflow: visible; }
+.t-check svg path { fill: none; stroke: var(--accent-contrast); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.gear-list input:checked + .t-check { background: var(--accent); border-color: var(--accent); }
+.gear-list input:focus-visible + .t-check { outline: 2px solid var(--accent); outline-offset: 2px; }
+.t-check {
+  transition:
+    background var(--check-box) var(--check-ease),
+    box-shadow var(--check-box) var(--check-ease);
+}
+.t-check svg path {
+  stroke-dasharray: var(--check-len, 15);
+  stroke-dashoffset: var(--check-len, 15);
+  transition: stroke-dashoffset var(--check-uncheck) var(--check-ease);
+}
+.gear-list input:checked + .t-check svg path {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset var(--check-draw) var(--check-ease) var(--check-delay);
+}
+
+/* Modal : la fenêtre grandit depuis 96 % ; à la fermeture, elle s'efface un peu plus vite. Les autres fenêtres
+   (import Strava, réglages) ont l'ouverture. */
+.t-modal {
+  transform-origin: center;
+  transform: scale(var(--modal-scale));
+  opacity: 0;
+  transition:
+    transform var(--modal-open-dur) var(--modal-ease),
+    opacity   var(--modal-open-dur) var(--modal-ease);
+  will-change: transform, opacity;
+}
+.t-modal.is-open {
+  transform: scale(1);
+  opacity: 1;
+}
+.t-modal.is-closing {
+  transform: scale(var(--modal-scale-close));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--modal-close-dur) var(--modal-ease),
+    opacity   var(--modal-close-dur) var(--modal-ease);
+}
+.modal { animation: t-modal-in var(--modal-open-dur) var(--modal-ease); }
+@keyframes t-modal-in { from { opacity: 0; transform: scale(var(--modal-scale)); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .t-tabs-pill, .segmented > a, .plan-hero-scenarios > button { transition: none !important; }
+  .t-text-soft, .t-text-soft > span { transition: none !important; }
+  .t-page-in, .modal { animation: none !important; }
+  .t-check, .t-check svg path { transition: none !important; }
+  .t-modal { transition: none !important; }
+}

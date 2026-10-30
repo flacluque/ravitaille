@@ -165,6 +165,9 @@ export function GearCard({ raceName, plan, profile }: Props) {
                 <li key={item.id} className={item.packed ? 'packed' : ''}>
                   <label>
                     <input type="checkbox" checked={item.packed} onChange={(e) => patch(item.id, { packed: e.target.checked })} />
+                    <span className="t-check" aria-hidden>
+                      <svg viewBox="0 0 10.1668 10.1668"><path d="M1 5.52L3.92 9.17L9.17 1" /></svg>
+                    </span>
                     <span>{item.name}</span>
                   </label>
                   <select value={item.status} onChange={(e) => patch(item.id, { status: e.target.value as GearStatus })} aria-label="Statut">

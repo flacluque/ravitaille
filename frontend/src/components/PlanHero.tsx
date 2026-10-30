@@ -2,6 +2,8 @@ import type { RacePlan } from '../api/types';
 import { formatClock, formatDuration, localMinutes } from '../lib/format';
 import { bindingCutoff, tightestCutoff, worstCutoff } from '../lib/plan';
 import { StatusBadge } from './StatusBadge';
+import { SoftText, useSlidingPill } from './Motion';
+import { useRef } from 'react';
 
 interface Props {
   plans: RacePlan[];
@@ -19,6 +21,8 @@ const SCENARIO_HELP = [
 /** L'essentiel en un coup d'œil : l'arrivée prévue, la fourchette des scénarios et la barrière la plus serrée. */
 export function PlanHero({ plans, selected, onSelect }: Props) {
   const plan = plans[Math.min(selected, plans.length - 1)];
+  const bar = useRef<HTMLDivElement>(null);
+  useSlidingPill(bar, selected);
   if (!plan) return null;
   const tightest = tightestCutoff(plan);
   const first = plans[0];
@@ -41,9 +45,9 @@ export function PlanHero({ plans, selected, onSelect }: Props) {
     <section className="plan-hero" aria-label="Arrivée prévue">
       <div className="plan-hero-main">
         <span className="plan-hero-label">Arrivée prévue · scénario {plan.scenario.name.toLowerCase()}</span>
-        <span className="plan-hero-finish scenario-finish"><span className="plan-hero-day">{day}</span> {time}</span>
+        <span className="plan-hero-finish scenario-finish"><SoftText className="plan-hero-day" value={day} /> <SoftText value={time} /></span>
         <span className="plan-hero-detail">
-          {formatDuration(plan.totalDuration)} de course
+          <SoftText value={formatDuration(plan.totalDuration)} /> de course
           {plans.length > 1 && <> · entre <strong>{bound(first.finish)}</strong> et <strong>{bound(last.finish)}</strong> selon ta journée</>}
         </span>
         <div className="plan-hero-frieze" aria-hidden>
@@ -59,7 +63,8 @@ export function PlanHero({ plans, selected, onSelect }: Props) {
       </div>
       <div className="plan-hero-side">
         {plans.length > 1 && (
-          <div className="plan-hero-scenarios" role="group" aria-label="Scénario">
+          <div className="plan-hero-scenarios" role="group" aria-label="Scénario" ref={bar}>
+            <span className="t-tabs-pill" aria-hidden />
             {plans.map((p, i) => (
               <button key={p.scenario.name} type="button" aria-pressed={i === selected}
                 className={i === selected ? 'active' : ''} onClick={() => onSelect(i)} title={SCENARIO_HELP[i] ?? undefined}>
