@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CourseView, Marker, RacePlan } from '../api/types';
 import { STATUS_COLORS, TRACK_COLOR } from '../lib/colors';
 import { durationMinutes, formatClock, formatHm, formatKm } from '../lib/format';
@@ -90,7 +90,17 @@ export function CourseStrip({ plan, course, live = null }: Props) {
   }
 
   const tightX = tightIndex >= 0 ? x(at[tightIndex]) : 0;
-  const labelAnchor = tightX < 70 ? 'start' : tightX > W - 70 ? 'end' : 'middle';
+  // Le nom de la barrière, centré sous son point quand il y a la place, sinon calé sur le bord : jamais hors du cadre.
+  const tightLabel = tight ? `${tight.eta.name} · ${formatHm(tight.cutoff.marginMinutes)} de marge` : '';
+  const labelRef = useRef<SVGTextElement>(null);
+  const [labelW, setLabelW] = useState(tightLabel.length * 6.6);
+  useLayoutEffect(() => {
+    const measure = () => { if (labelRef.current) setLabelW(labelRef.current.getComputedTextLength()); };
+    measure();
+    // Mesuré de nouveau une fois la police de l'appli chargée (plus large ou plus étroite que celle de secours).
+    void document.fonts?.ready.then(measure);
+  }, [tightLabel]);
+  const labelX = Math.min(Math.max(tightX - labelW / 2, 0), Math.max(0, W - labelW));
   const nightMinutes = durationMinutes(plan.nightDuration);
   const summary = `Profil de la course : ${formatKm(total)} km, ${etas.length} points${nightMinutes > 0 ? `, ${formatHm(nightMinutes)} de nuit` : ''}`
     + (tight ? `. Barrière la plus serrée : ${tight.eta.name}, ${formatHm(tight.cutoff.marginMinutes)} de marge.` : '.');
@@ -112,8 +122,8 @@ export function CourseStrip({ plan, course, live = null }: Props) {
       {tightIndex >= 0 && <>
         <line x1={tightX} x2={tightX} y1={y(altAt(at[tightIndex]))} y2={BASE + 6} stroke={tightColor} strokeWidth={1.5} />
         <circle cx={tightX} cy={y(altAt(at[tightIndex]))} r={5.5} fill={tightColor} className="strip-tight" />
-        <text x={tightX} y={BASE + 19} textAnchor={labelAnchor} className={`strip-tight-label ${tight!.eta.status.toLowerCase()}`}>
-          {tight!.eta.name} · {formatHm(tight!.cutoff.marginMinutes)} de marge
+        <text ref={labelRef} x={labelX} y={BASE + 19} className={`strip-tight-label ${tight!.eta.status.toLowerCase()}`}>
+          {tightLabel}
         </text>
       </>}
       {runnerKm !== null && <>
