@@ -327,6 +327,24 @@ Dans Xcode : cible **App** → **Signing & Capabilities** → choisir son équip
 essayer sur son iPhone), brancher l'iPhone, puis ▶︎. Après une modification du site : `npm run build:app && npx cap
 sync ios`, puis ▶︎ à nouveau.
 
+## Appli Android (Capacitor)
+
+Le même projet, dans `frontend/android/` (identifiant `fr.ravitaille.app`). L'appli s'affiche bord à bord : les marges de
+la barre d'état et de la barre de navigation viennent de `env(safe-area-inset-*)`, comme sur l'iPhone. Le bouton retour
+referme d'abord la fenêtre ouverte, puis revient à la page d'avant, et quitte l'appli depuis la première.
+
+Avec [Android Studio](https://developer.android.com/studio) (il installe le SDK Android et Java) :
+
+```bash
+cd frontend
+npm ci
+npm run android      # construit la version appli, la copie dans android/ et ouvre Android Studio
+```
+
+Dans Android Studio : attendre la fin de « Gradle sync », brancher le téléphone (options pour les développeurs et
+débogage USB activés) ou lancer un émulateur, puis ▶︎ Run. Après une modification du site : `npm run build:app && npx cap
+sync android`, puis ▶︎ à nouveau.
+
 ## Architecture
 
 ```

@@ -16,7 +16,7 @@ export function connectStrava(): void {
   void import('@capacitor/browser').then(({ Browser }) => Browser.open({ url: stravaConnectUrl() }));
 }
 
-/** À l'ouverture de l'appli : retour de Strava, barre d'état, écran de lancement. Sans effet sur le site. */
+/** À l'ouverture de l'appli : retour de Strava, bouton retour d'Android, zoom. Sans effet sur le site. */
 export async function initNativeApp(): Promise<void> {
   if (!isNativeApp()) return;
   document.documentElement.classList.add('native');
@@ -31,6 +31,22 @@ export async function initNativeApp(): Promise<void> {
     if (result === null) return;
     void Browser.close().catch(() => undefined);
     window.location.replace(`/?strava=${encodeURIComponent(result)}`);
+  });
+  // Bouton retour d'Android (sans effet sur l'iPhone) : il referme d'abord ce qui est ouvert par-dessus, puis revient
+  // à la page d'avant (chaque page a son adresse #…), et quitte l'appli depuis la première.
+  await App.addListener('backButton', ({ canGoBack }) => {
+    const dialog = document.querySelector('dialog[open]');
+    if (dialog) {
+      dialog.dispatchEvent(new Event('cancel', { cancelable: true }));
+      return;
+    }
+    if (document.querySelector('.modal-backdrop, .legend-panel, .date-picker')) {
+      // Ces fenêtres se ferment avec Échap.
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      return;
+    }
+    if (canGoBack) window.history.back();
+    else void App.exitApp();
   });
 }
 

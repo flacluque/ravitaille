@@ -10,9 +10,11 @@
     "test": "vitest run",
     "typecheck": "tsc -b",
     "build:app": "tsc -b && vite build --mode app",
-    "ios": "npm run build:app && cap sync ios && cap open ios"
+    "ios": "npm run build:app && cap sync ios && cap open ios",
+    "android": "npm run build:app && cap sync android && cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.0",
     "@capacitor/app": "^8.1.2",
     "@capacitor/browser": "^8.0.5",
     "@capacitor/core": "^8.6.0",
