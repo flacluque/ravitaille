@@ -1,10 +1,11 @@
-import { loadGear } from '../api/storage';
+import { loadFix, loadGear } from '../api/storage';
 import type { CourseView, RacePlan } from '../api/types';
 import { formatClock, formatHm, formatKm, formatMeters, localMinutes } from '../lib/format';
 import { tightestCutoff } from '../lib/plan';
-import { isRaceWindow, nowMinutes } from '../lib/race';
+import { isRaceWindow, nowMinutes, offsetMinutes } from '../lib/race';
 import { ListGroup, ListRow, ScreenTitle } from './AppScreen';
-import { CrewIcon, DocIcon, FlagIcon, StopwatchIcon, WatchIcon } from './Icons';
+import { CourseStrip } from './CourseStrip';
+import { BackpackIcon, CrewIcon, DocIcon, FlagIcon, StopwatchIcon, WatchIcon } from './Icons';
 import { StravaLogo } from './StravaLogo';
 
 interface Props {
@@ -76,32 +77,29 @@ export function HomeDashboard({ mode, course, plan, exampleReferences, loading, 
         </div>
       )}
 
+      {racing ? (
+        <a className="tile tile-go tile-wide" href={hrefs.course}>
+          <span className="tile-label">C'est le jour J</span>
+          <span className="tile-value">En course</span>
+          <span className="tile-sub">Prochain ravito, avance ou retard</span>
+        </a>
+      ) : over && mode === 'custom' && (
+        <a className="tile tile-go tile-wide" href={hrefs.retour}>
+          <span className="tile-label">Course terminée</span>
+          <span className="tile-value">Retour de course</span>
+          <span className="tile-sub">Compare avec ton activité Strava</span>
+        </a>
+      )}
+
+      <a className="home-course" href={hrefs.plan} aria-label="Ouvrir le plan">
+        <span className="home-course-head">
+          <span>{formatKm(plan.totalDistanceKm)} km · {formatMeters(plan.totalGainM)} D+ · {plan.checkpoints.length} points</span>
+          {!racing && !over && mode === 'custom' && <strong>départ dans {countdown(start - now).value}</strong>}
+        </span>
+        <CourseStrip plan={plan} course={course} live={racing ? { now, offset: offsetMinutes(plan, loadFix(course.race.name, plan.start)) } : null} />
+      </a>
+
       <div className="home-tiles">
-        {mode === 'demo' ? (
-          <div className="tile">
-            <span className="tile-label">Le parcours</span>
-            <span className="tile-value">{formatKm(plan.totalDistanceKm)} km</span>
-            <span className="tile-sub">{formatMeters(plan.totalGainM)} D+ · {plan.checkpoints.length} points</span>
-          </div>
-        ) : racing ? (
-          <a className="tile tile-go" href={hrefs.course}>
-            <span className="tile-label">C'est le jour J</span>
-            <span className="tile-value">En course</span>
-            <span className="tile-sub">Ouvrir le roadbook point par point</span>
-          </a>
-        ) : over ? (
-          <a className="tile tile-go" href={hrefs.retour}>
-            <span className="tile-label">Course terminée</span>
-            <span className="tile-value">Retour</span>
-            <span className="tile-sub">Compare avec ton activité Strava</span>
-          </a>
-        ) : (
-          <div className="tile">
-            <span className="tile-label">{countdown(start - now).label}</span>
-            <span className="tile-value">{countdown(start - now).value}</span>
-            <span className="tile-sub">{formatKm(plan.totalDistanceKm)} km · {formatMeters(plan.totalGainM)} D+</span>
-          </div>
-        )}
         <a className="tile" href={hrefs.plan}>
           <span className="tile-label">Arrivée prévue</span>
           <span className="tile-value">{finishDay} {finishTime}</span>
@@ -111,11 +109,6 @@ export function HomeDashboard({ mode, course, plan, exampleReferences, loading, 
           <span className="tile-label">Marge la plus serrée</span>
           <span className="tile-value">{margin === null ? '—' : margin < 0 ? 'Dépassée' : formatHm(margin)}</span>
           <span className="tile-sub">{tight ? tight.eta.name : 'Pas de barrière horaire'}</span>
-        </a>
-        <a className="tile" href={hrefs.sac}>
-          <span className="tile-label">Ton sac</span>
-          <span className="tile-value">{gear.length === 0 ? 'À faire' : `${packed} / ${gear.length}`}</span>
-          <span className="tile-sub">{gear.length === 0 ? 'Liste du matériel obligatoire' : packed === gear.length ? 'Tout est prêt' : 'à cocher la veille'}</span>
         </a>
       </div>
 
@@ -134,6 +127,9 @@ export function HomeDashboard({ mode, course, plan, exampleReferences, loading, 
         {racing && <ListRow icon={<StopwatchIcon size={18} />} tone="warm" title="En course" detail="Prochain ravito, avance ou retard" href={hrefs.course} />}
         <ListRow icon={<WatchIcon size={18} />} tone="warm" title="Ta montre" detail="Parcours Garmin et champ Prochain Ravito, ou .gpx"
           onClick={onWatch} disabled={!!exportBlocked} />
+        <ListRow icon={<BackpackIcon size={18} />} tone="neutral" title="Ton sac"
+          detail={gear.length === 0 ? 'Liste du matériel obligatoire à faire' : packed === gear.length ? 'Tout est prêt' : 'À cocher la veille'}
+          value={gear.length ? `${packed} / ${gear.length}` : undefined} href={hrefs.sac} />
         <ListRow icon={<CrewIcon size={18} />} tone="calm" title="Ton assistance" detail="Où elle t'attend, lien de suivi" href={hrefs.ravitos} />
         <ListRow icon={<DocIcon size={18} />} tone="neutral" title="Plan en PDF" detail="Une page à glisser dans la poche"
           onClick={onPdf} disabled={!!exportBlocked} />
