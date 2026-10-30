@@ -1,4 +1,5 @@
 import { Fragment, useState } from 'react';
+import { MoonIcon } from './Icons';
 import type { Marker, RacePlan, Service } from '../api/types';
 import { durationMinutes, formatClock, formatDuration, formatKm, formatPace } from '../lib/format';
 import { bindingCutoff } from '../lib/plan';
@@ -61,7 +62,7 @@ export function Roadbook({ plan, markers, services, crew, onHover, onDetails }: 
                     <span className="sr-only">Tronçon : </span>
                     {formatKm(eta.legDistanceKm)} km · +{Math.round(eta.legGainM)} m · {formatDuration(eta.legDuration)}
                     <span className="roadbook-pace"> · {formatPace(eta.legPaceMinPerKm)}</span>
-                    {night && <strong className="roadbook-night"> · ☾ de nuit</strong>}
+                    {night && <strong className="roadbook-night"> · <MoonIcon /> de nuit</strong>}
                   </span>
                 </li>
               )}

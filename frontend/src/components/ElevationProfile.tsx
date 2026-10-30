@@ -122,7 +122,7 @@ export function ElevationProfile({ track, markers, plan, hoverKm, onHover }: Pro
               height={innerH + 4} />
           ))}
           {nights[0] && (
-            <text className="night-label" x={scales.x(nights[0][0]) + 4} y={M.top + 10}>☾ de nuit</text>
+            <text className="night-label" x={scales.x(nights[0][0]) + 4} y={M.top + 10}>de nuit</text>
           )}
 
           <path d={paths.area} fill="url(#profile-fill)" />

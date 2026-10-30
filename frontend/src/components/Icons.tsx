@@ -57,3 +57,6 @@ export const ChatIcon = ({ size = 22 }: IconProps) => (
 export const FlagIcon = ({ size = 22 }: IconProps) => (
   <svg {...base} width={size} height={size}><path d="M5 21V4M5 4h11l-2 4 2 4H5" /></svg>
 );
+export const MoonIcon = ({ size = 14 }: IconProps) => (
+  <svg {...base} width={size} height={size}><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg>
+);

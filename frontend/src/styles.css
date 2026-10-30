@@ -676,7 +676,8 @@ button.plan-hero-worst { padding: 0; min-height: 44px; background: transparent; 
 .roadbook-leg { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 16px; padding: 0 12px; color: var(--muted); font-size: var(--fs-small); }
 .roadbook-leg > span:last-child { align-self: center; padding: 6px 0; }
 .roadbook-leg-line { justify-self: center; width: 3px; min-height: 34px; background: var(--track); }
-.roadbook-night { color: var(--text); }
+.roadbook-night { color: var(--text); white-space: nowrap; }
+.roadbook-night svg { vertical-align: -2px; }
 .roadbook-point { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .roadbook-row { width: 100%; padding: 12px; background: transparent; color: var(--text); border: 0; border-radius: 0; font-weight: 400; text-align: left; }
 .roadbook-row:hover { background: var(--surface-2); }
@@ -872,7 +873,7 @@ button.plan-hero-worst { padding: 0; min-height: 44px; background: transparent; 
 
 .ravitos-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
 .ravitos-timeline { display: flex; flex-direction: column; }
-.ravitos-start { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; border-radius: var(--radius); background: var(--accent); color: var(--accent-contrast); }
+.ravitos-start { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); }
 .ravitos-step { display: flex; flex-direction: column; }
 .ravitos-leg { margin: 0 0 0 22px; position: relative; padding: 14px 0 14px 18px; display: flex; flex-direction: column; gap: 6px; }
 /* Le tronçon se lit comme le chemin entre deux points : un trait, pas une carte. */
@@ -890,7 +891,8 @@ button.plan-hero-worst { padding: 0; min-height: 44px; background: transparent; 
 .ravitos-meta { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 18px; }
 .ravitos-arrival { padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); }
 .ravitos-arrival.crew { border: 2px solid #f4b48c; background: #fff8f2; color: #1c1f1d; }
-.ravitos-arrival.finish { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+.ravitos-arrival.finish { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.ravitos-arrival.finish .ravitos-arrival-time { color: var(--accent); }
 .ravitos-arrival-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .ravitos-arrival-name { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .ravitos-arrival-name strong { font-size: var(--fs-body); line-height: 1.25; }
@@ -898,7 +900,7 @@ button.plan-hero-worst { padding: 0; min-height: 44px; background: transparent; 
 .ravitos-arrival-time { flex: none; font-family: var(--font-display); font-size: 1.625rem; font-weight: 800; line-height: 1;
   font-variant-numeric: tabular-nums; }
 .ravitos-arrival.crew .ravitos-arrival-name .small { color: #8a3b07; font-weight: 700; }
-.ravitos-arrival.finish .ravitos-arrival-name .small { color: inherit; opacity: 0.85; }
+
 .ravitos-chips { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .ravitos-chips li { padding: 6px 10px; border-radius: 8px; background: var(--surface-2); font-size: var(--fs-small); }
 .ravitos-chips li.crew { background: #fff1e8; border: 1px solid #f4b48c; color: #1c1f1d; font-weight: 600; }
@@ -1364,9 +1366,9 @@ a.list-row:active, button.list-row:active:not(:disabled) { background: var(--sur
 
 .segmented { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 2px; border-radius: 10px;
   background: var(--surface-2); border: 1px solid var(--border); }
-.segmented a { display: grid; place-items: center; min-height: 36px; padding: 4px; border-radius: 8px; color: var(--muted);
+.segmented a { border: 1px solid transparent; display: grid; place-items: center; min-height: 36px; padding: 4px; border-radius: 8px; color: var(--muted);
   font-size: var(--fs-small); font-weight: 600; text-align: center; text-decoration: none; }
-.segmented a[aria-current='page'] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+.segmented a[aria-current='page'] { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
 
 .references-page { display: flex; flex-direction: column; gap: 12px; }
 
@@ -1404,7 +1406,8 @@ button.onb-back { align-self: flex-start; min-height: 44px; padding: 0; backgrou
   .plan-hero-scenarios { order: -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; padding: 2px;
     border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
   .plan-hero-scenarios button { min-height: 40px; border-radius: 8px; color: var(--muted); font-size: var(--fs-small); font-weight: 600; }
-  .plan-hero-scenarios button.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+  .plan-hero-scenarios button { border: 1px solid transparent; }
+  .plan-hero-scenarios button.active { background: var(--surface); color: var(--text); border-color: var(--border); box-shadow: none; }
   .plan-hero-help { order: 0; margin-top: -4px; padding: 0 4px; }
   .plan-hero-main { order: 1; padding: 14px 16px 6px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); }
   .plan-hero-finish { font-size: 3.75rem; }
@@ -1442,3 +1445,35 @@ button.ravitos-back.done { justify-self: end; font-weight: 700; }
 .waking { display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 300px; text-align: center; color: var(--muted); }
 .waking .spinner { width: 22px; height: 22px; }
 .waking p { margin: 0; }
+
+/* Téléphone, règles d'écran d'appli : marges de 16 px, étiquettes en minuscules et lisibles, une explication de moins. */
+@media (max-width: 860px) {
+  .layout { padding: 16px; gap: 16px; }
+  .scenario-name, th, .cp-header, .product-head, .nutrition-table td[data-label]::before, .gear-group h3, .overline,
+  .plan-hero-label, .plan-hero-watch-title, .roadbook-cols, .roadbook-day, .placement-figures dt, .race-time-label, .example-tag,
+  .cv-label, .runner-profile h3, .race-review h3, .list-group > h2 { text-transform: none; letter-spacing: 0; }
+  .list-group > h2 { margin: 0 4px; font-size: var(--fs-small); font-weight: 700; color: var(--text); }
+  .plan-hero-label, .roadbook-cols, .overline, .gear-group h3 { font-size: var(--fs-small); font-weight: 600; }
+  .roadbook-day { font-size: var(--fs-small); color: var(--text); }
+  .plan-hero-help { display: none; }
+}
+/* Plan sur téléphone : les heures de passage commencent dès le premier écran. */
+@media (max-width: 860px) {
+  .plan-hero-frieze { display: none; }
+  .plan-hero-main { padding: 12px 14px; gap: 2px; }
+  .plan-hero-finish { font-size: 3.25rem; }
+  .plan-hero-day { font-size: var(--fs-lead); }
+  .plan-hero-detail { font-size: var(--fs-small); color: var(--muted); }
+  .plan-hero-watch { gap: 2px; padding: 10px 14px; font-size: var(--fs-small); }
+  button.plan-hero-worst { min-height: 32px; line-height: 1.4; }
+  .plan-page { gap: 16px; }
+}
+@media (max-width: 860px) {
+  /* En-tête des heures de passage sur une ligne ; « Point / Arrivée » se voit sans être écrit. */
+  .roadbook-head { flex-wrap: nowrap; align-items: center; margin-bottom: 4px; }
+  .roadbook-head h2 { font-size: var(--fs-lead); }
+  .roadbook-head button.legend-btn { min-height: 36px; padding: 0 10px; }
+  .roadbook-cols { display: none; }
+  .roadbook-tools .link-btn { display: none; }
+  .roadbook-day { padding-top: 6px; }
+}

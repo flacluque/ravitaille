@@ -430,7 +430,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   const rhythmRow = (
       <ListRow icon={exampleReferences ? <StravaLogo size={18} /> : <RouteIcon size={18} />} tone={exampleReferences ? 'strava' : 'accent'}
         title={exampleReferences ? 'Ton rythme : course d\'exemple' : 'Ton rythme'}
-        detail={exampleReferences ? 'Importe tes courses depuis Strava pour un plan à ton rythme'
+        detail={exampleReferences ? 'Importe tes courses depuis Strava'
           : `${references.length} référence${references.length > 1 ? 's' : ''}${plan?.runner ? ' · profil de coureur' : ''}`}
         href={TAB_HASH.references} />
   );
@@ -460,7 +460,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
 
   return (
     <div className="app">
-      <header className="topbar">
+      {!phone && <header className="topbar">
         <a className="brand" href={TAB_HASH.accueil} aria-label="Ravitaille : accueil">
           <img src="/icon.svg" alt="" width={28} height={28} />
           <span>Ravitaille</span>
@@ -513,7 +513,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
             </div>
           ))}
         </div>
-      </header>
+      </header>}
 
       <nav className="tabs no-print" aria-label="Pages">
         {TABS.map(([id, label]) => (
@@ -604,7 +604,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
                 course (Accueil, « Préparer ma course »).</p>}
           </>}
           {tab === 'analyse' && subPage('Analyse détaillée')}
-          {tab === 'plan' && mode === 'demo' && (
+          {tab === 'plan' && mode === 'demo' && !phone && (
             <div className="example-banner no-print" role="note">
               <span>Tu regardes <strong>un exemple</strong> : {course?.race.name ?? 'une course type'}, avec des références types.</span>
               <button type="button" onClick={() => switchMode('custom')}>Préparer ma course</button>
@@ -624,6 +624,11 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
             />
           ) : phone ? (
             <ListGroup>
+              {mode === 'demo' && (
+                <ListRow icon={<FlagIcon size={18} />} title="Course d'exemple"
+                  detail="Saisis la tienne pour ton propre plan"
+                  value={<span className="row-action-accent">Préparer</span>} onClick={() => switchMode('custom')} />
+              )}
               {mode === 'custom' && (
                 <ListRow icon={<FlagIcon size={18} />} title="Ta course"
                   detail={gpx ? `Roadbook et trace GPX (${gpx.name})` : 'Sans trace GPX : ajoute-la pour la carte et le profil'}

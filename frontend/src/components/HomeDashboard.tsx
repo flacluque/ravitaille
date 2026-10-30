@@ -78,7 +78,7 @@ export function HomeDashboard({ mode, course, plan, exampleReferences, loading, 
 
       <div className="home-tiles">
         {mode === 'demo' ? (
-          <div className="tile tile-go">
+          <div className="tile">
             <span className="tile-label">Le parcours</span>
             <span className="tile-value">{formatKm(plan.totalDistanceKm)} km</span>
             <span className="tile-sub">{formatMeters(plan.totalGainM)} D+ · {plan.checkpoints.length} points</span>
@@ -96,7 +96,7 @@ export function HomeDashboard({ mode, course, plan, exampleReferences, loading, 
             <span className="tile-sub">Compare avec ton activité Strava</span>
           </a>
         ) : (
-          <div className="tile tile-go">
+          <div className="tile">
             <span className="tile-label">{countdown(start - now).label}</span>
             <span className="tile-value">{countdown(start - now).value}</span>
             <span className="tile-sub">{formatKm(plan.totalDistanceKm)} km · {formatMeters(plan.totalGainM)} D+</span>
