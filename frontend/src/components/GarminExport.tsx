@@ -111,18 +111,19 @@ export function GarminExport({ course, plans, selected, services, onClose }: Pro
   // le retirer du DOM suffit (et close() déclencherait onClose pendant le double montage du mode strict).
   useEffect(() => {
     const d = dialog.current;
+    // Modal (transitions.dev) : la fenêtre grandit depuis 96 % en apparaissant (animation CSS sur [open]).
     if (d && !d.open) d.showModal();
-    // Modal (transitions.dev) : la fenêtre grandit depuis 96 % en apparaissant.
-    const frame = requestAnimationFrame(() => d?.classList.add('is-open'));
-    return () => cancelAnimationFrame(frame);
   }, []);
-  // Fermeture : la fenêtre s'efface, puis le <dialog> se ferme (et le parent la retire).
+  // Fermeture : la fenêtre s'efface, puis le <dialog> se ferme (et le parent la retire). Filet de sécurité si la fin
+  // de l'animation n'arrive pas (mouvement réduit, onglet en arrière-plan).
   function close() {
     const d = dialog.current;
     if (!d || d.classList.contains('is-closing')) return;
-    d.classList.remove('is-open');
+    let done = false;
+    const finish = () => { if (!done) { done = true; d.close(); } };
+    d.addEventListener('animationend', (e) => { if (e.target === d) finish(); }, { once: true });
     d.classList.add('is-closing');
-    window.setTimeout(() => d.close(), modalCloseMs());
+    window.setTimeout(finish, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : modalCloseMs() + 80);
   }
   useEffect(() => setState('idle'), [scenario, timeInName, checkpoints, brand]);
 
