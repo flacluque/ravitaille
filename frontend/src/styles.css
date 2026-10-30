@@ -1439,3 +1439,6 @@ button.ravitos-back.done { justify-self: end; font-weight: 700; }
   .launch-trace { animation: none; stroke-dashoffset: 0; }
   .launch-fade .launch-mark { transform: none; }
 }
+.waking { display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 300px; text-align: center; color: var(--muted); }
+.waking .spinner { width: 22px; height: 22px; }
+.waking p { margin: 0; }
