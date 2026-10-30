@@ -1627,29 +1627,18 @@ button.ravitos-back.done { justify-self: end; font-weight: 700; }
   transition: stroke-dashoffset var(--check-draw) var(--check-ease) var(--check-delay);
 }
 
-/* Modal : la fenêtre grandit depuis 96 % ; à la fermeture, elle s'efface un peu plus vite. Les autres fenêtres
-   (import Strava, réglages) ont l'ouverture. */
-.t-modal {
-  transform-origin: center;
-  transform: scale(var(--modal-scale));
-  opacity: 0;
-  transition:
-    transform var(--modal-open-dur) var(--modal-ease),
-    opacity   var(--modal-open-dur) var(--modal-ease);
-  will-change: transform, opacity;
-}
-.t-modal.is-open {
-  transform: scale(1);
-  opacity: 1;
-}
-.t-modal.is-closing {
-  transform: scale(var(--modal-scale-close));
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    transform var(--modal-close-dur) var(--modal-ease),
-    opacity   var(--modal-close-dur) var(--modal-ease);
-}
+/* Modal : la fenêtre grandit depuis 96 % ; à la fermeture, elle s'efface un peu plus vite, et le fond avec elle.
+   En animations plutôt qu'en transitions : Safari (l'iPhone) n'anime pas une transition sur une fenêtre qui vient de
+   s'afficher. Les autres fenêtres (import Strava, réglages) ont l'ouverture. */
+.t-modal { transform-origin: center; will-change: transform, opacity; }
+.t-modal[open] { animation: t-modal-open var(--modal-open-dur) var(--modal-ease) both; }
+.t-modal[open]::backdrop { animation: t-backdrop-in var(--modal-open-dur) var(--modal-ease) both; }
+.t-modal.is-closing { pointer-events: none; animation: t-modal-close var(--modal-close-dur) var(--modal-ease) both; }
+.t-modal.is-closing::backdrop { animation: t-backdrop-out var(--modal-close-dur) var(--modal-ease) both; }
+@keyframes t-modal-open { from { opacity: 0; transform: scale(var(--modal-scale)); } to { opacity: 1; transform: scale(1); } }
+@keyframes t-modal-close { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(var(--modal-scale-close)); } }
+@keyframes t-backdrop-in { from { opacity: 0; } }
+@keyframes t-backdrop-out { to { opacity: 0; } }
 .modal { animation: t-modal-in var(--modal-open-dur) var(--modal-ease); }
 @keyframes t-modal-in { from { opacity: 0; transform: scale(var(--modal-scale)); } }
 
@@ -1658,5 +1647,5 @@ button.ravitos-back.done { justify-self: end; font-weight: 700; }
   .t-text-soft, .t-text-soft > span { transition: none !important; }
   .t-page-in, .modal { animation: none !important; }
   .t-check, .t-check svg path { transition: none !important; }
-  .t-modal { transition: none !important; }
+  .t-modal, .t-modal::backdrop { animation: none !important; }
 }
