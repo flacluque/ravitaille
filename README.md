@@ -1,4 +1,4 @@
-# Ravitaille
+# Ravitime
 
 Planificateur de course trail : à partir du roadbook (et/ou de la trace GPX) et de tes courses
 de référence, il calcule les **heures de passage à chaque ravito**, les **marges sur les barrières
@@ -31,7 +31,7 @@ npm run dev              # http://localhost:5173 (les appels /api sont relayés 
 ```
 
 - **Six onglets** pour ne pas se perdre :
-  - **Accueil** : à quoi sert Ravitaille et comment s'en servir, avec un aperçu du plan. Affiché à la
+  - **Accueil** : à quoi sert Ravitime et comment s'en servir, avec un aperçu du plan. Affiché à la
     première visite, puis on arrive sur « Mon plan » (le logo ramène à l'accueil) ;
   - **Mon plan** : l'arrivée prévue et sa fourchette, la barrière la plus serrée, la carte, le profil et
     les heures de passage (le tableau détaillé est dans « Analyse ») ;
@@ -174,7 +174,7 @@ test : l'image dans `src/test/resources/roadbooks/`, la saisie de référence da
 Strava demande une **application API**, gratuite, à créer une fois avec ton compte :
 
 1. Sur https://www.strava.com/settings/api, crée une application :
-   - nom : `Ravitaille` (au choix), catégorie : `Training` ;
+   - nom : `Ravitime` (au choix), catégorie : `Training` ;
    - site web : `http://localhost` ;
    - **domaine de rappel (Authorization Callback Domain) : `localhost`**.
 2. Note l'**identifiant client** (Client ID) et le **secret client** (Client Secret).
@@ -295,9 +295,10 @@ visite et met environ une minute à se réveiller.
      Tally…, ou `mailto:toi@exemple.fr`) ; vide : pas de bouton.
 
    `TRAILPLANNER_SECRET` (clé des cookies) est tiré au hasard par Render. Le premier déploiement
-   prend quelques minutes ; l'adresse du site est du type `https://trail-planner-xxxx.onrender.com`.
+   prend quelques minutes ; l'adresse du site est du type `https://trail-planner-xxxx.onrender.com`. Le site public est
+   branché sur `https://ravitime.fr` (Render › Settings › Custom Domains ; DNS chez one.com).
 3. **Strava**, sur https://www.strava.com/settings/api :
-   - **domaine de rappel** : le domaine Render, sans `https://` (ex. `trail-planner-xxxx.onrender.com`).
+   - **domaine de rappel** : le domaine du site, sans `https://` (`ravitime.fr`).
      Strava n'en accepte qu'un : pour revenir au local, remets `localhost` ;
    - **capacité** : 10 sportifs, pour que tes amis puissent connecter leur compte.
 4. Envoie l'adresse et le code d'invitation. Chaque visiteur saisit le code une fois (retenu un an) ;
@@ -312,7 +313,7 @@ Pour essayer l'image en local : `docker build -t trail-planner . && docker run -
 
 Le même site, emballé par [Capacitor](https://capacitorjs.com) dans `frontend/ios/`. L'appli appelle le serveur en
 ligne (`frontend/.env.app`), garde la connexion Strava et le code d'accès dans ses en-têtes (pas de cookies), ouvre
-Strava dans le navigateur intégré et revient par le lien `ravitaille://strava?…`, et partage les fichiers (.fit,
+Strava dans le navigateur intégré et revient par le lien `ravitime://strava?…`, et partage les fichiers (.fit,
 .gpx, PDF) par la feuille de partage d'iOS.
 
 Sur un Mac avec Xcode :
@@ -329,7 +330,7 @@ sync ios`, puis ▶︎ à nouveau.
 
 ## Appli Android (Capacitor)
 
-Le même projet, dans `frontend/android/` (identifiant `fr.ravitaille.app`). L'appli s'affiche bord à bord : les marges de
+Le même projet, dans `frontend/android/` (identifiant `fr.ravitime.app`). L'appli s'affiche bord à bord : les marges de
 la barre d'état et de la barre de navigation viennent de `env(safe-area-inset-*)`, comme sur l'iPhone. Le bouton retour
 referme d'abord la fenêtre ouverte, puis revient à la page d'avant, et quitte l'appli depuis la première.
 

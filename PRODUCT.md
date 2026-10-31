@@ -19,7 +19,7 @@ téléphone ou sur leur montre (Garmin surtout). Presque tous ont Strava.
 
 ## Product Purpose
 
-Ravitaille calcule les heures de passage à chaque ravito d'une course, à partir des courses passées du coureur
+Ravitime calcule les heures de passage à chaque ravito d'une course, à partir des courses passées du coureur
 (références, ou importées de Strava), et en tire tout ce qui se prépare : marges sur les barrières horaires, nuit,
 nutrition ravito par ravito, sac et matériel obligatoire, plan sur la montre (.fit / champ Connect IQ « Prochain
 Ravito », ou .gpx), lien de suivi pour l'assistance, retour de course. Réussite : le coureur arrive aux ravitos à
@@ -43,7 +43,7 @@ roadbook officiel (photo ou PDF) est lu par l'IA, les ravitos se placent sur la 
 ## Capabilities and Constraints
 
 - Front React + TypeScript (Vite) dans `frontend/`, API Spring Boot ; appli iOS par Capacitor (Strava dans le
-  navigateur intégré, retour par `ravitaille://`, partage iOS des fichiers).
+  navigateur intégré, retour par `ravitime://`, partage iOS des fichiers).
 - Onglets actuels : Accueil, Mon plan, En course, Ravitos, Sac, Analyse détaillée, Comment ça marche ; exports PDF,
   montre ; exemple embarqué (Raid des Bogomiles 2026).
 - Pas de compte pour l'instant : tout est gardé dans le navigateur / l'appli. Comptes, Premium (annuel ou pass course)
@@ -53,7 +53,7 @@ roadbook officiel (photo ou PDF) est lu par l'IA, les ravitos se placent sur la 
 
 ## Brand Commitments
 
-- Nom : Ravitaille (site et appli) ; champ Garmin : Prochain Ravito.
+- Nom : Ravitime (site et appli) ; champ Garmin : Prochain Ravito.
 - Vouvoiement exclu : l'appli tutoie le coureur, en français, ton direct et concret.
 - Couleurs et icône existantes : vert forêt #1f4d3a, crème #f6f4ef, orange trace #e8893a ; icône montagne et trace.
 - Polices embarquées Barlow (texte) et Barlow Semi Condensed (titres, heures), pour la lecture en mouvement.

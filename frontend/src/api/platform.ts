@@ -23,8 +23,8 @@ export function siteUrl(): string {
 }
 
 /** En-têtes de l'appli (voir WebConfig côté serveur). */
-export const STRAVA_HEADER = 'X-Ravitaille-Strava';
-export const ACCESS_HEADER = 'X-Ravitaille-Access';
+export const STRAVA_HEADER = 'X-Ravitime-Strava';
+export const ACCESS_HEADER = 'X-Ravitime-Access';
 
 const STRAVA_KEY = 'trail-planner:app-strava';
 const ACCESS_KEY = 'trail-planner:app-acces';
@@ -66,7 +66,7 @@ export function rememberFromResponse(headers: Headers): void {
 }
 
 /**
- * Retour de Strava dans l'appli, par son lien « ravitaille://strava?strava=connected&session=… » : la connexion
+ * Retour de Strava dans l'appli, par son lien « ravitime://strava?strava=connected&session=… » : la connexion
  * chiffrée est gardée. Renvoie le résultat (comme le « ?strava=… » du site), null pour un autre lien.
  */
 export function handleAppLink(link: string): string | null {

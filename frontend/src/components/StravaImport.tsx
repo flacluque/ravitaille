@@ -194,7 +194,7 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
             <p>L'import Strava demande une <strong>application API Strava</strong>, gratuite, à créer une fois :</p>
             <ol>
               <li>Sur <a href="https://www.strava.com/settings/api" target="_blank" rel="noreferrer">strava.com/settings/api</a>,
-                crée une application : nom « Ravitaille », site web <code>http://localhost</code>,
+                crée une application : nom « Ravitime », site web <code>http://localhost</code>,
                 domaine de rappel <code>localhost</code>.</li>
               <li>À la racine du projet, crée le fichier <code>config/application.properties</code> (ignoré par git),
                 avec le <strong>Client ID</strong> (un nombre) et le <strong>Client Secret</strong> de cette page :
@@ -206,7 +206,7 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
 
         {status?.configured && !status.connected && (
           <div className="strava-connect">
-            <p>Autorise Ravitaille à lire tes activités. Tes identifiants Strava ne passent jamais par l'appli,
+            <p>Autorise Ravitime à lire tes activités. Tes identifiants Strava ne passent jamais par l'appli,
               et tu peux révoquer l'accès à tout moment.</p>
             <ConnectWithStrava />
             {error && <p className="field-error" role="alert">{error}</p>}

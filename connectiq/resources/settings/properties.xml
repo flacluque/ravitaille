@@ -1,5 +1,5 @@
 <properties>
-    <!-- Vide : le coureur colle le code de son plan (Ravitaille › Télécharger › Parcours pour ma Garmin) dans les
+    <!-- Vide : le coureur colle le code de son plan (Ravitime › Télécharger › Parcours pour ma Garmin) dans les
          réglages du champ, depuis l'appli Connect IQ du téléphone. -->
     <property id="planCode" type="string"></property>
 </properties>

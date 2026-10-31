@@ -264,7 +264,7 @@ export interface RaceResult {
   fatigueExponent: number | null;
   /** Compter cette course pour la fatigue (à décocher pour une course perturbée : blessure, météo…). */
   use: boolean;
-  /** Course de Ravitaille comparée (api/races), absente pour un retour enregistré par une version précédente. */
+  /** Course de Ravitime comparée (api/races), absente pour un retour enregistré par une version précédente. */
   raceId?: string;
 }
 

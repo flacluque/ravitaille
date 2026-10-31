@@ -12,8 +12,8 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'Ravitaille',
-        short_name: 'Ravitaille',
+        name: 'Ravitime',
+        short_name: 'Ravitime',
         description: 'Heures de passage, ravitos et barrières horaires de ta course',
         lang: 'fr',
         theme_color: '#1f4d3a',

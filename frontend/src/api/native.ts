@@ -3,7 +3,7 @@ import { stravaConnectUrl } from './client';
 
 /**
  * Ce qui ne se fait pas comme sur le site dans l'appli iPhone (Capacitor) : la connexion Strava dans le navigateur
- * intégré, le retour dans l'appli par son lien (ravitaille://strava?…), la barre d'état. Les modules natifs ne sont
+ * intégré, le retour dans l'appli par son lien (ravitime://strava?…), la barre d'état. Les modules natifs ne sont
  * chargés que dans l'appli.
  */
 

@@ -108,9 +108,9 @@ function tabFromHash(hash: string): Tab | null {
 const DEFAULT_REFERENCES: Reference[] = [{ label: '', date: null, kind: 'RACE', km: 60, gainM: 3200, time: 'PT8H48M' }];
 
 const DISCONNECTED_NOTICE = 'Strava est déconnecté. Tout ce qui en venait (références importées, profil de coureur, retours de '
-  + 'course) a été effacé de Ravitaille.';
-const REVOKED_NOTICE = 'Strava n\'est plus connecté à Ravitaille (accès révoqué ou déconnecté). Tout ce qui en venait '
-  + '(références importées, profil de coureur, retours de course) a été effacé de Ravitaille.';
+  + 'course) a été effacé de Ravitime.';
+const REVOKED_NOTICE = 'Strava n\'est plus connecté à Ravitime (accès révoqué ou déconnecté). Tout ce qui en venait '
+  + '(références importées, profil de coureur, retours de course) a été effacé de Ravitime.';
 
 type Mode = 'demo' | 'custom';
 
@@ -729,9 +729,9 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   return (
     <div className="app">
       {!phone && <header className="topbar">
-        <a className="brand" href={TAB_HASH.accueil} aria-label="Ravitaille : accueil">
+        <a className="brand" href={TAB_HASH.accueil} aria-label="Ravitime : accueil">
           <img src="/icon.svg" alt="" width={28} height={28} />
-          <span>Ravitaille</span>
+          <span>Ravitime</span>
         </a>
         {book.races.length > 0 ? <RacePicker title={pickerTitle} subtitle={pickerSubtitle} {...raceList} />
           : tab === 'accueil' ? <div className="race-title" /> : otherRace ? (

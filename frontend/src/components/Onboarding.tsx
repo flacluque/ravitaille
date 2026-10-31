@@ -26,7 +26,7 @@ export function Onboarding({ onExample, onStrava, onManual, onLater }: Props) {
           <div className="onb-body">
             <img src="/icon.svg" alt="" width={64} height={64} />
             <h1>Tes heures de passage, à ton rythme.</h1>
-            <p>Ravitaille calcule ton arrivée à chaque ravito à partir de tes propres courses, et prépare ta nutrition, ton sac
+            <p>Ravitime calcule ton arrivée à chaque ravito à partir de tes propres courses, et prépare ta nutrition, ton sac
               et ta montre.</p>
           </div>
           <div className="onb-actions">

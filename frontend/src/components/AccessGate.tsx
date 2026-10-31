@@ -85,7 +85,7 @@ export function AccessGate({ children }: { children: (info: AppInfo | null) => R
       <form className="card form" onSubmit={(e) => void submit(e)}>
         <div className="brand">
           <img src="/icon.svg" alt="" width={36} height={36} />
-          <span>Ravitaille</span>
+          <span>Ravitime</span>
         </div>
         <p>Le site est en test entre amis : entre le code d'invitation qu'on t'a donné.</p>
         <label>
