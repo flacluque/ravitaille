@@ -1,12 +1,12 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { fetchStravaStatus } from '../api/client';
 import { MAX_PREP_WEEKS, MIN_PREP_WEEKS } from '../api/storage';
 import type { ElevationSource, Reference, ReferenceKind, TrainingOptions } from '../api/types';
 import { durationMinutes, formatHm, formatKm, parseHmInput } from '../lib/format';
 import { isExampleReference, type Target } from '../lib/strava';
 import { DatePicker } from './DatePicker';
+import { PoweredByStrava, ViewOnStrava } from './StravaBrand';
 import { StravaImport } from './StravaImport';
-import { StravaLogo } from './StravaLogo';
 
 interface Props {
   initialReferences: Reference[];
@@ -20,6 +20,8 @@ interface Props {
   onTrainingChange: (options: TrainingOptions) => void;
   /** Ouvrir tout de suite l'import Strava (bouton « Importer depuis Strava » de l'accueil). */
   openStrava?: boolean;
+  /** Strava déconnecté depuis l'import : l'appli efface ce qui en venait. */
+  onStravaDisconnected: () => void;
 }
 
 
@@ -38,6 +40,8 @@ interface Row {
   km: string;
   gain: string;
   time: string;
+  /** Sortie importée de Strava, tant que ses valeurs ne sont pas modifiées à la main. */
+  strava?: Reference['strava'];
 }
 
 let nextRowId = 0;
@@ -49,6 +53,7 @@ const toRow = (r: Reference): Row => ({
   km: String(r.km),
   gain: String(r.gainM),
   time: formatHm(durationMinutes(r.time)),
+  strava: r.strava,
 });
 /** Durées de préparation proposées : un plan d'entraînement dure de 10 à 16 semaines. */
 const PREP_WEEKS = Array.from({ length: MAX_PREP_WEEKS - MIN_PREP_WEEKS + 1 }, (_, i) => MIN_PREP_WEEKS + i);
@@ -66,11 +71,20 @@ function parseRow(row: Row): { ref: Reference | null; errors: Partial<Record<'km
   if (row.gain.trim() === '' || !(gain >= 0)) errors.gain = 'D+ ≥ 0';
   if (time === null) errors.time = 'Format 8h48';
   if (Object.keys(errors).length) return { ref: null, errors };
-  return { ref: { label: row.label.trim(), date: row.date || null, kind: row.kind, km, gainM: gain, time: time! }, errors };
+  const ref: Reference = { label: row.label.trim(), date: row.date || null, kind: row.kind, km, gainM: gain, time: time! };
+  return { ref: row.strava ? { ...ref, strava: row.strava } : ref, errors };
 }
 
-export function ReferenceForm({ initialReferences, initialSource, loading, onSubmit, target, training, onTrainingChange, openStrava = false }: Props) {
+export function ReferenceForm({ initialReferences, initialSource, loading, onSubmit, target, training, onTrainingChange, openStrava = false,
+  onStravaDisconnected }: Props) {
   const [rows, setRows] = useState<Row[]>(() => initialReferences.map(toRow));
+  // Références changées par l'appli (vérification Strava, déconnexion) ou recalculées : le formulaire les reprend.
+  const shownReferences = useRef(initialReferences);
+  useEffect(() => {
+    if (shownReferences.current === initialReferences) return;
+    shownReferences.current = initialReferences;
+    setRows(initialReferences.map(toRow));
+  }, [initialReferences]);
   const [source, setSource] = useState<ElevationSource>(initialSource);
   // Repliées en un résumé une fois le plan calculé : on les rouvre pour les modifier.
   const [expanded, setExpanded] = useState(() => initialReferences.length === 0 || initialReferences.some((r) => !(r.km > 0)));
@@ -95,7 +109,9 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
   const parsed = rows.map(parseRow);
   const valid = parsed.every((p) => p.ref !== null);
 
-  const update = (id: number, patch: Partial<Row>) => setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  // Une sortie Strava dont on change la date, la distance, le D+ ou le temps devient une saisie à la main.
+  const update = (id: number, patch: Partial<Row>) => setRows((rs) => rs.map((r) => (r.id !== id ? r
+    : { ...r, ...patch, ...(['date', 'km', 'gain', 'time'].some((k) => k in patch) ? { strava: undefined } : {}) })));
 
   // Les sorties importées s'ajoutent aux références (à la place d'une ligne vide), et le plan est recalculé.
   function addImported(refs: Reference[]) {
@@ -134,9 +150,7 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
       <div className="ref-strava">
         <p>Le plus simple : <strong>importe tes courses depuis Strava</strong>. Ravitaille repère celles qui ressemblent à ta
           course.</p>
-        <button type="button" className="strava-btn" onClick={() => setStravaOpen(true)}>
-          <StravaLogo /> Importer depuis Strava
-        </button>
+        <button type="button" className="ghost" onClick={() => setStravaOpen(true)}>Importer depuis Strava</button>
       </div>
 
       {!expanded && (
@@ -170,6 +184,7 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
             <div className="ref-head">
               <input className="ref-label" value={row.label} onChange={(e) => update(row.id, { label: e.target.value })}
                 placeholder={i === 0 ? 'Ex. : Trail des Cathares' : `Référence ${i + 1}`} aria-label="Nom" />
+              {row.strava && <ViewOnStrava id={row.strava.id} />}
               {rows.length > 1 && (
                 <button type="button" className="ghost icon-btn" aria-label={`Supprimer ${row.label || `la référence ${i + 1}`}`}
                   onClick={() => setRows((rs) => rs.filter((r) => r.id !== row.id))}>✕</button>
@@ -269,6 +284,8 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
         </p>
       )}
 
+      {rows.some((r) => r.strava) && <PoweredByStrava />}
+
       {stravaOpen && (
         <StravaImport
           existing={parsed.flatMap((p) => (p.ref ? [p.ref] : []))}
@@ -278,6 +295,7 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
           connectionResult={stravaResult}
           training={training}
           onTrainingChange={onTrainingChange}
+          onDisconnected={onStravaDisconnected}
         />
       )}
     </form>

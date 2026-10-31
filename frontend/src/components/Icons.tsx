@@ -60,3 +60,9 @@ export const FlagIcon = ({ size = 22 }: IconProps) => (
 export const MoonIcon = ({ size = 14 }: IconProps) => (
   <svg {...base} width={size} height={size}><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg>
 );
+export const LinkIcon = ({ size = 22 }: IconProps) => (
+  <svg {...base} width={size} height={size}><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>
+);
+export const ShieldIcon = ({ size = 22 }: IconProps) => (
+  <svg {...base} width={size} height={size}><path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z" /><path d="M9 12l2 2 4-4" /></svg>
+);

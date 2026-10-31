@@ -4,12 +4,11 @@ import { ApiError, disconnectStrava, fetchStravaActivities, fetchStravaStatus } 
 import { MAX_PREP_WEEKS, MIN_PREP_WEEKS } from '../api/storage';
 import type { Reference, ReferenceKind, StravaActivity, StravaStatus, TrainingOptions } from '../api/types';
 import { durationMinutes, formatHm, formatKm, formatMeters } from '../lib/format';
-import { StravaLogo } from './StravaLogo';
 import {
   activityTime, activityToReference, blockSummary, closest, connectionMessage, isAlreadyReference, keySessions, sortActivities,
   splitByBlock, SPORT_LABELS, yearsAgo, type Target,
 } from '../lib/strava';
-import { connectStrava } from '../api/native';
+import { ConnectWithStrava, PoweredByStrava, ViewOnStrava } from './StravaBrand';
 import { addDays, isIsoDate, prepWindow, todayIso } from '../lib/dates';
 import { DatePicker } from './DatePicker';
 
@@ -25,6 +24,8 @@ interface Props {
   /** Durée de la préparation (partagée avec le réglage « forme ») ; l'import active sa prise en compte. */
   training: TrainingOptions;
   onTrainingChange: (options: TrainingOptions) => void;
+  /** Strava vient d'être déconnecté : l'appli efface ce qui en venait. */
+  onDisconnected: () => void;
 }
 
 const PREP_WEEKS = Array.from({ length: MAX_PREP_WEEKS - MIN_PREP_WEEKS + 1 }, (_, i) => MIN_PREP_WEEKS + i);
@@ -35,7 +36,7 @@ const OLDER_SHOWN = 15;
 const frDate = (iso: string) => iso.split('-').reverse().join('/');
 
 /** Import des sorties Strava comme références. */
-export function StravaImport({ existing, target, onAdd, onClose, connectionResult, training, onTrainingChange }: Props) {
+export function StravaImport({ existing, target, onAdd, onClose, connectionResult, training, onTrainingChange, onDisconnected }: Props) {
   const message = connectionMessage(connectionResult);
   const [status, setStatus] = useState<StravaStatus | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -126,10 +127,16 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
   }
 
   async function disconnect() {
-    await disconnectStrava().catch(() => undefined);
+    try {
+      await disconnectStrava();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      return;
+    }
     setActivities(null);
     setSelected(new Map());
     refreshStatus();
+    onDisconnected();
   }
 
   function row(a: StravaActivity) {
@@ -154,6 +161,7 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
           <span>{formatMeters(a.elevationGainM)} D+</span>
           <span title={`Temps écoulé, pauses comprises : ${formatHm(durationMinutes(a.elapsedTime))}`}>
             {formatHm(durationMinutes(activityTime(a)))}</span>
+          <ViewOnStrava id={a.id} />
         </span>
         {kind && (
           <select value={kind} onChange={(e) => setKind(a, e.target.value as ReferenceKind)} aria-label={`Type de ${a.name}`}>
@@ -170,7 +178,7 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
     <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal strava" role="dialog" aria-modal="true" aria-labelledby="strava-title">
         <div className="modal-head strava-head">
-          <h2 id="strava-title"><span className="strava-mark"><StravaLogo size={18} /></span> Importer depuis Strava</h2>
+          <h2 id="strava-title">Importer depuis Strava</h2>
           <button type="button" className="ghost icon-btn" onClick={onClose} aria-label="Fermer">✕</button>
         </div>
 
@@ -200,9 +208,7 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
           <div className="strava-connect">
             <p>Autorise Ravitaille à lire tes activités. Tes identifiants Strava ne passent jamais par l'appli,
               et tu peux révoquer l'accès à tout moment.</p>
-            <button type="button" className="strava-btn" onClick={connectStrava}>
-              <StravaLogo /> Se connecter avec Strava
-            </button>
+            <ConnectWithStrava />
             {error && <p className="field-error" role="alert">{error}</p>}
           </div>
         )}
@@ -211,7 +217,7 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
           <>
             <p className="muted small strava-account">
               Connecté : {status.athlete ?? 'compte Strava'} ·{' '}
-              <button type="button" className="link-btn" onClick={() => void disconnect()}>se déconnecter</button>
+              <button type="button" className="link-btn" onClick={() => void disconnect()}>déconnecter Strava</button>
             </p>
             {loading && <p className="scan-progress" role="status"><span className="spinner" aria-hidden /> Lecture de tes activités…</p>}
             {error && <p className="field-error" role="alert">{error}</p>}
@@ -293,13 +299,13 @@ export function StravaImport({ existing, target, onAdd, onClose, connectionResul
 
             <div className="modal-foot">
               <span className="muted small">Temps de déplacement Strava (pauses exclues).</span>
-              <button type="button" className="strava-btn" onClick={add} disabled={selected.size === 0}>
+              <button type="button" onClick={add} disabled={selected.size === 0}>
                 {selected.size > 1 ? `Ajouter ${selected.size} références` : 'Ajouter la référence'}
               </button>
             </div>
           </>
         )}
-        <p className="strava-powered"><StravaLogo size={12} /> Données d'activité fournies par Strava</p>
+        <PoweredByStrava />
       </div>
     </div>,
     document.body,

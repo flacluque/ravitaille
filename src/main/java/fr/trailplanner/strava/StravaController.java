@@ -87,7 +87,7 @@ public class StravaController {
 
     /** Profil personnel (pente et fatigue) mesuré sur les sorties Strava du coureur. */
     @GetMapping("/profile")
-    public RunnerProfile profile(HttpServletRequest request, HttpServletResponse response) {
+    public MeasuredProfile profile(HttpServletRequest request, HttpServletResponse response) {
         StravaSession session = cookies.read(request);
         try {
             return strava.profile(session);

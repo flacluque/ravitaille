@@ -231,7 +231,11 @@ export function saveRunnerName(name: string): void {
 // calcul de sa course quand il choisit de l'utiliser.
 const RUNNER_PROFILE_KEY = 'trail-planner:profil-coureur';
 
-/** Une course analysée (retour de course) : sa fatigue compte pour les plans suivants si le coureur le veut. */
+/**
+ * Une course analysée (retour de course) : sa fatigue compte pour les plans suivants si le coureur le veut. Le nom, la
+ * date et la distance sont ceux de la course du coureur (son plan), pas de l'activité Strava ; seuls l'identifiant de
+ * l'activité (pour l'effacer si elle disparaît de Strava) et la fatigue mesurée viennent de Strava.
+ */
 export interface RaceResult {
   activityId: number;
   name: string;
@@ -246,6 +250,8 @@ export interface RaceResult {
 export interface StoredRunnerProfile {
   /** Coût selon la pente, mesuré sur les sorties Strava (sa fatigue est celle du coureur moyen). */
   profile: RunnerProfile | null;
+  /** Activités Strava d'où vient le profil : s'il en manque une sur Strava, le profil est effacé. */
+  sources: number[];
   use: boolean;
   /** Date de la mesure (ISO). */
   measuredAt: string | null;
@@ -253,7 +259,7 @@ export interface StoredRunnerProfile {
   races: RaceResult[];
 }
 
-export const NO_RUNNER_PROFILE: StoredRunnerProfile = { profile: null, use: false, measuredAt: null, races: [] };
+export const NO_RUNNER_PROFILE: StoredRunnerProfile = { profile: null, sources: [], use: false, measuredAt: null, races: [] };
 
 export function loadRunnerProfile(): StoredRunnerProfile {
   try {
@@ -263,7 +269,11 @@ export function loadRunnerProfile(): StoredRunnerProfile {
     const profile = saved.profile && Array.isArray(saved.profile.slope) && typeof saved.profile.fatigueExponent === 'number'
       ? saved.profile : null;
     const races = Array.isArray(saved.races) ? saved.races.filter((r) => r && typeof r.activityId === 'number') : [];
-    return { profile, use: (!!profile || races.length > 0) && saved.use !== false, measuredAt: saved.measuredAt ?? null, races };
+    // Profil d'une version qui ne gardait pas ses activités d'origine : on ne peut plus le relier à Strava, il est oublié.
+    const sources = Array.isArray(saved.sources) ? saved.sources.filter((id) => typeof id === 'number') : [];
+    const kept = profile && sources.length > 0 ? profile : null;
+    return { profile: kept, sources: kept ? sources : [], use: (!!kept || races.length > 0) && saved.use !== false,
+      measuredAt: kept ? saved.measuredAt ?? null : null, races };
   } catch {
     return NO_RUNNER_PROFILE;
   }
@@ -296,5 +306,25 @@ export function saveWatchBrand(brand: WatchBrand): void {
     localStorage.setItem(WATCH_KEY, brand);
   } catch {
     // Stockage indisponible : le choix vaut pour cette visite.
+  }
+}
+
+// Dernière vérification des données Strava gardées (voir lib/stravaData) : une fois par jour au plus.
+const STRAVA_CHECK_KEY = 'trail-planner:strava-verifie';
+
+export function loadStravaCheck(): string | null {
+  try {
+    return localStorage.getItem(STRAVA_CHECK_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function saveStravaCheck(at: string | null): void {
+  try {
+    if (at) localStorage.setItem(STRAVA_CHECK_KEY, at);
+    else localStorage.removeItem(STRAVA_CHECK_KEY);
+  } catch {
+    // Stockage indisponible : la vérification se refera à la prochaine ouverture.
   }
 }

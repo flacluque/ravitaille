@@ -5,7 +5,12 @@ import type {
 import type { NightWindow } from '../lib/draft';
 import { API_BASE, apiUrl, appHeaders, isNativeApp, rememberFromResponse } from './platform';
 
-export class ApiError extends Error {}
+export class ApiError extends Error {
+  /** Code HTTP de la réponse (401 : Strava a refusé l'accès, la connexion est oubliée). */
+  constructor(message: string, readonly status?: number) {
+    super(message);
+  }
+}
 
 /** Message d'erreur montrable au coureur : celui du serveur, ou une coupure réseau dite en clair. */
 export function humanError(e: unknown): string {
@@ -36,7 +41,7 @@ async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
     // Le code de l'erreur reste affiché : c'est ce qui permet de retrouver la cause quand le coureur la signale.
     throw new ApiError(detail ?? (res.status >= 500
       ? `le serveur a rencontré un problème (erreur ${res.status}). Réessaie dans un instant.`
-      : `une donnée de ta course ou de tes références n'est pas valide (erreur ${res.status}). Vérifie la saisie.`));
+      : `une donnée de ta course ou de tes références n'est pas valide (erreur ${res.status}). Vérifie la saisie.`), res.status);
   }
   return res.json() as Promise<T>;
 }
@@ -126,7 +131,7 @@ export function fetchStravaActivities(after: string): Promise<StravaActivity[]> 
 }
 
 /** Profil personnel (pente et fatigue) mesuré sur les sorties Strava : une quinzaine de requêtes à Strava. */
-export function fetchRunnerProfile(): Promise<RunnerProfile> {
+export function fetchRunnerProfile(): Promise<{ profile: RunnerProfile; sources: number[] }> {
   return getJson('/api/strava/profile');
 }
 

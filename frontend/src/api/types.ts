@@ -221,6 +221,11 @@ export interface Reference {
   gainM: number;
   /** Durée ISO-8601, ex. "PT8H48M". */
   time: string;
+  /**
+   * Référence importée de Strava : l'activité d'origine et la date de la dernière vérification auprès de Strava. Ses
+   * valeurs sont des données Strava : gardées 7 jours au plus sans nouvelle vérification (voir lib/stravaData).
+   */
+  strava?: { id: number; checkedAt: string };
 }
 
 /** Ce que prédit une référence seule, et son poids dans le plan (fr.trailplanner.engine.ReferenceInsight). */

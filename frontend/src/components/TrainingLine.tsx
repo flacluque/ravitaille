@@ -1,6 +1,5 @@
 import type { RacePlan } from '../api/types';
 import { comparedReferences, formEffect, volumeChange } from '../lib/training';
-import { StravaLogo } from './StravaLogo';
 
 /** La préparation résumée en une ligne ; le détail est dans l'onglet Analyse. */
 export function TrainingLine({ plan, onDetails }: { plan: RacePlan; onDetails: () => void }) {
@@ -10,7 +9,6 @@ export function TrainingLine({ plan, onDetails }: { plan: RacePlan; onDetails: (
   const main = [...comparedReferences(plan.references)].sort((a, b) => b.weight - a.weight)[0];
   return (
     <div className="card training-line">
-      <span className="strava-mark small"><StravaLogo size={12} /></span>
       <span>
         <strong>Ta préparation :</strong>{' '}
         {t.active

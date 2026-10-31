@@ -5,8 +5,7 @@ import { tightestCutoff } from '../lib/plan';
 import { isRaceWindow, nowMinutes, offsetMinutes } from '../lib/race';
 import { ListGroup, ListRow, ScreenTitle } from './AppScreen';
 import { CourseStrip } from './CourseStrip';
-import { BackpackIcon, CrewIcon, DocIcon, FlagIcon, StopwatchIcon, WatchIcon } from './Icons';
-import { StravaLogo } from './StravaLogo';
+import { BackpackIcon, CrewIcon, DocIcon, FlagIcon, RouteIcon, StopwatchIcon, WatchIcon } from './Icons';
 
 interface Props {
   mode: 'demo' | 'custom';
@@ -114,11 +113,11 @@ export function HomeDashboard({ mode, course, plan, exampleReferences, loading, 
 
       {exampleReferences && (
         <div className="home-strava" role="note">
-          <span className="home-strava-mark"><StravaLogo size={20} /></span>
+          <span className="home-strava-mark"><RouteIcon size={20} /></span>
           <div>
             <p><strong>Ton plan suit une course d'exemple.</strong> Importe tes courses depuis Strava : ton plan suivra ton
               rythme.</p>
-            <button type="button" className="strava-btn" onClick={onStrava}><StravaLogo /> Importer depuis Strava</button>
+            <button type="button" onClick={onStrava}>Importer depuis Strava</button>
           </div>
         </div>
       )}

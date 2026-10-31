@@ -5,8 +5,7 @@ import type { CourseView, RacePlan, RaceReview, StravaActivity } from '../api/ty
 import { formatClockFromMinutes, formatHm, formatKm, formatMeters, localMinutes } from '../lib/format';
 import { compareRace } from '../lib/review';
 import { STANDARD_FATIGUE, fatigueEffect } from '../lib/runner';
-import { connectStrava } from '../api/native';
-import { StravaLogo } from './StravaLogo';
+import { ConnectWithStrava, PoweredByStrava, ViewOnStrava } from './StravaBrand';
 
 interface Props {
   plan: RacePlan;
@@ -87,7 +86,9 @@ export function RaceReviewCard({ plan, course, stored, onChange }: Props) {
   function save() {
     const a = activities?.find((x) => x.id === review?.activityId);
     if (!review || !a) return;
-    const result: RaceResult = { activityId: a.id, name: a.name || course.race.name, date: a.date, distanceKm: review.distanceKm,
+    // Le nom et la distance sont ceux de la course préparée : de Strava, on ne garde que l'activité (pour l'effacer si
+    // elle disparaît de Strava), sa date (vérifiée chaque jour avec elle) et la fatigue mesurée.
+    const result: RaceResult = { activityId: a.id, name: course.race.name, date: a.date, distanceKm: plan.totalDistanceKm,
       fatigueExponent: review.fatigueExponent, use: count && review.fatigueExponent !== null };
     onChange({ ...stored, use: stored.use || result.use, races: [...stored.races.filter((r) => r.activityId !== a.id), result] });
     setReview(null);
@@ -108,7 +109,7 @@ export function RaceReviewCard({ plan, course, stored, onChange }: Props) {
   return (
     <section className="card race-review">
       <div className="card-head">
-        <h2><span className="strava-mark small"><StravaLogo size={13} /></span> Retour de course</h2>
+        <h2>Retour de course</h2>
         <p className="muted small">
           Après ta course, choisis ton activité Strava : on compare ton temps à ton plan ({plan.scenario.name.toLowerCase()}),
           ravito par ravito, et ta fatigue sur cette course sert à tes prochains plans.
@@ -130,7 +131,10 @@ export function RaceReviewCard({ plan, course, stored, onChange }: Props) {
                       : `fatigue ${r.fatigueExponent.toFixed(2).replace('.', ',')}`}</span>
                   </span>
                 </label>
-                <button type="button" className="link-btn" onClick={() => setRace(r.activityId, null)}>Retirer</button>
+                <span className="review-race-actions">
+                  <ViewOnStrava id={r.activityId} />
+                  <button type="button" className="link-btn" onClick={() => setRace(r.activityId, null)}>Retirer</button>
+                </span>
               </li>
             ))}
           </ul>
@@ -140,7 +144,7 @@ export function RaceReviewCard({ plan, course, stored, onChange }: Props) {
 
       {!review && (
         connected === false ? (
-          <button type="button" className="strava-btn" onClick={connectStrava}><StravaLogo /> Connecter Strava</button>
+          <ConnectWithStrava />
         ) : activities === null ? (
           <div className="runner-actions">
             <button type="button" onClick={() => void pick()} disabled={busy || connected === null}>
@@ -157,7 +161,7 @@ export function RaceReviewCard({ plan, course, stored, onChange }: Props) {
               <label key={a.id} className="check">
                 <input type="radio" name="review-activity" checked={chosen === a.id} onChange={() => setChosen(a.id)} />
                 <span><strong>{a.name || 'Sortie'}</strong> · {new Date(a.date).toLocaleDateString('fr-FR')} · {formatKm(a.distanceKm)} km
-                  · {formatMeters(a.elevationGainM)} D+</span>
+                  · {formatMeters(a.elevationGainM)} D+ · <ViewOnStrava id={a.id} /></span>
               </label>
             ))}
             <div className="runner-actions">
@@ -213,6 +217,7 @@ export function RaceReviewCard({ plan, course, stored, onChange }: Props) {
         </div>
       )}
       {error && <p className="field-error" role="alert">{error}</p>}
+      {(stored.races.length > 0 || activities !== null || review) && <PoweredByStrava />}
     </section>
   );
 }
