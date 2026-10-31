@@ -7,7 +7,7 @@ import { connectStrava } from '../api/native';
  * - ce qui montre des données Strava porte le logo officiel « Powered by Strava », plus discret que la marque Ravitaille ;
  * - une activité renvoie vers Strava par un lien « View on Strava » (gras et souligné) ;
  * - jamais le logo de Strava comme icône, ni de bouton aux couleurs de Strava : Ravitaille n'est pas une appli Strava.
- * Les images officielles sont dans public/strava (voir son README). Si l'une manque, un texte sobre la remplace.
+ * Les images officielles sont dans public/strava (voir son README) ; si l'une ne se charge pas, un texte sobre la remplace.
  */
 
 const ASSETS = '/strava';
