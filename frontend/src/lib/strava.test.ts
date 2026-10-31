@@ -3,6 +3,7 @@ import type { StravaActivity } from '../api/types';
 import {
   activityToReference, blockSummary, closest, closeness, connectionMessage, filterActivities, isAlreadyReference, keySessions,
   sortActivities, splitByBlock, weeksAgo, yearsAgo,
+  withoutExample,
 } from './strava';
 
 const act = (id: number, date: string, km: number, gain: number, race = false): StravaActivity => ({
@@ -96,5 +97,14 @@ describe('bloc de préparation', () => {
     expect(keySessions(block, null).map((a) => a.id)).toEqual([11, 12, 13, 15]);
     const existing = [activityToReference(act(13, '2026-09-01', 38, 2100), 'TRAINING')];
     expect(keySessions(block, troubadours, existing).map((a) => a.id)).toEqual([11, 12, 14, 15]);
+  });
+});
+
+describe('course d\'exemple', () => {
+  const example = { label: '', date: null, kind: 'RACE' as const, km: 60, gainM: 3200, time: 'PT8H48M' };
+  const mine = { label: 'Cathares', date: '2026-05-01', kind: 'RACE' as const, km: 60, gainM: 3000, time: 'PT9H' };
+  it('n\'est gardée que tant qu\'il n\'y a pas de vraie référence', () => {
+    expect(withoutExample([example])).toEqual([example]);
+    expect(withoutExample([example, mine])).toEqual([mine]);
   });
 });
