@@ -18,6 +18,8 @@ interface Props {
   crew: string[];
   /** Renvoie le lien de suivi à l'assistance, avec le recalage (absent sans assistance). */
   onShareCrew?: (fix: Fix | null, message: string) => Promise<ShareResult>;
+  /** Clé de la course (api/races) sous laquelle les pointages sont gardés. */
+  raceKey: string;
 }
 
 const clock = (minutes: number) => formatClockFromMinutes(minutes);
@@ -28,15 +30,15 @@ const CONFIRM_GAP = 20;
  * « En course » : une page par point, comme un roadbook qu'on feuillette au téléphone. Pilotée par
  * l'horloge ; « Je suis à ce point » recale la suite sur l'heure réelle.
  */
-export function RaceView({ plan, course, services, profile, crew, onShareCrew }: Props) {
+export function RaceView({ raceKey, plan, course, services, profile, crew, onShareCrew }: Props) {
   const raceName = course.race.name;
-  const [fix, setFix] = useState<Fix | null>(() => loadFix(raceName, plan.start));
+  const [fix, setFix] = useState<Fix | null>(() => loadFix(raceKey, plan.start));
   const [now, setNow] = useState(nowMinutes);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(nowMinutes()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
-  useEffect(() => setFix(loadFix(raceName, plan.start)), [raceName, plan.start]);
+  useEffect(() => setFix(loadFix(raceKey, plan.start)), [raceKey, plan.start]);
 
   const progress = raceProgress(plan, now, fix);
   const [shown, setShown] = useState<number | null>(null);
@@ -54,13 +56,13 @@ export function RaceView({ plan, course, services, profile, crew, onShareCrew }:
     const previous = fix;
     const next = { index: target, atMinutes: Math.round(at) };
     setFix(next);
-    saveFix(raceName, plan.start, next);
+    saveFix(raceKey, plan.start, next);
     setShown(null);
     setCrewNotice(null);
     setConfirming(null);
     undo.offer(`Pointé à ${plan.checkpoints[target].name} à ${clock(at)}.`, () => {
       setFix(previous);
-      saveFix(raceName, plan.start, previous);
+      saveFix(raceKey, plan.start, previous);
     });
   }
   function arrived(at: number) {
@@ -81,7 +83,7 @@ export function RaceView({ plan, course, services, profile, crew, onShareCrew }:
   }
   function clearFix() {
     setFix(null);
-    saveFix(raceName, plan.start, null);
+    saveFix(raceKey, plan.start, null);
   }
 
   const eta = plan.checkpoints[index];

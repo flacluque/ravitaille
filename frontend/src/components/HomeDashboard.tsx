@@ -1,11 +1,13 @@
-import { loadFix, loadGear } from '../api/storage';
+import { loadFix } from '../api/storage';
 import type { CourseView, RacePlan } from '../api/types';
 import { formatClock, formatHm, formatKm, formatMeters, localMinutes } from '../lib/format';
 import { tightestCutoff } from '../lib/plan';
 import { isRaceWindow, nowMinutes, offsetMinutes } from '../lib/race';
-import { ListGroup, ListRow, ScreenTitle } from './AppScreen';
+import type { ReactNode } from 'react';
+import { ListGroup, ListRow } from './AppScreen';
+import { PrepChecklist, type PrepItem } from './Races';
 import { CourseStrip } from './CourseStrip';
-import { BackpackIcon, CrewIcon, DocIcon, FlagIcon, RouteIcon, StopwatchIcon, WatchIcon } from './Icons';
+import { ChevronDownIcon, DocIcon, FlagIcon, RouteIcon, StopwatchIcon, WatchIcon } from './Icons';
 
 interface Props {
   mode: 'demo' | 'custom';
@@ -22,6 +24,27 @@ interface Props {
   onPdf: () => void;
   /** Pourquoi la montre et le PDF ne sont pas disponibles (plan pas calculé ou périmé). */
   exportBlocked: string | null;
+  /** Le titre ouvre « Mes courses ». */
+  onRaces: () => void;
+  /** Nom de la course quand son plan n'est pas encore calculé. */
+  draftName: string;
+  /** Ce qui reste à préparer. */
+  prep: PrepItem[];
+  /** Clé de la course (api/races) : pointages du jour J. */
+  raceKey: string;
+}
+
+/** Le nom de la course, en grand : on le touche pour changer de course. */
+function RaceSwitcher({ title, subtitle, onClick }: { title: string; subtitle?: ReactNode; onClick: () => void }) {
+  return (
+    <div className="screen-title">
+      <button type="button" className="race-switcher" onClick={onClick} aria-haspopup="dialog" aria-label={`${title} : changer de course`}>
+        <h1>{title}</h1>
+        <span className="race-switcher-chev" aria-hidden><ChevronDownIcon size={16} /></span>
+      </button>
+      {subtitle && <p>{subtitle}</p>}
+    </div>
+  );
 }
 
 /** « dans 12 jours », « dans 5 h », « demain » */
@@ -37,11 +60,11 @@ function countdown(minutes: number): { value: string; label: string } {
  * reste à faire, et le chemin vers la vue En course le jour J.
  */
 export function HomeDashboard({ mode, course, plan, exampleReferences, loading, hrefs, onMyRace, onEditRace, onStrava,
-  onWatch, onPdf, exportBlocked }: Props) {
+  onWatch, onPdf, exportBlocked, onRaces, draftName, prep, raceKey }: Props) {
   if (!course || !plan) {
     return (
       <div className="home">
-        <ScreenTitle title={mode === 'custom' ? 'Ta course' : 'Ravitaille'} />
+        <RaceSwitcher title={mode === 'custom' ? draftName : 'Ravitaille'} onClick={onRaces} />
         {loading ? <p className="muted">Calcul en cours…</p> : (
           <div className="home-empty">
             <p>Saisis ta course (roadbook, trace GPX) : Ravitaille calcule ton heure de passage à chaque ravito.</p>
@@ -59,14 +82,12 @@ export function HomeDashboard({ mode, course, plan, exampleReferences, loading, 
   const tight = tightestCutoff(plan);
   const margin = tight?.cutoff.marginMinutes ?? null;
   const marginTone = margin === null ? '' : margin < 0 ? 'missed' : margin < 60 ? 'tight' : 'ok';
-  const gear = loadGear(course.race.name);
-  const packed = gear.filter((g) => g.packed).length;
   const [finishDay, finishTime] = formatClock(plan.finish).split(' ');
   const startLabel = new Date(`${course.race.start}`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
     <div className="home">
-      <ScreenTitle title={course.race.name}
+      <RaceSwitcher title={course.race.name} onClick={onRaces}
         subtitle={<>{mode === 'demo' ? 'Exemple · ' : ''}{startLabel} · départ {formatClock(plan.start).split(' ')[1]}</>} />
 
       {mode === 'demo' && (
@@ -95,7 +116,7 @@ export function HomeDashboard({ mode, course, plan, exampleReferences, loading, 
           <span>{formatKm(plan.totalDistanceKm)} km · {formatMeters(plan.totalGainM)} D+ · {plan.checkpoints.length} points</span>
           {!racing && !over && mode === 'custom' && <strong>départ dans {countdown(start - now).value}</strong>}
         </span>
-        <CourseStrip plan={plan} course={course} live={racing ? { now, offset: offsetMinutes(plan, loadFix(course.race.name, plan.start)) } : null} />
+        <CourseStrip plan={plan} course={course} live={racing ? { now, offset: offsetMinutes(plan, loadFix(raceKey, plan.start)) } : null} />
       </a>
 
       <div className="home-tiles">
@@ -122,14 +143,13 @@ export function HomeDashboard({ mode, course, plan, exampleReferences, loading, 
         </div>
       )}
 
-      <ListGroup header="Préparer" footer={exportBlocked ?? undefined}>
+      <h2 className="home-section">À préparer</h2>
+      <PrepChecklist items={prep} />
+
+      <ListGroup header="Pour la course" footer={exportBlocked ?? undefined}>
         {racing && <ListRow icon={<StopwatchIcon size={18} />} tone="warm" title="En course" detail="Prochain ravito, avance ou retard" href={hrefs.course} />}
         <ListRow icon={<WatchIcon size={18} />} tone="warm" title="Ta montre" detail="Parcours Garmin et champ Prochain Ravito, ou .gpx"
           onClick={onWatch} disabled={!!exportBlocked} />
-        <ListRow icon={<BackpackIcon size={18} />} tone="neutral" title="Ton sac"
-          detail={gear.length === 0 ? 'Liste du matériel obligatoire à faire' : packed === gear.length ? 'Tout est prêt' : 'À cocher la veille'}
-          value={gear.length ? `${packed} / ${gear.length}` : undefined} href={hrefs.sac} />
-        <ListRow icon={<CrewIcon size={18} />} tone="calm" title="Ton assistance" detail="Où elle t'attend, lien de suivi" href={hrefs.ravitos} />
         <ListRow icon={<DocIcon size={18} />} tone="neutral" title="Plan en PDF" detail="Une page à glisser dans la poche"
           onClick={onPdf} disabled={!!exportBlocked} />
         {mode === 'custom' && <ListRow icon={<FlagIcon size={18} />} tone="neutral" title="Modifier ma course" detail="Roadbook, trace, ravitos" onClick={onEditRace} />}

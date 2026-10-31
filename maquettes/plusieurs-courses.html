@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette · Plusieurs courses</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f6f4ef; --surface: #fff; --surface-2: #f1eee7; --text: #1c1f1d; --muted: #5c605a; --border: #e2ddd2;
+  --accent: #1f4d3a; --accent-contrast: #fff; --track: #c2410c; --ok: #15803d; --tight: #d97706;
+  --ok-fg: #166534; --tight-fg: #92400e; --ok-bg: #dcfce7; --tight-bg: #fef3c7;
+  --body: 'Barlow', system-ui, sans-serif; --display: 'Barlow Semi Condensed', 'Barlow', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #d9d6ce; font-family: var(--body); color: var(--text); line-height: 1.45; }
+h1, h2, h3 { margin: 0; font-family: var(--display); line-height: 1.15; }
+.board { display: flex; flex-direction: column; gap: 56px; padding: 40px; }
+.board > * { padding: 16px; }
+.row { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; }
+.frame-label { font-family: var(--display); font-weight: 700; font-size: 20px; margin: 0 0 4px; }
+.frame-note { margin: 0 0 14px; max-width: 390px; color: #3c403b; font-size: 14px; }
+.frame-note.wide { max-width: 1280px; }
+
+/* ---------- Téléphone ---------- */
+.phone { width: 390px; height: 844px; border-radius: 44px; background: var(--bg); position: relative; overflow: hidden;
+  box-shadow: 0 0 0 10px #1c1f1d, 0 24px 60px rgb(0 0 0 / .25); }
+.status { height: 47px; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; font-weight: 600; font-size: 15px; }
+.screen { padding: 4px 16px 120px; display: flex; flex-direction: column; gap: 14px; }
+.tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: rgb(255 255 255 / .94); border-top: 1px solid var(--border);
+  display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 8px 0; }
+.tabbar span { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.tabbar i { width: 54px; height: 30px; border-radius: 15px; display: grid; place-items: center; }
+.tabbar .on { color: var(--accent); }
+.tabbar .on i { background: var(--accent); color: #fff; }
+.tabbar svg { width: 20px; height: 20px; }
+
+.switcher { display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; font: inherit; color: inherit; text-align: left; }
+.switcher h1 { font-size: 34px; font-weight: 800; letter-spacing: -.005em; }
+.switcher .chev { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; margin-top: 4px; }
+.sub { color: var(--muted); font-size: 15px; margin-top: 2px; }
+.count-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--surface);
+  border: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--accent); }
+.head-row { display: flex; justify-content: space-between; align-items: center; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+.strip-meta { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+.strip-meta strong { color: var(--accent); }
+svg.strip { width: 100%; height: auto; display: block; }
+.strip-foot { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 4px; }
+.tight-label { font-size: 12.5px; font-weight: 700; color: var(--ok-fg); }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.tile .l { font-size: 13px; font-weight: 600; color: var(--muted); }
+.tile .v { font-family: var(--display); font-size: 28px; font-weight: 800; }
+.tile .v.ok { color: var(--ok-fg); }
+.tile .s { font-size: 13px; color: var(--muted); }
+.group-h { font-family: var(--display); font-weight: 700; font-size: 16px; margin: 6px 4px -6px; }
+.list { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--border); }
+.li:first-child { border-top: 0; }
+.ico { flex: none; width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--accent); color: #fff; }
+.ico.warm { background: #c2560c; } .ico.n { background: #6b6f69; }
+.ico svg { width: 17px; height: 17px; }
+.li .t { flex: 1; min-width: 0; }
+.li .t b { display: block; font-weight: 600; }
+.li .t span { display: block; font-size: 13.5px; color: var(--muted); }
+.li .val { font-size: 14px; color: var(--muted); }
+.chevron { color: #a3a69f; }
+
+/* Feuille Mes courses */
+.dim { position: absolute; inset: 0; background: rgb(20 24 21 / .38); }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 62px; background: var(--bg); border-radius: 18px 18px 0 0;
+  display: flex; flex-direction: column; box-shadow: 0 -8px 30px rgb(0 0 0 / .15); }
+.grabber { width: 38px; height: 5px; border-radius: 3px; background: #c9c5bb; margin: 8px auto 4px; }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px 10px; }
+.sheet-head h2 { font-size: 26px; font-weight: 800; }
+.x { width: 32px; height: 32px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; color: var(--muted); }
+.sheet-body { padding: 0 16px 20px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+.sec { font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 8px 4px -2px; }
+.race { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; display: grid;
+  grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+.race.current { border: 2px solid var(--accent); padding: 11px 13px; }
+.race b { font-family: var(--display); font-size: 19px; font-weight: 700; }
+.race .meta { font-size: 13.5px; color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 4px; justify-self: start; }
+.race .when { grid-row: 1 / span 2; grid-column: 2; text-align: right; }
+.race .when strong { display: block; font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--accent); line-height: 1; }
+.race .when small { font-size: 12px; color: var(--muted); }
+.race svg.mini { grid-column: 1 / -1; width: 100%; height: 30px; margin-top: 6px; }
+.badge { display: inline-block; white-space: nowrap; vertical-align: 1px; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.badge.ok { background: var(--ok-bg); color: var(--ok-fg); }
+.badge.todo { background: var(--tight-bg); color: var(--tight-fg); }
+.badge.cur { background: var(--accent); color: #fff; }
+.race.past { grid-template-columns: 1fr auto; }
+.add { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border-radius: 12px; border: 1.5px dashed #b9b4a8;
+  color: var(--accent); font-weight: 700; background: transparent; }
+.link { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; font-size: 14.5px; text-align: center; }
+
+/* Nouvelle course */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 14px; font-weight: 600; }
+.input { min-height: 48px; border: 1px solid var(--border); background: var(--surface); border-radius: 10px; padding: 12px 14px; font-size: 16px; }
+.input.ph { color: #8c9089; }
+.choice { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+.choice.sel { border: 2px solid var(--accent); padding: 13px; }
+.choice b { display: block; font-weight: 700; }
+.choice span { font-size: 13.5px; color: var(--muted); }
+.btn { display: flex; align-items: center; justify-content: center; min-height: 52px; border-radius: 12px; background: var(--accent); color: #fff;
+  font-weight: 700; font-size: 17px; }
+.btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--border); }
+.hint { font-size: 13.5px; color: var(--muted); }
+
+/* ---------- Site (ordinateur) ---------- */
+.desk { width: 1280px; height: 800px; background: var(--bg); overflow: hidden; position: relative; box-shadow: 0 24px 60px rgb(0 0 0 / .2);
+  border-radius: 10px; }
+.topbar { height: 66px; display: flex; align-items: center; gap: 22px; padding: 0 20px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--accent); }
+.brand i { width: 28px; height: 28px; border-radius: 7px; background: var(--accent); display: block; position: relative; }
+.brand i::after { content: ''; position: absolute; left: 5px; right: 5px; bottom: 7px; height: 9px; background: linear-gradient(135deg, transparent 45%, #f1b26b 46%); }
+.race-pick { display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); }
+.race-pick b { font-family: var(--display); font-size: 19px; }
+.race-pick span { font-size: 13px; color: var(--muted); }
+.race-pick.open { border-color: var(--accent); box-shadow: 0 0 0 3px rgb(31 77 58 / .12); }
+.top-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+.ghost-btn { padding: 9px 14px; border: 1px solid var(--border); border-radius: 10px; font-weight: 600; color: var(--accent); background: var(--surface); }
+.solid-btn { padding: 9px 14px; border-radius: 10px; font-weight: 600; color: #fff; background: var(--accent); }
+.avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border); display: grid; place-items: center; font-weight: 700; color: var(--accent); font-size: 14px; }
+.tabs { display: flex; gap: 4px; padding: 0 20px; background: var(--surface); border-bottom: 1px solid var(--border); height: 46px; align-items: stretch; }
+.tabs span { padding: 0 14px; display: flex; align-items: center; font-weight: 600; color: var(--muted); }
+.tabs .on { color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+.dash { display: grid; grid-template-columns: 1fr 360px; gap: 28px; padding: 24px 28px; }
+.dash-main { display: flex; flex-direction: column; gap: 16px; }
+.dash h1 { font-size: 40px; font-weight: 800; }
+.hero-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; }
+.hero { background: var(--accent); color: #fff; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 4px; }
+.hero .l { font-size: 13px; opacity: .85; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.hero .v { font-family: var(--display); font-size: 56px; font-weight: 800; line-height: 1; }
+.hero .s { opacity: .9; }
+.todo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.todo .tile { flex-direction: row; gap: 10px; align-items: center; }
+.todo .tile b { display: block; font-weight: 600; font-size: 15px; }
+.todo .tile span { font-size: 13px; color: var(--muted); }
+.check { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; }
+.check.ok { background: var(--ok-bg); color: var(--ok-fg); }
+.check.todo-c { background: var(--tight-bg); color: var(--tight-fg); }
+.side { display: flex; flex-direction: column; gap: 10px; }
+.side .race b { font-size: 17px; }
+.side .race .when strong { font-size: 17px; }
+.side-head { display: flex; justify-content: space-between; align-items: baseline; }
+.side-head h2 { font-size: 22px; font-weight: 800; }
+.dropdown { position: absolute; top: 60px; left: 170px; width: 420px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 16px 40px rgb(0 0 0 / .16); padding: 8px; display: flex; flex-direction: column; gap: 2px; z-index: 5; }
+.dd-item { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; padding: 9px 10px; border-radius: 10px; }
+.dd-item.on { background: var(--surface-2); }
+.dd-item b { font-family: var(--display); font-size: 17px; }
+.dd-item span { font-size: 13px; color: var(--muted); }
+.dd-item em { font-style: normal; grid-row: 1 / span 2; grid-column: 2; align-self: center; font-size: 13px; font-weight: 600; color: var(--accent); }
+.dd-sec { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 8px 10px 2px; }
+.dd-foot { display: flex; justify-content: space-between; border-top: 1px solid var(--border); margin-top: 6px; padding: 10px 10px 4px; }
+.dd-foot span { font-weight: 700; color: var(--accent); }
+.dd-foot a { color: var(--muted); font-size: 14px; }
+.fade { opacity: .45; filter: blur(.4px); }
+</style>
+</head>
+<body>
+<div class="board">
+
+  <div class="row">
+    <div>
+      <p class="frame-label">1 · Accueil (téléphone)</p>
+      <p class="frame-note">Le nom de la course est le sélecteur : on le touche pour changer de course. La pastille rappelle combien il y en a. Le reste du tableau de bord ne change pas.</p>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="screen">
+          <div class="head-row" style="margin-top:8px">
+            <span class="count-pill">Mes courses · 4</span>
+            <span class="avatar" style="width:32px;height:32px">FL</span>
+          </div>
+          <div>
+            <button class="switcher"><h1>Trail des Cathares</h1><span class="chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+            <div class="sub">samedi 13 mars · départ 7h00 · dans 4 mois</div>
+          </div>
+          <div class="card">
+            <div class="strip-meta"><span>60,0 km · 3 200 m D+ · 7 points</span></div>
+            <svg class="strip" viewBox="0 0 358 112" data-strip="1"></svg>
+          </div>
+          <div class="tiles">
+            <div class="tile"><span class="l">Arrivée prévue</span><span class="v">sam 15h48</span><span class="s">8h48 · réaliste</span></div>
+            <div class="tile"><span class="l">Marge la plus serrée</span><span class="v ok">1h35</span><span class="s">Col de la Galaube</span></div>
+          </div>
+          <p class="group-h">Préparer</p>
+          <div class="list">
+            <div class="li"><span class="ico warm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="6" width="10" height="12" rx="3"/><path d="M9 6l1-3h4l1 3M9 18l1 3h4l1-3"/></svg></span><span class="t"><b>Ta montre</b><span>Parcours Garmin et champ Prochain Ravito</span></span><span class="chevron">›</span></div>
+            <div class="li"><span class="ico n"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z"/></svg></span><span class="t"><b>Ton sac</b><span>À cocher la veille</span></span><span class="val">3 / 11</span><span class="chevron">›</span></div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <span class="on"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></i>Accueil</span>
+          <span><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 19c3-1 3-5 7-6s4-6 7-8"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="5" r="2"/></svg></i>Plan</span>
+          <span><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6M10 3v3l-2 3v11a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V9l-2-3V3"/></svg></i>Ravitos</span>
+          <span><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></i>Moi</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="frame-label">2 · Mes courses (feuille)</p>
+      <p class="frame-note">S'ouvre par-dessus, du bas. À venir d'abord (la plus proche en tête), puis les passées avec l'état de leur retour de course. Glisser une course vers la gauche : dupliquer, supprimer.</p>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="fade" style="padding:12px 16px"><h1 style="font-size:34px;font-weight:800">Trail des Cathares</h1></div>
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="grabber"></div>
+          <div class="sheet-head"><h2>Mes courses</h2><span class="x">✕</span></div>
+          <div class="sheet-body">
+            <p class="sec">À venir</p>
+            <div class="race current">
+              <b>Trail des Cathares</b>
+              <span class="when"><strong>4 mois</strong><small>13 mars 2027</small></span>
+              <span class="meta">60 km · 3 200 m D+ · <span class="badge cur">affichée</span></span>
+              <svg class="mini" viewBox="0 0 320 30" data-mini="1"></svg>
+            </div>
+            <div class="race">
+              <b>Grand Trail du Vercors</b>
+              <span class="when"><strong>7 mois</strong><small>19 juin 2027</small></span>
+              <span class="meta">85 km · 4 800 m D+ · trace à ajouter</span>
+              <svg class="mini" viewBox="0 0 320 30" data-mini="2"></svg>
+            </div>
+            <p class="sec">Passées</p>
+            <div class="race past">
+              <b>Trail des Troubadours</b>
+              <span class="when"><small>23 oct. 2026</small></span>
+              <span class="meta">88 km · <span class="badge ok">13h52 · 21 min d'avance</span></span>
+            </div>
+            <div class="race past">
+              <b>Montagne Noire</b>
+              <span class="when"><small>7 sept. 2026</small></span>
+              <span class="meta">42 km · <span class="badge todo">Retour à faire</span></span>
+            </div>
+            <div class="add">＋ Nouvelle course</div>
+            <span class="link">Voir un exemple de plan</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="frame-label">3 · Nouvelle course</p>
+      <p class="frame-note">Le nom et la date, puis par quoi commencer. Ensuite, l'éditeur de course habituel. Tes références, ton profil et ta nutrition servent à toutes tes courses.</p>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="grabber"></div>
+          <div class="sheet-head"><h2>Nouvelle course</h2><span class="x">✕</span></div>
+          <div class="sheet-body" style="gap:14px">
+            <div class="field"><label>Nom de la course</label><div class="input">Grand Trail du Vercors</div></div>
+            <div class="field"><label>Date</label><div class="input">samedi 19 juin 2027</div></div>
+            <p class="sec" style="margin-top:4px">Pour commencer</p>
+            <div class="choice sel"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/></svg></span><span><b>Le roadbook de l'organisation</b><span>PDF ou photo : lu par l'IA, ravitos et barrières remplis pour toi</span></span></div>
+            <div class="choice"><span class="ico n"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 19c3-1 3-5 7-6s4-6 7-8"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="5" r="2"/></svg></span><span><b>La trace GPX</b><span>Le profil et la carte ; les ravitos s'ajoutent ensuite</span></span></div>
+            <div class="choice"><span class="ico n"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><span><b>À la main</b><span>Points, distances et barrières, saisis un par un</span></span></div>
+            <div class="btn" style="margin-top:6px">Continuer</div>
+            <p class="hint" style="text-align:center">Sans compte, tes courses restent sur ce téléphone.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <p class="frame-label">4 · Site : tableau de bord (Accueil, coureur qui a déjà des courses)</p>
+    <p class="frame-note wide">La page d'accueil actuelle reste pour un premier visiteur. Dès qu'on a une course, l'Accueil devient ce tableau de bord : la course affichée à gauche (arrivée, marge, profil, ce qui reste à préparer), toutes tes courses à droite. Le nom de la course, dans la barre du haut, permet de changer de course depuis n'importe quel onglet.</p>
+    <div class="desk">
+      <div class="topbar">
+        <span class="brand"><i></i>Ravitaille</span>
+        <span class="race-pick"><span><b>Trail des Cathares</b><br><span>sam 13 mars 2027 · 60 km · 3 200 m D+</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span>
+        <span class="top-right"><span class="ghost-btn">Télécharger ▾</span><span class="ghost-btn">Se connecter</span></span>
+      </div>
+      <div class="tabs"><span class="on">Accueil</span><span>Mon plan</span><span>En course</span><span>Ravitos</span><span>Sac</span><span>Analyse</span><span>Comment ça marche</span></div>
+      <div class="dash">
+        <div class="dash-main">
+          <div><h1>Trail des Cathares</h1><div class="sub">samedi 13 mars 2027 · départ 7h00 · dans 4 mois et 12 jours</div></div>
+          <div class="hero-row">
+            <div class="hero"><span class="l">Arrivée prévue · réaliste</span><span class="v">sam 15h48</span><span class="s">8h48 de course · entre 15h05 et 16h41 selon ta journée</span></div>
+            <div class="tile" style="justify-content:center"><span class="l">Marge la plus serrée</span><span class="v ok" style="font-size:40px">1h35</span><span class="s">Col de la Galaube · km 38</span></div>
+          </div>
+          <div class="card"><svg class="strip" viewBox="0 0 760 120" data-strip="2"></svg></div>
+          <div class="todo">
+            <div class="tile"><span class="check ok">✓</span><span><b>Roadbook et trace</b><span>7 points, trace GPX</span></span></div>
+            <div class="tile"><span class="check ok">✓</span><span><b>Tes références</b><span>5 courses Strava</span></span></div>
+            <div class="tile"><span class="check todo-c">!</span><span><b>Ton sac</b><span>3 / 11 cochés</span></span></div>
+            <div class="tile"><span class="check todo-c">!</span><span><b>Ta montre</b><span>Parcours pas encore envoyé</span></span></div>
+            <div class="tile"><span class="check ok">✓</span><span><b>Ravitos</b><span>Nutrition prévue</span></span></div>
+            <div class="tile"><span class="check todo-c">!</span><span><b>Ton assistance</b><span>Lien de suivi à partager</span></span></div>
+          </div>
+        </div>
+        <aside class="side">
+          <div class="side-head"><h2>Mes courses</h2><span class="solid-btn" style="padding:7px 12px">＋ Nouvelle</span></div>
+          <p class="sec" style="margin:2px 2px -2px">À venir</p>
+          <div class="race current"><b>Trail des Cathares</b><span class="when"><strong>4 mois</strong><small>13 mars</small></span><span class="meta">60 km · 3 200 m D+</span><svg class="mini" viewBox="0 0 320 30" data-mini="1"></svg></div>
+          <div class="race"><b>Grand Trail du Vercors</b><span class="when"><strong>7 mois</strong><small>19 juin</small></span><span class="meta">85 km · trace à ajouter</span><svg class="mini" viewBox="0 0 320 30" data-mini="2"></svg></div>
+          <p class="sec" style="margin:6px 2px -2px">Passées</p>
+          <div class="race past"><b>Trail des Troubadours</b><span class="when"><small>23 oct. 2026</small></span><span class="meta">88 km · <span class="badge ok">21 min d'avance</span></span></div>
+          <div class="race past"><b>Montagne Noire</b><span class="when"><small>7 sept. 2026</small></span><span class="meta">42 km · <span class="badge todo">Retour à faire</span></span></div>
+          <span class="link" style="text-align:left;margin-top:4px">Voir un exemple de plan</span>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <p class="frame-label">5 · Site : changer de course depuis n'importe quel onglet</p>
+    <p class="frame-note wide">Le nom de la course, dans la barre du haut, ouvre la liste. On reste sur le même onglet (ici Mon plan) : il passe à la course choisie.</p>
+    <div class="desk" style="height:520px">
+      <div class="topbar">
+        <span class="brand"><i></i>Ravitaille</span>
+        <span class="race-pick open"><span><b>Trail des Cathares</b><br><span>sam 13 mars 2027 · 60 km · 3 200 m D+</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 15l-6-6-6 6"/></svg></span>
+        <span class="top-right"><span class="ghost-btn">Télécharger ▾</span><span class="avatar">FL</span></span>
+      </div>
+      <div class="tabs"><span>Accueil</span><span class="on">Mon plan</span><span>En course</span><span>Ravitos</span><span>Sac</span><span>Analyse</span><span>Comment ça marche</span></div>
+      <div class="dropdown">
+        <div class="dd-sec">À venir</div>
+        <div class="dd-item on"><b>Trail des Cathares</b><span>13 mars 2027 · 60 km · 3 200 m D+</span><em>✓</em></div>
+        <div class="dd-item"><b>Grand Trail du Vercors</b><span>19 juin 2027 · 85 km · 4 800 m D+</span><em>7 mois</em></div>
+        <div class="dd-sec">Passées</div>
+        <div class="dd-item"><b>Trail des Troubadours</b><span>23 oct. 2026 · 88 km</span><em>Retour fait</em></div>
+        <div class="dd-item"><b>Montagne Noire</b><span>7 sept. 2026 · 42 km</span><em style="color:var(--tight-fg)">Retour à faire</em></div>
+        <div class="dd-foot"><span>＋ Nouvelle course</span><a>Toutes mes courses</a></div>
+      </div>
+      <div class="fade" style="padding:24px 28px">
+        <p class="l" style="font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--muted);margin:0">ARRIVÉE PRÉVUE · SCÉNARIO RÉALISTE</p>
+        <p style="font-family:var(--display);font-size:110px;font-weight:800;margin:0;line-height:1">15h48</p>
+        <div class="card" style="margin-top:16px"><svg class="strip" viewBox="0 0 760 120" data-strip="2"></svg></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Profils inventés pour la maquette.
+function profile(seed, n) {
+  let a = 0, pts = [];
+  for (let i = 0; i <= n; i++) {
+    a += Math.sin(i * 0.35 * seed) * 18 + Math.sin(i * 0.11 + seed) * 22 + Math.cos(i * 0.9 * seed) * 6;
+    pts.push(a);
+  }
+  return pts;
+}
+function path(pts, w, top, base) {
+  const min = Math.min(...pts), max = Math.max(...pts);
+  return pts.map((p, i) => `${i ? 'L' : 'M'}${(i / (pts.length - 1) * w).toFixed(1)} ${(base - (p - min) / (max - min) * (base - top)).toFixed(1)}`).join(' ');
+}
+document.querySelectorAll('svg[data-strip]').forEach((svg) => {
+  const [, , W, H] = svg.getAttribute('viewBox').split(' ').map(Number);
+  const base = H - 36, line = path(profile(svg.dataset.strip === '1' ? 1.3 : 1.3, 120), W, 10, base);
+  const tx = W * 0.62;
+  svg.innerHTML = `<path d="${line} L${W} ${base} L0 ${base} Z" fill="#c2410c" fill-opacity=".14"/>
+    <path d="${line}" fill="none" stroke="#c2410c" stroke-width="2" stroke-linejoin="round"/>
+    <line x1="0" x2="${W}" y1="${base}" y2="${base}" stroke="#e2ddd2"/>
+    ${[0.15, 0.32, 0.47, 0.8].map((f) => `<circle cx="${W * f}" cy="${base - 12}" r="3.5" fill="#fff" stroke="#1c1f1d" stroke-width="1.5"/>`).join('')}
+    <line x1="${tx}" x2="${tx}" y1="${base - 30}" y2="${base + 6}" stroke="#15803d" stroke-width="1.5"/>
+    <circle cx="${tx}" cy="${base - 30}" r="5.5" fill="#15803d" stroke="#fff" stroke-width="2"/>
+    <text x="${tx - 70}" y="${base + 19}" font-size="12.5" font-weight="700" fill="#166534" font-family="Barlow">Col de la Galaube · 1h35 de marge</text>
+    <text x="0" y="${H - 2}" font-size="12" fill="#5c605a" font-family="Barlow">Départ 7h00</text>
+    <text x="${W}" y="${H - 2}" text-anchor="end" font-size="12" fill="#5c605a" font-family="Barlow">Barrière d'arrivée sam 17h30</text>`;
+});
+document.querySelectorAll('svg[data-mini]').forEach((svg) => {
+  const line = path(profile(svg.dataset.mini === '1' ? 1.3 : 0.7, 80), 320, 3, 28);
+  svg.innerHTML = `<path d="${line} L320 28 L0 28 Z" fill="#c2410c" fill-opacity=".12"/><path d="${line}" fill="none" stroke="#c2410c" stroke-width="1.5"/>`;
+});
+</script>
+</body>
+</html>
