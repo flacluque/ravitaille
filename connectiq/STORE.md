@@ -15,7 +15,7 @@ Le temps prévu suit le terrain (montées et descentes) et ne compte pas les arr
 Le champ n'a besoin ni de parcours chargé ni de connexion pendant la course.
 
 Comment faire :
-1. Prépare ta course sur Ravitime (trail-planner.onrender.com).
+1. Prépare ta course sur Ravitime (ravitime.fr).
 2. « Télécharger › Parcours pour ma Garmin » : copie le code du plan.
 3. Appli Connect IQ › Prochain Ravito › Réglages : colle le code.
 4. Ajoute le champ à un écran de ton activité Trail (seul ou à côté d'autres champs), de préférence celui que tu
@@ -29,7 +29,7 @@ Planned times follow the terrain (climbs and descents), and planned stops at aid
 No course or connection needed during the race. The field displays its texts in French, like the Ravitime website.
 
 How to use:
-1. Plan your race on Ravitime (trail-planner.onrender.com).
+1. Plan your race on Ravitime (ravitime.fr).
 2. "Télécharger › Parcours pour ma Garmin": copy the plan code.
 3. Connect IQ app › Prochain Ravito › Settings: paste the code.
 4. Add the field to a data screen of your Trail activity, ideally the one you look at most.

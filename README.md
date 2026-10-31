@@ -295,9 +295,10 @@ visite et met environ une minute à se réveiller.
      Tally…, ou `mailto:toi@exemple.fr`) ; vide : pas de bouton.
 
    `TRAILPLANNER_SECRET` (clé des cookies) est tiré au hasard par Render. Le premier déploiement
-   prend quelques minutes ; l'adresse du site est du type `https://trail-planner-xxxx.onrender.com`.
+   prend quelques minutes ; l'adresse du site est du type `https://trail-planner-xxxx.onrender.com`. Le site public est
+   branché sur `https://ravitime.fr` (Render › Settings › Custom Domains ; DNS chez one.com).
 3. **Strava**, sur https://www.strava.com/settings/api :
-   - **domaine de rappel** : le domaine Render, sans `https://` (ex. `trail-planner-xxxx.onrender.com`).
+   - **domaine de rappel** : le domaine du site, sans `https://` (`ravitime.fr`).
      Strava n'en accepte qu'un : pour revenir au local, remets `localhost` ;
    - **capacité** : 10 sportifs, pour que tes amis puissent connecter leur compte.
 4. Envoie l'adresse et le code d'invitation. Chaque visiteur saisit le code une fois (retenu un an) ;

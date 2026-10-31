@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { fetchStravaStatus, humanError } from '../api/client';
 import { STRAVA_MAX_AGE_DAYS } from '../lib/stravaData';
 
-/** Contact pour la confidentialité (à remplacer par l'adresse du nom de domaine de Ravitime). */
-export const CONTACT_EMAIL = 'lacluque.flv@gmail.com';
+/** Contact pour la confidentialité (transférée par ImprovMX). */
+export const CONTACT_EMAIL = 'contact@ravitime.fr';
 
 interface Props {
   /** Déconnecte Strava et efface ce qui en venait. */
