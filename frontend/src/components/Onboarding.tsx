@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StravaLogo } from './StravaLogo';
+import { ConnectWithStrava } from './StravaBrand';
 
 interface Props {
   /** Voir le plan d'exemple. */
@@ -43,7 +43,7 @@ export function Onboarding({ onExample, onStrava, onManual, onLater }: Props) {
               en descente est mesuré. Lecture seule, déconnexion en un geste.</p>
           </div>
           <div className="onb-actions">
-            <button type="button" className="big-btn strava" onClick={onStrava}><StravaLogo size={18} /> Connecter Strava</button>
+            <ConnectWithStrava onClick={onStrava} />
             <button type="button" className="big-btn ghost" onClick={onManual}>Saisir une course à la main</button>
             <button type="button" className="link-btn onb-later" onClick={onLater}>Plus tard : saisir ma course d'abord</button>
           </div>

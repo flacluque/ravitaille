@@ -55,8 +55,9 @@ export function activityTime(a: StravaActivity): string {
   return a.movingTime && durationMinutes(a.movingTime) > 0 ? a.movingTime : a.elapsedTime;
 }
 
-export function activityToReference(a: StravaActivity, kind: ReferenceKind): Reference {
+export function activityToReference(a: StravaActivity, kind: ReferenceKind, now = new Date()): Reference {
   return {
+    strava: { id: a.id, checkedAt: now.toISOString() },
     label: a.name || `${SPORT_LABELS[a.sportType] ?? 'Sortie'} du ${a.date}`,
     date: a.date,
     kind,

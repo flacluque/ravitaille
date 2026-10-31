@@ -4,8 +4,7 @@ import type { RaceResult, StoredRunnerProfile } from '../api/storage';
 import type { RunnerProfile, SlopePoint } from '../api/types';
 import { formatKm } from '../lib/format';
 import { STANDARD_FATIGUE, fatigueEffect, racesFatigue, slopeLabel, slopeVerdict } from '../lib/runner';
-import { connectStrava } from '../api/native';
-import { StravaLogo } from './StravaLogo';
+import { ConnectWithStrava, PoweredByStrava } from './StravaBrand';
 
 interface Props {
   stored: StoredRunnerProfile;
@@ -30,8 +29,8 @@ export function RunnerProfileCard({ stored, onChange, isExample }: Props) {
     setMeasuring(true);
     setError(null);
     try {
-      const profile = await fetchRunnerProfile();
-      onChange({ ...stored, profile, use: true, measuredAt: new Date().toISOString() });
+      const { profile, sources } = await fetchRunnerProfile();
+      onChange({ ...stored, profile, sources, use: true, measuredAt: new Date().toISOString() });
     } catch (e) {
       setError(humanError(e));
     } finally {
@@ -43,7 +42,7 @@ export function RunnerProfileCard({ stored, onChange, isExample }: Props) {
   return (
     <section className="card runner-profile">
       <div className="card-head">
-        <h2><span className="strava-mark small"><StravaLogo size={13} /></span> Ton profil de coureur</h2>
+        <h2>Ton profil de coureur</h2>
         <p className="muted small">
           Ton rythme selon la pente, mesuré point par point sur tes sorties Strava de l'année (les plus longues et les
           plus vallonnées), et ta fatigue, mesurée sur tes courses (retour de course, ci-dessous). Sans profil, le plan
@@ -70,17 +69,18 @@ export function RunnerProfileCard({ stored, onChange, isExample }: Props) {
             {measuring ? 'Mesure en cours…' : p ? 'Remesurer sur Strava' : 'Mesurer mon profil sur Strava'}
           </button>
         ) : connected === false && (
-          <button type="button" className="strava-btn" onClick={connectStrava}><StravaLogo /> Connecter Strava</button>
+          <ConnectWithStrava />
         )}
         {p && (
           <button type="button" className="link-btn"
-            onClick={() => onChange({ ...stored, profile: null, measuredAt: null, use: stored.use && stored.races.length > 0 })}>
+            onClick={() => onChange({ ...stored, profile: null, sources: [], measuredAt: null, use: stored.use && stored.races.length > 0 })}>
             Oublier mon profil
           </button>
         )}
       </div>
       {measuring && <p className="muted small" role="status">Lecture de tes sorties sur Strava : une quinzaine de secondes.</p>}
       {error && <p className="field-error" role="alert">{error}</p>}
+      {(p || stored.races.length > 0) && <PoweredByStrava />}
     </section>
   );
 }

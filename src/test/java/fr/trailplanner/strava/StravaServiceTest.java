@@ -264,8 +264,11 @@ class StravaServiceTest {
                   "distance": 60000, "total_elevation_gain": 900, "elapsed_time": 9000, "moving_time": 8000}]""");
         fake.streams = streams();
 
-        var profile = service.profile(connected("acces-1", 1));
+        var measured = service.profile(connected("acces-1", 1));
+        var profile = measured.profile();
 
+        // Les activités d'où vient le profil : il sera effacé si l'une d'elles est supprimée sur Strava.
+        assertEquals(List.of(1L), measured.sources());
         assertEquals(1, profile.activities());
         assertEquals(LocalDate.of(2026, 9, 1), profile.from());
         assertFalse(profile.slope().isEmpty());

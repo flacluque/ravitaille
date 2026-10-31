@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ApiError, fetchCourse, fetchCustomPlans, fetchPlans, loadSnapshot, saveSnapshot, type Snapshot } from './api/client';
+import {
+  ApiError, disconnectStrava, fetchCourse, fetchCustomPlans, fetchPlans, fetchStravaActivities, fetchStravaStatus, loadSnapshot, saveSnapshot,
+  type Snapshot,
+} from './api/client';
 import {
   loadCrew, loadDraft, loadGear, loadGpx, loadNutrition, loadTrainingOptions, saveCrew, saveDraft, saveGpx, saveNutrition,
   saveTrainingOptions,
-  loadFix, loadRunnerName, loadRunnerProfile, saveRunnerProfile, type StoredRunnerProfile,
+  loadFix, loadRunnerName, loadRunnerProfile, loadStravaCheck, saveRunnerProfile, saveStravaCheck, NO_RUNNER_PROFILE,
+  type StoredRunnerProfile,
 } from './api/storage';
 import type { ElevationSource, Reference } from './api/types';
 import { CompareTable } from './components/CompareTable';
@@ -28,7 +32,8 @@ import { Onboarding } from './components/Onboarding';
 import { connectStrava } from './api/native';
 import { ListGroup, ListRow } from './components/AppScreen';
 import { FlagIcon, RouteIcon } from './components/Icons';
-import { StravaLogo } from './components/StravaLogo';
+import { PrivacyPage } from './components/PrivacyPage';
+import { checkStrava, holdsStravaData, purgeStrava, reconcileNotice } from './lib/stravaData';
 import { isExampleReference } from './lib/strava';
 import { playPageIn, useSlidingPill } from './components/Motion';
 import { RaceView } from './components/RaceView';
@@ -51,17 +56,18 @@ import { defaultServices } from './lib/services';
 // Course d'exemple embarquée (src/main/resources/samples/bogomiles).
 const SAMPLE_ID = 'bogomiles';
 const CUSTOM_ID = 'custom';
-type Tab = 'accueil' | 'plan' | 'course' | 'ravitos' | 'sac' | 'analyse' | 'algo' | 'moi' | 'references' | 'profil' | 'retour';
+type Tab = 'accueil' | 'plan' | 'course' | 'ravitos' | 'sac' | 'analyse' | 'algo' | 'moi' | 'references' | 'profil' | 'retour'
+  | 'confidentialite';
 const TABS: [Tab, string][] = [['accueil', 'Accueil'], ['plan', 'Mon plan'], ['course', 'En course'], ['ravitos', 'Ravitos'],
   ['sac', 'Sac'], ['analyse', 'Analyse'], ['algo', 'Comment ça marche']];
 const TAB_HASH: Record<Tab, string> = {
   accueil: '#accueil', plan: '#plan', course: '#course', ravitos: '#ravitos', sac: '#sac', analyse: '#analyse', algo: '#algorithme',
-  moi: '#moi', references: '#references', profil: '#profil', retour: '#retour',
+  moi: '#moi', references: '#references', profil: '#profil', retour: '#retour', confidentialite: '#confidentialite',
 };
 /** Sur téléphone, la section de la barre d'onglets qui contient chaque page. */
 const SECTION_OF: Record<Tab, Section> = {
   accueil: 'accueil', course: 'accueil', plan: 'plan', ravitos: 'ravitos', sac: 'ravitos',
-  moi: 'moi', references: 'moi', profil: 'moi', retour: 'moi', analyse: 'moi', algo: 'moi',
+  moi: 'moi', references: 'moi', profil: 'moi', retour: 'moi', analyse: 'moi', algo: 'moi', confidentialite: 'moi',
 };
 /** Largeur de la mise en page téléphone (barre d'onglets en bas, voir styles.css). */
 const PHONE = '(max-width: 860px)';
@@ -94,6 +100,11 @@ function tabFromHash(hash: string): Tab | null {
 }
 
 const DEFAULT_REFERENCES: Reference[] = [{ label: '', date: null, kind: 'RACE', km: 60, gainM: 3200, time: 'PT8H48M' }];
+
+const DISCONNECTED_NOTICE = 'Strava est déconnecté. Tout ce qui en venait (références importées, profil de coureur, retours de '
+  + 'course) a été effacé de Ravitaille.';
+const REVOKED_NOTICE = 'Strava n\'est plus connecté à Ravitaille (accès révoqué ou déconnecté). Tout ce qui en venait '
+  + '(références importées, profil de coureur, retours de course) a été effacé de Ravitaille.';
 
 type Mode = 'demo' | 'custom';
 
@@ -248,6 +259,78 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     return mode === 'demo' ? computeDemo(refs, src) : computeCustom(refs, src, draft, gpx);
   };
 
+  // Données venues de Strava (lib/stravaData) : vérifiées une fois par jour, effacées quand Strava est déconnecté.
+  // Les vérifications sont asynchrones : elles lisent l'état du moment par cette référence.
+  const [stravaNotice, setStravaNotice] = useState<string | null>(null);
+  const latest = useRef({ references, runner, data, compute, source });
+  latest.current = { references, runner, data, compute, source };
+
+  /** Remplace ce qui vient de Strava ; `scrub` retire aussi du dernier plan gardé ce qui en était tiré. */
+  function keepStrava(refs: Reference[], nextRunner: StoredRunnerProfile, scrub: boolean, notice: string | null) {
+    const { data: snap, compute: recompute, source: src } = latest.current;
+    const nextRefs = refs.length ? refs : DEFAULT_REFERENCES;
+    setRunner(nextRunner);
+    runnerRef.current = nextRunner;
+    saveRunnerProfile(nextRunner);
+    if (snap) {
+      const cleaned: Snapshot = {
+        ...snap, references: nextRefs,
+        plans: scrub ? snap.plans.map((p) => ({ ...p, references: [], training: null, runner: null })) : snap.plans,
+      };
+      setData(cleaned);
+      saveSnapshot(cleaned);
+    }
+    if (notice) setStravaNotice(notice);
+    void recompute(nextRefs, src);
+  }
+
+  /** Strava déconnecté ou accès révoqué : tout ce qui en vient est effacé, et le coureur en est averti (§7.4, §2.5). */
+  function purgeStravaData(notice: string) {
+    const { references: refs } = latest.current;
+    saveStravaCheck(null);
+    keepStrava(purgeStrava(refs), NO_RUNNER_PROFILE, true, notice);
+  }
+
+  async function disconnectAndPurge() {
+    await disconnectStrava();
+    purgeStravaData(DISCONNECTED_NOTICE);
+  }
+
+  const checking = useRef(false);
+  async function verifyStrava() {
+    if (checking.current) return;
+    checking.current = true;
+    try {
+      const held = { references: latest.current.references, runner: latest.current.runner };
+      const now = new Date();
+      const result = await checkStrava(held, loadStravaCheck(), { status: fetchStravaStatus, activities: fetchStravaActivities }, now);
+      // Le coureur a changé ses références pendant la vérification : on refera la vérification plus tard.
+      if (result.kind === 'skip' || latest.current.references !== held.references || latest.current.runner !== held.runner) return;
+      if (result.kind === 'purge') {
+        if (holdsStravaData(held)) purgeStravaData(REVOKED_NOTICE);
+        else saveStravaCheck(null);
+      } else if (result.kind === 'expired') {
+        if (result.removed) {
+          keepStrava(result.references, held.runner, true, `Strava n'a pas pu être vérifié depuis plus de 7 jours : ${result.removed > 1
+            ? `${result.removed} références importées ont été effacées` : 'une référence importée a été effacée'}. Reconnecte-toi pour les réimporter.`);
+        }
+      } else {
+        saveStravaCheck(now.toISOString());
+        const r = result.result;
+        const removed = r.removedReferences > 0 || r.profileRemoved || r.removedRaces > 0;
+        if (removed || r.changed) keepStrava(r.references, r.runner, removed, reconcileNotice(r));
+        else {
+          // Rien n'a changé sur Strava : seule la date de vérification des références avance.
+          setReferences(r.references);
+          const snap = latest.current.data;
+          if (snap) saveSnapshot({ ...snap, references: r.references });
+        }
+      }
+    } finally {
+      checking.current = false;
+    }
+  }
+
   // Seul un calcul lancé depuis l'éditeur le referme : un calcul encore en cours au moment où
   // le coureur rouvre l'éditeur ne doit pas le lui fermer sous les doigts.
   async function submitEditor() {
@@ -277,12 +360,23 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     if (initial?.sampleId === CUSTOM_ID) {
       void loadGpx().then((file) => {
         setGpx(file);
-        void computeCustom(refs, src, loadDraft() ?? emptyDraft(), file);
+        void computeCustom(refs, src, loadDraft() ?? emptyDraft(), file).then(() => setBooted(true));
       });
     } else {
-      void computeDemo(refs, src);
+      void computeDemo(refs, src).then(() => setBooted(true));
     }
   }, [initial, computeDemo, computeCustom]);
+  // Une fois le premier plan affiché (le serveur est réveillé), puis à chaque retour dans l'appli : vérification Strava.
+  const [booted, setBooted] = useState(false);
+  const verifyRef = useRef(verifyStrava);
+  verifyRef.current = verifyStrava;
+  useEffect(() => {
+    if (!booted) return;
+    void verifyRef.current();
+    const onVisible = () => { if (document.visibilityState === 'visible') void verifyRef.current(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [booted]);
 
   function switchMode(next: Mode) {
     if (next === mode) return;
@@ -430,6 +524,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
         training={training}
         onTrainingChange={changeTraining}
         openStrava={stravaRequested}
+        onStravaDisconnected={() => purgeStravaData(DISCONNECTED_NOTICE)}
       />
       {plan && <SourceNote source={plan.elevationSource} hasTrack={!!course?.track} />}
       {plan?.runner && (
@@ -442,7 +537,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   const exampleReferences = references.some(isExampleReference);
   // Sur téléphone, les références sont dans Moi : le plan y renvoie par une ligne « Ton rythme ».
   const rhythmRow = (
-      <ListRow icon={exampleReferences ? <StravaLogo size={18} /> : <RouteIcon size={18} />} tone={exampleReferences ? 'strava' : 'accent'}
+      <ListRow icon={<RouteIcon size={18} />} tone={exampleReferences ? 'warm' : 'accent'}
         title={exampleReferences ? 'Ton rythme : course d\'exemple' : 'Ton rythme'}
         detail={exampleReferences ? 'Importe tes courses depuis Strava'
           : `${references.length} référence${references.length > 1 ? 's' : ''}${plan?.runner ? ' · profil de coureur' : ''}`}
@@ -549,6 +644,12 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           <button type="button" className="link-btn" onClick={() => void compute(references, source)}>Réessayer</button>
         </div>
       )}
+      {stravaNotice && (
+        <div className="banner info no-print" role="status">
+          {stravaNotice}{' '}
+          <button type="button" className="link-btn" onClick={() => setStravaNotice(null)}>OK</button>
+        </div>
+      )}
       {status.kind === 'rejected' && (
         <div className="banner error" role="alert">
           Le plan n'a pas pu être calculé : {status.error.charAt(0).toLowerCase() + status.error.slice(1)}{' '}
@@ -605,9 +706,15 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           </>}
           {tab === 'moi' && (
             <MePage referenceCount={references.length} exampleReferences={exampleReferences} runner={runner}
-              hrefs={{ references: TAB_HASH.references, profil: TAB_HASH.profil, retour: TAB_HASH.retour, analyse: TAB_HASH.analyse, algo: TAB_HASH.algo }}
-              feedbackUrl={feedbackUrl} onPdf={(v) => void savePdf(v)} onWatch={() => setGarminOpen(true)} exportBlocked={pdfBlocked} />
+              hrefs={{ references: TAB_HASH.references, profil: TAB_HASH.profil, retour: TAB_HASH.retour, analyse: TAB_HASH.analyse,
+                algo: TAB_HASH.algo, confidentialite: TAB_HASH.confidentialite }}
+              feedbackUrl={feedbackUrl} onPdf={(v) => void savePdf(v)} onWatch={() => setGarminOpen(true)} exportBlocked={pdfBlocked}
+              onStrava={() => { setStravaRequested(true); goTab('references'); }} onDisconnectStrava={disconnectAndPurge} />
           )}
+          {tab === 'confidentialite' && <>
+            {subPage('Confidentialité')}
+            <PrivacyPage onDisconnectStrava={disconnectAndPurge} feedbackUrl={feedbackUrl} />
+          </>}
           {tab === 'references' && <>
             {subPage('Tes références')}
             <div className="references-page">{side}</div>

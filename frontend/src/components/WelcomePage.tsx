@@ -94,7 +94,7 @@ export function WelcomePage({ plan, isExample, onOpenPlan, onMyRace, onAlgorithm
           <p>
             Tes courses, références et réglages sont gardés dans ton navigateur. Strava se connecte en lecture seule
             et se déconnecte d'un clic. Un roadbook lu par l'IA est envoyé à Gemini (Google) le temps de la lecture ;
-            Ravitaille n'en garde rien.
+            Ravitaille n'en garde rien. <a href="#confidentialite">Confidentialité</a>
           </p>
         </div>
         <div className="card">

@@ -35,7 +35,7 @@ export function ListGroup({ header, footer, children }: { header?: string; foote
   );
 }
 
-export type RowTone = 'accent' | 'strava' | 'warm' | 'calm' | 'neutral';
+export type RowTone = 'accent' | 'warm' | 'calm' | 'neutral';
 
 interface RowProps {
   icon?: ReactNode;

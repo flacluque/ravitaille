@@ -203,7 +203,7 @@ public class StravaService {
      * pied et de trail de l'année : les {@value #PROFILE_ACTIVITIES} plus parlantes (du dénivelé, de la durée, les
      * courses d'abord), une requête Strava chacune.
      */
-    public RunnerProfile profile(StravaSession session) {
+    public MeasuredProfile profile(StravaSession session) {
         LocalDate since = LocalDate.now(clock).minusYears(1);
         List<StravaActivity> chosen = fetch(session, since, RUNNING).stream()
                 .filter(a -> a.movingTime().compareTo(PROFILE_MIN_DURATION) >= 0)
@@ -217,12 +217,17 @@ public class StravaService {
         }
         String access = accessToken(session);
         List<RunnerCalibration.Activity> activities = new ArrayList<>();
+        List<Long> sources = new ArrayList<>();
         for (StravaActivity a : chosen) {
             JsonNode streams = call(session, () -> client.streams(access, a.id()));
-            toStreams(streams, a).ifPresent(activities::add);
+            toStreams(streams, a).ifPresent(activity -> {
+                activities.add(activity);
+                sources.add(a.id());
+            });
         }
-        return RunnerCalibration.calibrate(activities).orElseThrow(() -> new IllegalArgumentException(
+        RunnerProfile profile = RunnerCalibration.calibrate(activities).orElseThrow(() -> new IllegalArgumentException(
                 "Pas assez de mesures dans tes sorties Strava (GPS et altitude) pour calculer ton profil."));
+        return new MeasuredProfile(profile, List.copyOf(sources));
     }
 
     /**

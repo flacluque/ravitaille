@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { RacePlan, TrainingWeek } from '../api/types';
 import { formatKm } from '../lib/format';
 import { comparedReferences, formEffect, axisTicks, volumeChange, weekLabel } from '../lib/training';
-import { StravaLogo } from './StravaLogo';
+import { PoweredByStrava } from './StravaBrand';
 
 const H = 170;
 const PAD = { top: 12, right: 8, bottom: 22, left: 34 };
@@ -24,7 +24,7 @@ export function TrainingCard({ plan }: { plan: RacePlan }) {
   return (
     <section className="card training">
       <div className="card-head">
-        <h2><span className="strava-mark small"><StravaLogo size={13} /></span> Ta préparation</h2>
+        <h2>Ta préparation</h2>
         <p className="muted small">
           Les {n} semaines avant ta course{block.end > new Date().toISOString().slice(0, 10) ? ", jusqu'à aujourd'hui" : ''},
           d'après Strava. Volume en km-effort : 100 m de D+ comptent comme 1 km.
@@ -94,6 +94,7 @@ export function TrainingCard({ plan }: { plan: RacePlan }) {
             : `+10 % de volume ≈ −${formatPct(t.elasticity)} de temps, d'après Tanda 2011`}), dans la limite de ±8 %.
         </p>
       )}
+      <PoweredByStrava />
     </section>
   );
 }

@@ -35,8 +35,10 @@ describe('import Strava', () => {
   });
 
   it('fait une référence avec le temps de déplacement', () => {
-    expect(activityToReference(cathares, 'RACE')).toEqual({
+    // L'activité d'origine est gardée : la référence est revérifiée sur Strava, et effacée si l'activité disparaît.
+    expect(activityToReference(cathares, 'RACE', new Date('2026-10-31T10:00:00Z'))).toEqual({
       label: 'Sortie 1', date: '2026-04-12', kind: 'RACE', km: 60.4, gainM: 3210, time: 'PT8H10M',
+      strava: { id: cathares.id, checkedAt: '2026-10-31T10:00:00.000Z' },
     });
     // Activité saisie à la main, sans temps de déplacement : on garde le temps écoulé.
     expect(activityToReference({ ...cathares, movingTime: 'PT0S' }, 'RACE').time).toBe('PT8H48M');
