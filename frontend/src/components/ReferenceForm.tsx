@@ -148,7 +148,7 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
       </div>
 
       <div className="ref-strava">
-        <p>Le plus simple : <strong>importe tes courses depuis Strava</strong>. Ravitaille repère celles qui ressemblent à ta
+        <p>Le plus simple : <strong>importe tes courses depuis Strava</strong>. Ravitime repère celles qui ressemblent à ta
           course.</p>
         <button type="button" className="ghost" onClick={() => setStravaOpen(true)}>Importer depuis Strava</button>
       </div>

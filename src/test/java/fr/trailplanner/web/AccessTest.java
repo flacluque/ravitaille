@@ -58,9 +58,9 @@ class AccessTest {
     void lAppliMobileGardeLeCodeDansUnEnTete() throws Exception {
         String signed = mvc.perform(post("/api/app/access").contentType(MediaType.APPLICATION_JSON).content("{\"code\":\"Bogomiles\"}"))
                 .andExpect(status().isNoContent())
-                .andReturn().getResponse().getHeader("X-Ravitaille-Access");
-        mvc.perform(get("/api/demo/bogomiles/course").header("X-Ravitaille-Access", signed)).andExpect(status().isOk());
-        mvc.perform(get("/api/demo/bogomiles/course").header("X-Ravitaille-Access", "bricole")).andExpect(status().isUnauthorized());
+                .andReturn().getResponse().getHeader("X-Ravitime-Access");
+        mvc.perform(get("/api/demo/bogomiles/course").header("X-Ravitime-Access", signed)).andExpect(status().isOk());
+        mvc.perform(get("/api/demo/bogomiles/course").header("X-Ravitime-Access", "bricole")).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -69,14 +69,14 @@ class AccessTest {
         mvc.perform(options("/api/demo/bogomiles/course")
                         .header("Origin", "capacitor://localhost")
                         .header("Access-Control-Request-Method", "GET")
-                        .header("Access-Control-Request-Headers", "X-Ravitaille-Access"))
+                        .header("Access-Control-Request-Headers", "X-Ravitime-Access"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Access-Control-Allow-Origin", "capacitor://localhost"));
         // Le refus reste lisible par l'appli, qui voit aussi les en-têtes de connexion.
         mvc.perform(get("/api/demo/bogomiles/course").header("Origin", "capacitor://localhost"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().string("Access-Control-Allow-Origin", "capacitor://localhost"))
-                .andExpect(header().string("Access-Control-Expose-Headers", org.hamcrest.Matchers.containsString("X-Ravitaille-Strava")));
+                .andExpect(header().string("Access-Control-Expose-Headers", org.hamcrest.Matchers.containsString("X-Ravitime-Strava")));
         // Un autre site ne reçoit pas d'autorisation (le navigateur l'empêche alors de lire la réponse).
         mvc.perform(get("/api/app").header("Origin", "https://pirate.example"))
                 .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));

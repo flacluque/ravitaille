@@ -120,7 +120,7 @@ export function fetchStravaStatus(): Promise<StravaStatus> {
 
 /** Page à ouvrir pour connecter Strava : l'API renvoie vers Strava, qui revient ensuite sur l'appli. */
 export function stravaConnectUrl(): string {
-  // Dans l'appli, Strava revient sur le serveur, qui rouvre l'appli par son lien (ravitaille://strava?…).
+  // Dans l'appli, Strava revient sur le serveur, qui rouvre l'appli par son lien (ravitime://strava?…).
   if (isNativeApp()) return `${API_BASE}/api/strava/authorize?origin=app`;
   return `${API_BASE}/api/strava/authorize?origin=${encodeURIComponent(window.location.origin)}`;
 }

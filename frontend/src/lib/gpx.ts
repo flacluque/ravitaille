@@ -81,10 +81,10 @@ export function buildCourseGpx(course: CourseView, plan: RacePlan, services: Ser
   const points = track.profile.map((p) => `      <trkpt lat="${coord(p.lat)}" lon="${coord(p.lon)}"><ele>${Math.round(p.elevationM)}</ele></trkpt>`);
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<gpx version="1.1" creator="Ravitaille" xmlns="http://www.topografix.com/GPX/1/1">',
+    '<gpx version="1.1" creator="Ravitime" xmlns="http://www.topografix.com/GPX/1/1">',
     '  <metadata>',
     `    <name>${name}</name>`,
-    `    <desc>${xml(`Plan Ravitaille, scénario ${plan.scenario.name.toLowerCase()} : heures de passage prévues aux ravitos.`)}</desc>`,
+    `    <desc>${xml(`Plan Ravitime, scénario ${plan.scenario.name.toLowerCase()} : heures de passage prévues aux ravitos.`)}</desc>`,
     '  </metadata>',
     ...waypoints,
     '  <trk>',

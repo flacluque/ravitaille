@@ -2,8 +2,8 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 // Appli iPhone : le site construit pour l'appli (npm run build:app → dist/), emballé par Capacitor.
 const config: CapacitorConfig = {
-  appId: 'fr.ravitaille.app',
-  appName: 'Ravitaille',
+  appId: 'fr.ravitime.app',
+  appName: 'Ravitime',
   webDir: 'dist',
   ios: {
     // Fond de l'appli pendant le chargement (comme le site).

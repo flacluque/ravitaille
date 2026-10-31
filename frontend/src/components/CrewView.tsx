@@ -61,7 +61,7 @@ export function CrewView({ share }: { share: CrewShare }) {
   return (
     <div className="cv">
       <header className="cv-head">
-        <span className="cv-brand">Ravitaille · Assistance</span>
+        <span className="cv-brand">Ravitime · Assistance</span>
         <h1>Suivre {share.runner ?? 'la course'}</h1>
         <p>{share.race} · départ {clock(0)}</p>
       </header>

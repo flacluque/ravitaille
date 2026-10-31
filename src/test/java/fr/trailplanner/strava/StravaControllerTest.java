@@ -96,21 +96,21 @@ class StravaControllerTest {
                 .andExpect(header().doesNotExist("Set-Cookie"))
                 .andReturn();
         String location = result.getResponse().getHeader("Location");
-        assertTrue(location.startsWith("ravitaille://strava?strava=connected&session="), location);
+        assertTrue(location.startsWith("ravitime://strava?strava=connected&session="), location);
         assertFalse(location.contains("acces"), "jetons illisibles dans le lien");
 
         // L'appli renvoie la connexion dans l'en-tête ; une connexion oubliée lui revient vide.
         String sealed = java.net.URLDecoder.decode(location.substring(location.indexOf("session=") + 8), java.nio.charset.StandardCharsets.UTF_8);
         when(strava.status(any())).thenAnswer(call -> new StravaStatus(true,
                 call.<StravaSession>getArgument(0).token().isPresent(), call.<StravaSession>getArgument(0).token().map(StravaToken::athlete).orElse(null)));
-        mvc.perform(get("/api/strava/status").header("X-Ravitaille-Strava", sealed)).andExpect(jsonPath("$.athlete").value("Flavien L."));
+        mvc.perform(get("/api/strava/status").header("X-Ravitime-Strava", sealed)).andExpect(jsonPath("$.athlete").value("Flavien L."));
         doAnswer(call -> {
             call.<StravaSession>getArgument(0).clear();
             return null;
         }).when(strava).disconnect(any());
-        mvc.perform(delete("/api/strava/connection").header("X-Ravitaille-Strava", sealed))
+        mvc.perform(delete("/api/strava/connection").header("X-Ravitime-Strava", sealed))
                 .andExpect(status().isNoContent())
-                .andExpect(header().string("X-Ravitaille-Strava", ""))
+                .andExpect(header().string("X-Ravitime-Strava", ""))
                 .andExpect(header().doesNotExist("Set-Cookie"));
     }
 

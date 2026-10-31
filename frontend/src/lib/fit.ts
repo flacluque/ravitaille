@@ -143,7 +143,7 @@ export async function buildCourseFit(course: CourseView, plan: RacePlan, service
   const first = records[0];
   const lastRec = records[records.length - 1];
   const totalSeconds = Math.round((lastRec.minutes - first.minutes) * 60);
-  const name = ascii(course.race.name).slice(0, 32) || 'Ravitaille';
+  const name = ascii(course.race.name).slice(0, 32) || 'Ravitime';
 
   const encoder = new Encoder();
   // Les messages suivent le profil FIT (noms de champs en camelCase) ; le SDK convertit valeurs et unités.

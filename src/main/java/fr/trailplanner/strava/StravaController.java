@@ -31,11 +31,11 @@ public class StravaController {
 
     private final StravaService strava;
     private final StravaCookies cookies;
-    /** Lien qui rouvre l'appli mobile après Strava ({@code ravitaille://strava?…}). */
+    /** Lien qui rouvre l'appli mobile après Strava ({@code ravitime://strava?…}). */
     private final String appScheme;
 
     public StravaController(StravaService strava, StravaCookies cookies,
-                            @Value("${trailplanner.app-scheme:ravitaille}") String appScheme) {
+                            @Value("${trailplanner.app-scheme:ravitime}") String appScheme) {
         this.strava = strava;
         this.cookies = cookies;
         this.appScheme = appScheme;

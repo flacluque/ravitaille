@@ -64,10 +64,10 @@ export function HomeDashboard({ mode, course, plan, exampleReferences, loading, 
   if (!course || !plan) {
     return (
       <div className="home">
-        <RaceSwitcher title={mode === 'custom' ? draftName : 'Ravitaille'} onClick={onRaces} />
+        <RaceSwitcher title={mode === 'custom' ? draftName : 'Ravitime'} onClick={onRaces} />
         {loading ? <p className="muted">Calcul en cours…</p> : (
           <div className="home-empty">
-            <p>Saisis ta course (roadbook, trace GPX) : Ravitaille calcule ton heure de passage à chaque ravito.</p>
+            <p>Saisis ta course (roadbook, trace GPX) : Ravitime calcule ton heure de passage à chaque ravito.</p>
             <button type="button" className="big-btn" onClick={onEditRace}>Saisir ma course</button>
           </div>
         )}

@@ -33,7 +33,7 @@ export function MePage({ referenceCount, exampleReferences, runner, hrefs, feedb
   }, []);
   async function disconnect() {
     if (!window.confirm('Déconnecter Strava ? Tout ce qui vient de Strava (références importées, profil de coureur, retours '
-      + 'de course) sera effacé de Ravitaille.')) return;
+      + 'de course) sera effacé de Ravitime.')) return;
     setDisconnecting(true);
     setError(null);
     try {
@@ -82,7 +82,7 @@ export function MePage({ referenceCount, exampleReferences, runner, hrefs, feedb
         <ListRow icon={<DocIcon size={18} />} tone="neutral" title="PDF complet" detail="Tout le plan" onClick={() => onPdf('full')} disabled={!!exportBlocked} />
       </ListGroup>
 
-      <ListGroup header="Ravitaille">
+      <ListGroup header="Ravitime">
         <ListRow icon={<InfoIcon size={18} />} tone="neutral" title="Comment c'est calculé" detail="Le modèle, ses sources, ses limites" href={hrefs.algo} />
         <ListRow icon={<ShieldIcon size={18} />} tone="neutral" title="Confidentialité" detail="Tes données, Strava, comment tout effacer" href={hrefs.confidentialite} />
         {feedbackUrl && <ListRow icon={<ChatIcon size={18} />} tone="neutral" title="Donner mon avis" detail="Un bug, une idée, un plan qui s'est trompé" href={feedbackUrl} external />}

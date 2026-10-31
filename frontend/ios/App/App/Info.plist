@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>fr</string>
 	<key>CFBundleDisplayName</key>
-        <string>Ravitaille</string>
+        <string>Ravitime</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -22,10 +22,10 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>fr.ravitaille.app</string>
+			<string>fr.ravitime.app</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>ravitaille</string>
+				<string>ravitime</string>
 			</array>
 		</dict>
 	</array>

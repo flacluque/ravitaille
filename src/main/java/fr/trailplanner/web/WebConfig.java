@@ -41,6 +41,6 @@ public class WebConfig {
     }
 
     /** En-têtes de l'appli : connexion Strava chiffrée, et code d'accès signé (à la place des cookies du site). */
-    public static final String APP_STRAVA_HEADER = "X-Ravitaille-Strava";
-    public static final String APP_ACCESS_HEADER = "X-Ravitaille-Access";
+    public static final String APP_STRAVA_HEADER = "X-Ravitime-Strava";
+    public static final String APP_ACCESS_HEADER = "X-Ravitime-Access";
 }

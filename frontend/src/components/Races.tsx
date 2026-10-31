@@ -255,7 +255,7 @@ export function RaceDashboard({ plan, course, isExample, prep, list, loading, on
         </> : (
           <div className="home-empty">
             {loading ? <p className="muted">Calcul en cours…</p> : <>
-              <p>Saisis ta course (roadbook, trace GPX) : Ravitaille calcule ton heure de passage à chaque ravito.</p>
+              <p>Saisis ta course (roadbook, trace GPX) : Ravitime calcule ton heure de passage à chaque ravito.</p>
               <button type="button" className="big-btn" onClick={onEditRace}>Saisir ma course</button>
             </>}
           </div>

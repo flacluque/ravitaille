@@ -165,5 +165,5 @@ export function reconcileNotice(r: Pick<Reconciled, 'removedReferences' | 'profi
   if (r.removedRaces) parts.push(`${r.removedRaces} retour${r.removedRaces > 1 ? 's' : ''} de course`);
   if (!parts.length) return null;
   const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} et ${parts[parts.length - 1]}` : parts[0];
-  return `Des activités ont été supprimées de ton compte Strava. Ravitaille a effacé ce qui en venait : ${list}.`;
+  return `Des activités ont été supprimées de ton compte Strava. Ravitime a effacé ce qui en venait : ${list}.`;
 }

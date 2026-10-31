@@ -49,7 +49,7 @@ public class StravaService {
     static final double PROFILE_MIN_GAIN_M = 200;
 
     /**
-     * Origine de l'appli mobile : au retour de Strava, on la rouvre par son lien ({@code ravitaille://strava?…}) au lieu
+     * Origine de l'appli mobile : au retour de Strava, on la rouvre par son lien ({@code ravitime://strava?…}) au lieu
      * d'une adresse web.
      */
     public static final String APP_ORIGIN = "app:";

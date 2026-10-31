@@ -16,7 +16,7 @@
     </style>
 
 
-    <!-- Lancement : le vert de Ravitaille et la montagne (Android 12 et plus), l'image splash avant. L'ouverture animée
+    <!-- Lancement : le vert de Ravitime et la montagne (Android 12 et plus), l'image splash avant. L'ouverture animée
          de la page (LaunchIntro) prend ensuite le relais. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>

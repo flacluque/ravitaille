@@ -90,7 +90,7 @@ describe('données Strava gardées par l\'appli', () => {
       if (r.kind !== 'reconciled') return;
       expect(r.result.references[0].strava?.checkedAt).toBe(now.toISOString());
       expect(reconcileNotice(r.result)).toBe(
-        'Des activités ont été supprimées de ton compte Strava. Ravitaille a effacé ce qui en venait : 1 retour de course.');
+        'Des activités ont été supprimées de ton compte Strava. Ravitime a effacé ce qui en venait : 1 retour de course.');
       expect(reconcileNotice({ removedReferences: 0, profileRemoved: false, removedRaces: 0 })).toBeNull();
     });
   });

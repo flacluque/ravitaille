@@ -22,12 +22,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Retour de Strava : le serveur rouvre l'appli par ravitaille://strava?… -->
+            <!-- Retour de Strava : le serveur rouvre l'appli par ravitime://strava?… -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="ravitaille" />
+                <data android:scheme="ravitime" />
             </intent-filter>
 
         </activity>

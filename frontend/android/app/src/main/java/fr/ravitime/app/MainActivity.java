@@ -1,4 +1,4 @@
-package fr.ravitaille.app;
+package fr.ravitime.app;
 
 import com.getcapacitor.BridgeActivity;
 

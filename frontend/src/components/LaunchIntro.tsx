@@ -39,7 +39,7 @@ export function LaunchIntro() {
           <path className="launch-trace" d="M10 54 C 22 46, 30 52, 42 44 S 54 40, 58 38" pathLength={1} stroke="#e8893a"
             strokeWidth={3.5} fill="none" strokeLinecap="round" />
         </svg>
-        <span className="launch-name">Ravitaille</span>
+        <span className="launch-name">Ravitime</span>
       </div>
     </div>
   );
