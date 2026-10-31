@@ -40,7 +40,7 @@ import {
 } from './api/races';
 import { defaultRaceId, isPast, raceName, summarize, type RaceBook } from './lib/races';
 import { RacesSheet, RacePicker, RaceDashboard, type PrepItem, type RaceListProps } from './components/Races';
-import { isExampleReference } from './lib/strava';
+import { isExampleReference, withoutExample } from './lib/strava';
 import { playPageIn, useSlidingPill } from './components/Motion';
 import { RaceView } from './components/RaceView';
 import { isRaceWindow, nowMinutes, type Fix } from './lib/race';
@@ -170,10 +170,16 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   // Tes références servent à toutes tes courses (gardées à part ; les premières versions les gardaient avec le plan).
   const storedReferences = useMemo(() => {
     const stored = loadReferences();
-    if (stored) return stored;
+    if (stored) {
+      // Course d'exemple gardée à côté de vraies références par une version précédente : retirée.
+      const references = withoutExample(stored.references);
+      if (references.length < stored.references.length) saveReferences(references, stored.source);
+      return { ...stored, references };
+    }
     return { references: initial?.references.length ? initial.references : DEFAULT_REFERENCES, source: initial?.source ?? 'AUTO' as ElevationSource };
   }, [initial]);
-  const [references, setReferences] = useState<Reference[]>(storedReferences.references.length ? storedReferences.references : DEFAULT_REFERENCES);
+  const [references, setReferences] = useState<Reference[]>(
+    storedReferences.references.length ? withoutExample(storedReferences.references) : DEFAULT_REFERENCES);
   const [source, setSource] = useState<ElevationSource>(storedReferences.source);
   const hasData = useRef(initial !== null);
   // Onglet affiché, avec sa propre adresse (#ravitos, #algorithme…) pour pouvoir partager le lien.
@@ -293,7 +299,9 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     void compute(references, source);
   }
 
-  const compute = (refs: Reference[], src: ElevationSource) => {
+  const compute = (all: Reference[], src: ElevationSource) => {
+    // Jamais la course d'exemple à côté de tes vraies références.
+    const refs = withoutExample(all);
     setReferences(refs);
     setSource(src);
     saveReferences(refs, src);

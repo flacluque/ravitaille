@@ -3,7 +3,7 @@ import { fetchStravaStatus } from '../api/client';
 import { MAX_PREP_WEEKS, MIN_PREP_WEEKS } from '../api/storage';
 import type { ElevationSource, Reference, ReferenceKind, TrainingOptions } from '../api/types';
 import { durationMinutes, formatHm, formatKm, parseHmInput } from '../lib/format';
-import { isExampleReference, type Target } from '../lib/strava';
+import { isExampleReference, withoutExample, type Target } from '../lib/strava';
 import { DatePicker } from './DatePicker';
 import { PoweredByStrava, ViewOnStrava } from './StravaBrand';
 import { StravaImport } from './StravaImport';
@@ -59,6 +59,8 @@ const toRow = (r: Reference): Row => ({
 const PREP_WEEKS = Array.from({ length: MAX_PREP_WEEKS - MIN_PREP_WEEKS + 1 }, (_, i) => MIN_PREP_WEEKS + i);
 
 const isBlank = (r: Row) => !r.label.trim() && !r.km.trim() && !r.gain.trim() && !r.time.trim();
+/** Ligne de la course d'exemple, pas encore modifiée. */
+const isExampleRow = (r: Row) => { const ref = parseRow(r).ref; return ref !== null && isExampleReference(ref); };
 const emptyRow = (): Row => ({ id: nextRowId++, label: '', date: '', kind: 'RACE', km: '', gain: '', time: '' });
 
 /** Ligne → référence pour l'API ; liste d'erreurs si la saisie est incomplète. */
@@ -114,8 +116,11 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
     : { ...r, ...patch, ...(['date', 'km', 'gain', 'time'].some((k) => k in patch) ? { strava: undefined } : {}) })));
 
   // Les sorties importées s'ajoutent aux références (à la place d'une ligne vide), et le plan est recalculé.
+  // La course d'exemple s'efface devant les tiennes.
+  const [exampleRemoved, setExampleRemoved] = useState(false);
   function addImported(refs: Reference[]) {
-    const next = [...rows.filter((r) => !isBlank(r)), ...refs.map(toRow)];
+    if (refs.length > 0 && rows.some(isExampleRow)) setExampleRemoved(true);
+    const next = [...rows.filter((r) => !isBlank(r) && (refs.length === 0 || !isExampleRow(r))), ...refs.map(toRow)];
     setRows(next);
     setStravaOpen(false);
     setStravaResult(null);
@@ -131,7 +136,13 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
   function submit(e: FormEvent) {
     e.preventDefault();
     if (valid) {
-      onSubmit(parsed.map((p) => p.ref!), source);
+      const refs = parsed.map((p) => p.ref!);
+      const kept = withoutExample(refs);
+      if (kept.length < refs.length) {
+        setRows((rs) => rs.filter((r) => !isExampleRow(r)));
+        setExampleRemoved(true);
+      }
+      onSubmit(kept, source);
       setExpanded(false);
     }
   }
@@ -165,10 +176,14 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
       )}
       {parsed.some((p) => p.ref && isExampleReference(p.ref)) && (
         <p className="example-note small">
-          Référence d'exemple, pas la tienne : importe tes courses depuis Strava, ou saisis une course que tu as faite,
-          pour un plan à ton rythme.{' '}
+          <strong>Course d'exemple, pas la tienne.</strong> Elle sert seulement en attendant les tiennes : importe tes
+          courses depuis Strava, ou saisis une course que tu as faite. Elle sera alors retirée toute seule.{' '}
           {!expanded && <button type="button" className="link-btn" onClick={() => setExpanded(true)}>Saisir la mienne</button>}
         </p>
+      )}
+
+      {exampleRemoved && !parsed.some((p) => p.ref && isExampleReference(p.ref)) && (
+        <p className="strava-msg ok small" role="status">La course d'exemple a été retirée : ton plan suit maintenant tes courses.</p>
       )}
 
       {expanded && <>
@@ -226,7 +241,7 @@ export function ReferenceForm({ initialReferences, initialSource, loading, onSub
       })}
 
       <div className="ref-actions">
-        <button type="button" className="ghost" onClick={() => setRows((rs) => [...rs, emptyRow()])}>
+        <button type="button" className="ghost" onClick={() => setRows((rs) => [...rs.filter((r) => !isExampleRow(r)), emptyRow()])}>
           + Ajouter une référence à la main
         </button>
       </div>

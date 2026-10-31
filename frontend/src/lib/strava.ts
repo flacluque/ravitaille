@@ -139,3 +139,11 @@ export function connectionMessage(result: string | null): { ok: boolean; text: s
 export function isExampleReference(ref: Reference): boolean {
   return !ref.label.trim() && !ref.date && ref.km === 60 && ref.gainM === 3200 && durationMinutes(ref.time) === 528;
 }
+
+/**
+ * La course d'exemple ne sert qu'en attendant les tiennes : dès qu'il y a une vraie référence, elle est retirée (elle
+ * fausserait le plan si on oubliait de la supprimer).
+ */
+export function withoutExample(refs: Reference[]): Reference[] {
+  return refs.some((r) => !isExampleReference(r)) ? refs.filter((r) => !isExampleReference(r)) : refs;
+}
