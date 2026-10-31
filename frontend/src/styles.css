@@ -1640,3 +1640,118 @@ button.ravitos-back.done { justify-self: end; font-weight: 700; }
   .t-check, .t-check svg path { transition: none !important; }
   .t-modal, .t-modal::backdrop { animation: none !important; }
 }
+
+/* ---------- Mes courses (components/Races.tsx) ---------- */
+/* Téléphone : le nom de la course, en grand, ouvre « Mes courses ». */
+button.race-switcher { display: flex; align-items: center; gap: 8px; max-width: 100%; min-height: 44px; padding: 0; border: 0;
+  background: none; color: var(--text); text-align: left; font: inherit; }
+button.race-switcher h1 { min-width: 0; }
+.race-switcher-chev { flex: none; display: grid; place-items: center; width: 30px; height: 30px; margin-top: 4px; border-radius: 50%;
+  background: var(--surface-2); color: var(--text); }
+.home-section { margin: 0 4px -12px; font-size: var(--fs-body); font-weight: 700; }
+
+/* Liste des courses */
+.race-list { display: flex; flex-direction: column; gap: 8px; }
+.race-list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.race-list p { margin: 0; }
+.race-section { margin: 6px 4px 0; font-family: var(--font-body); font-size: var(--fs-micro); font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted); }
+.race-card { position: relative; }
+button.race-open { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center;
+  padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  text-align: left; font: inherit; font-weight: 400; min-height: 0; }
+.race-card.shown button.race-open { border: 2px solid var(--accent); padding: 11px 13px; }
+.race-card:has(.race-delete) button.race-open { padding-right: 52px; }
+.race-card.shown:has(.race-delete) button.race-open { padding-right: 51px; }
+.race-name { font-family: var(--font-display); font-size: 1.1875rem; font-weight: 700; line-height: 1.15; overflow-wrap: anywhere; }
+.race-when { grid-row: 1 / span 2; grid-column: 2; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.race-when strong { font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; line-height: 1; color: var(--accent); }
+.race-when small { font-size: var(--fs-micro); color: var(--muted); white-space: nowrap; }
+.race-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--fs-small); color: var(--muted); }
+.race-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 600; white-space: nowrap; }
+.race-badge.shown { background: var(--accent); color: var(--accent-contrast); }
+.race-badge.ok { background: var(--ok-bg); color: var(--ok-fg); }
+.race-badge.todo { background: var(--tight-bg); color: var(--tight-fg); }
+.race-mini { grid-column: 1 / -1; width: 100%; height: 30px; margin-top: 6px; }
+.race-mini-area { fill: var(--track); fill-opacity: 0.12; }
+.race-mini-line { fill: none; stroke: var(--track); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+button.race-delete { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 40px; height: 40px; min-height: 0;
+  padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--muted); }
+button.race-delete:hover { background: var(--surface-2); color: var(--missed-fg); }
+button.race-new { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin-top: 4px;
+  border: 1.5px dashed var(--border); border-radius: 12px; background: transparent; color: var(--accent); font-weight: 700; }
+button.race-example { align-self: center; min-height: 44px; }
+.race-card.compact button.race-open { padding: 9px 12px; border-color: transparent; background: transparent; }
+.race-card.compact.shown button.race-open { border: 0; padding: 9px 12px; background: var(--surface-2); }
+.race-card.compact .race-name { font-size: var(--fs-body); }
+.race-card.compact .race-when strong { font-size: var(--fs-small); }
+.race-card.compact button.race-open:hover { background: var(--surface-2); }
+
+/* Feuille « Mes courses » : monte du bas, sur toute la largeur. */
+dialog.races-sheet { width: 100%; max-width: 560px; max-height: calc(100dvh - 48px - env(safe-area-inset-top)); margin: auto auto 0;
+  padding: 0 16px calc(20px + env(safe-area-inset-bottom)); border: 0; border-radius: 18px 18px 0 0; background: var(--bg);
+  color: var(--text); overflow-y: auto; overscroll-behavior: contain; }
+dialog.races-sheet::backdrop { background: rgb(20 24 21 / 0.4); }
+.sheet-grabber { width: 38px; height: 5px; margin: 8px auto 4px; border-radius: 3px; background: var(--border); }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; padding: 4px 0 8px; position: sticky; top: 0;
+  background: var(--bg); z-index: 1; }
+.sheet-head h2 { font-size: var(--fs-title); font-weight: 800; }
+button.sheet-close { display: grid; place-items: center; width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 50%;
+  background: var(--surface-2); color: var(--muted); }
+.t-sheet[open] { animation: t-sheet-open var(--modal-open-dur) var(--modal-ease) both; }
+.t-sheet[open]::backdrop { animation: t-backdrop-in var(--modal-open-dur) var(--modal-ease) both; }
+.t-sheet.is-closing { pointer-events: none; animation: t-sheet-close var(--modal-close-dur) var(--modal-ease) both; }
+.t-sheet.is-closing::backdrop { animation: t-backdrop-out var(--modal-close-dur) var(--modal-ease) both; }
+@keyframes t-sheet-open { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes t-sheet-close { from { transform: translateY(0); opacity: 1; } to { transform: translateY(40px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .t-sheet, .t-sheet::backdrop { animation: none !important; } }
+
+/* Ordinateur : le nom de la course dans la barre du haut ouvre la liste. */
+.race-picker { position: relative; flex: 1; min-width: 0; }
+button.race-picker-btn { display: inline-flex; align-items: center; gap: 12px; max-width: 460px; min-height: 48px; padding: 6px 12px 6px 14px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); text-align: left; font: inherit;
+  font-weight: 400; }
+button.race-picker-btn[aria-expanded='true'] { border-color: var(--accent); }
+.race-picker-btn > span { display: flex; flex-direction: column; min-width: 0; }
+.race-picker-btn strong { font-family: var(--font-display); font-size: 1.1875rem; font-weight: 700; line-height: 1.15;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.race-picker-btn small { font-size: var(--fs-micro); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.race-picker-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 60; width: 420px; max-height: 70vh; overflow-y: auto;
+  padding: 8px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: 0 16px 40px rgb(0 0 0 / 0.16); }
+.race-picker-menu .race-list ul { gap: 2px; }
+
+/* Ce qui reste à préparer */
+.prep-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.prep-item { display: flex; align-items: flex-start; gap: 10px; width: 100%; height: 100%; min-height: 0; padding: 12px; border-radius: 14px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); text-align: left; text-decoration: none; font: inherit;
+  font-weight: 400; }
+.prep-mark { flex: none; display: grid; place-items: center; width: 22px; height: 22px; margin-top: 1px; border-radius: 50%;
+  font-size: 0.8125rem; font-weight: 800; }
+.prep-mark.ok { background: var(--ok-bg); color: var(--ok-fg); }
+.prep-mark.todo { background: var(--tight-bg); color: var(--tight-fg); }
+.prep-mark.optional { background: var(--surface-2); color: var(--muted); }
+.prep-text { display: flex; flex-direction: column; min-width: 0; }
+.prep-text strong { font-weight: 600; line-height: 1.25; }
+.prep-text span { font-size: var(--fs-small); color: var(--muted); line-height: 1.3; }
+
+/* Site : tableau de bord */
+.race-dashboard { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 28px; width: 100%; max-width: 1280px; margin: 0 auto;
+  padding: 24px 0; }
+.race-dashboard-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.race-dashboard-main h1 { font-size: var(--fs-hero); font-weight: 800; }
+.race-dashboard-main > div > p { margin: 4px 0 0; }
+.race-dashboard-side { display: flex; flex-direction: column; gap: 6px; }
+.race-dashboard-side h2 { font-size: var(--fs-title); font-weight: 800; }
+.dash-hero-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; }
+.dash-hero { display: flex; flex-direction: column; gap: 4px; padding: 18px 20px; border-radius: 14px; background: #1f4d3a; color: #f6f4ef;
+  text-decoration: none; }
+.dash-hero-label { font-size: var(--fs-micro); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #c9ddd0; }
+.dash-hero-value { font-family: var(--font-display); font-size: 3.5rem; font-weight: 800; line-height: 1; }
+.race-dashboard .prep-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.race-dashboard .tile { min-height: 0; justify-content: center; }
+.race-dashboard .tile .tile-value { font-size: 2.5rem; }
+@media (max-width: 1100px) {
+  .race-dashboard { grid-template-columns: 1fr; }
+  .race-dashboard .prep-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.race-dashboard .course-strip { max-height: 210px; }

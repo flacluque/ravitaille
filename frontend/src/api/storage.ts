@@ -1,6 +1,6 @@
 import { normalizeDraft, type RaceDraft } from '../lib/draft';
 import { plain, type GearItem } from '../lib/gear';
-import type { RunnerProfile, TrainingOptions } from './types';
+import type { ElevationSource, Reference, RunnerProfile, TrainingOptions } from './types';
 import { DEFAULT_PROFILE, normalizeProfile, type NutritionProfile } from '../lib/nutrition';
 
 // Ta course reste dans ton navigateur : le roadbook (petit) dans localStorage, la trace GPX
@@ -38,6 +38,19 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
+/** Lecture, écriture et effacement d'une valeur dans IndexedDB (courses, traces, plans gardés). */
+export function idbGet(key: string): Promise<unknown> {
+  return withStore<unknown>('readonly', (s) => s.get(key));
+}
+
+export function idbPut(key: string, value: unknown): Promise<unknown> {
+  return withStore<unknown>('readwrite', (s) => s.put(value, key) as IDBRequest<unknown>);
+}
+
+export function idbDelete(key: string): Promise<unknown> {
+  return withStore<unknown>('readwrite', (s) => s.delete(key) as IDBRequest<unknown>);
+}
+
 async function withStore<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
   const db = await openDb();
   try {
@@ -65,19 +78,22 @@ function isStoredGpx(value: unknown): value is StoredGpx {
   return typeof value === 'object' && value !== null && (value as StoredGpx).bytes instanceof ArrayBuffer;
 }
 
-/** Enregistre (ou efface, avec null) la trace GPX de ta course. Les échecs sont silencieux. */
-export async function saveGpx(file: File | null): Promise<void> {
+/**
+ * Enregistre (ou efface, avec null) une trace GPX ; `key` : celle d'une course (api/races), sinon la trace unique des
+ * premières versions. Les échecs sont silencieux.
+ */
+export async function saveGpx(file: File | null, key = GPX_KEY): Promise<void> {
   try {
     const value: StoredGpx | null = file ? { name: file.name, type: file.type, bytes: await file.arrayBuffer() } : null;
-    await withStore<unknown>('readwrite', (s) => (value ? s.put(value, GPX_KEY) : s.delete(GPX_KEY)) as IDBRequest<unknown>);
+    await withStore<unknown>('readwrite', (s) => (value ? s.put(value, key) : s.delete(key)) as IDBRequest<unknown>);
   } catch {
     // IndexedDB indisponible : il faudra resélectionner la trace au prochain chargement.
   }
 }
 
-export async function loadGpx(): Promise<File | null> {
+export async function loadGpx(key = GPX_KEY): Promise<File | null> {
   try {
-    const value = await withStore<unknown>('readonly', (s) => s.get(GPX_KEY));
+    const value = await withStore<unknown>('readonly', (s) => s.get(key));
     if (isStoredGpx(value)) return new File([value.bytes], value.name || 'trace.gpx', { type: value.type });
     if (!(value instanceof Blob)) return null;
     // Trace gardée par une version précédente (un File) : relue tout de suite et gardée en octets. Illisible, elle est
@@ -87,7 +103,7 @@ export async function loadGpx(): Promise<File | null> {
       const bytes = await file.arrayBuffer();
       if (bytes.byteLength === 0 && file.size > 0) return file;
       const copy = new File([bytes], file.name, { type: file.type });
-      void saveGpx(copy);
+      void saveGpx(copy, key);
       return copy;
     } catch {
       return file;
@@ -97,7 +113,10 @@ export async function loadGpx(): Promise<File | null> {
   }
 }
 
-/** Checklist du matériel, une par course (clé : nom de la course). */
+/**
+ * Matériel, assistance et pointages du jour J : gardés course par course. La clé est l'identifiant de la course
+ * (api/races), ou le nom de la course pour l'exemple et les données des premières versions.
+ */
 function gearKey(raceName: string): string {
   return `trail-planner:materiel:${plain(raceName)}`;
 }
@@ -245,6 +264,8 @@ export interface RaceResult {
   fatigueExponent: number | null;
   /** Compter cette course pour la fatigue (à décocher pour une course perturbée : blessure, météo…). */
   use: boolean;
+  /** Course de Ravitaille comparée (api/races), absente pour un retour enregistré par une version précédente. */
+  raceId?: string;
 }
 
 export interface StoredRunnerProfile {
@@ -326,5 +347,52 @@ export function saveStravaCheck(at: string | null): void {
     else localStorage.removeItem(STRAVA_CHECK_KEY);
   } catch {
     // Stockage indisponible : la vérification se refera à la prochaine ouverture.
+  }
+}
+
+/** Donne à une course les données (matériel, assistance, pointages) gardées sous une autre clé, puis les y efface. */
+export function moveRaceData(from: string, to: string): void {
+  for (const key of [gearKey, crewKey, fixKey]) {
+    try {
+      const value = localStorage.getItem(key(from));
+      if (value !== null && localStorage.getItem(key(to)) === null) localStorage.setItem(key(to), value);
+      localStorage.removeItem(key(from));
+    } catch {
+      // stockage indisponible
+    }
+  }
+}
+
+/** Efface le matériel, l'assistance et les pointages d'une course supprimée. */
+export function deleteRaceData(raceKey: string): void {
+  for (const key of [gearKey, crewKey, fixKey]) {
+    try {
+      localStorage.removeItem(key(raceKey));
+    } catch {
+      // stockage indisponible
+    }
+  }
+}
+
+// Tes références (communes à toutes tes courses) et la source du dénivelé. Les premières versions les gardaient avec
+// le dernier plan calculé.
+const REFERENCES_KEY = 'trail-planner:references';
+
+export function loadReferences(): { references: Reference[]; source: ElevationSource } | null {
+  try {
+    const raw = JSON.parse(localStorage.getItem(REFERENCES_KEY) ?? 'null') as { references?: unknown; source?: unknown } | null;
+    if (!raw || !Array.isArray(raw.references)) return null;
+    const source = raw.source === 'ROADBOOK' || raw.source === 'TRACK' ? raw.source : 'AUTO';
+    return { references: raw.references as Reference[], source };
+  } catch {
+    return null;
+  }
+}
+
+export function saveReferences(references: Reference[], source: ElevationSource): void {
+  try {
+    localStorage.setItem(REFERENCES_KEY, JSON.stringify({ references, source }));
+  } catch {
+    // stockage indisponible
   }
 }

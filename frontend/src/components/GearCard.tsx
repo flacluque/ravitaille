@@ -18,6 +18,8 @@ import type { NutritionProfile } from '../lib/nutrition';
 
 interface Props {
   /** La checklist est propre à chaque course. */
+  /** Clé de la course (api/races) sous laquelle la liste est gardée. */
+  raceKey: string;
   raceName: string;
   plan: RacePlan | undefined;
   profile: NutritionProfile;
@@ -26,8 +28,8 @@ interface Props {
 const GROUPS: GearStatus[] = ['MANDATORY', 'RECOMMENDED', 'PERSONAL'];
 
 /** Checklist du matériel : lue dans le règlement, partie d'une liste type, ou saisie ; à cocher en faisant le sac. */
-export function GearCard({ raceName, plan, profile }: Props) {
-  const [items, setItems] = useState<GearItem[]>(() => loadGear(raceName));
+export function GearCard({ raceKey, raceName, plan, profile }: Props) {
+  const [items, setItems] = useState<GearItem[]>(() => loadGear(raceKey));
   const [newName, setNewName] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
   const [extractor, setExtractor] = useState<ExtractorStatus | null>(null);
@@ -38,17 +40,17 @@ export function GearCard({ raceName, plan, profile }: Props) {
 
   // Changement de course : on recharge sa propre liste.
   useEffect(() => {
-    setItems(loadGear(raceName));
+    setItems(loadGear(raceKey));
     setReadNotes([]);
     setReadError(null);
-  }, [raceName]);
+  }, [raceKey]);
   useEffect(() => {
     fetchExtractorStatus().then(setExtractor).catch(() => setExtractor(null));
   }, []);
 
   const update = (next: GearItem[]) => {
     setItems(next);
-    saveGear(raceName, next);
+    saveGear(raceKey, next);
   };
   const latest = useRef(items);
   latest.current = items;

@@ -4,7 +4,7 @@ import {
   type Snapshot,
 } from './api/client';
 import {
-  loadCrew, loadDraft, loadGear, loadGpx, loadNutrition, loadTrainingOptions, saveCrew, saveDraft, saveGpx, saveNutrition,
+  loadCrew, loadGear, loadNutrition, loadReferences, loadTrainingOptions, saveCrew, saveNutrition, saveReferences,
   saveTrainingOptions,
   loadFix, loadRunnerName, loadRunnerProfile, loadStravaCheck, saveRunnerProfile, saveStravaCheck, NO_RUNNER_PROFILE,
   type StoredRunnerProfile,
@@ -34,6 +34,12 @@ import { ListGroup, ListRow } from './components/AppScreen';
 import { FlagIcon, RouteIcon } from './components/Icons';
 import { PrivacyPage } from './components/PrivacyPage';
 import { checkStrava, holdsStravaData, purgeStrava, reconcileNotice } from './lib/stravaData';
+import {
+  deleteRaceFiles, loadRaceBook, loadRaceGpx, loadRacePlan, newRace, saveRaceBook, saveRaceGpx, saveRacePlan, scrubRacePlans,
+  updateDraft,
+} from './api/races';
+import { defaultRaceId, isPast, raceName, summarize, type RaceBook } from './lib/races';
+import { RacesSheet, RacePicker, RaceDashboard, type PrepItem, type RaceListProps } from './components/Races';
 import { isExampleReference } from './lib/strava';
 import { playPageIn, useSlidingPill } from './components/Motion';
 import { RaceView } from './components/RaceView';
@@ -117,6 +123,18 @@ type Status =
   | { kind: 'rejected'; error: string };
 
 export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}) {
+  // Mes courses (api/races) : lue avant le dernier plan, qu'elle relie à sa course la première fois.
+  const [book, setBookState] = useState<RaceBook>(loadRaceBook);
+  const bookRef = useRef(book);
+  const activeRef = useRef(book.active);
+  const changeBook = useCallback((update: (b: RaceBook) => RaceBook) => {
+    const next = update(bookRef.current);
+    bookRef.current = next;
+    activeRef.current = next.active;
+    saveRaceBook(next);
+    setBookState(next);
+  }, []);
+  const activeRace = book.races.find((r) => r.id === book.active) ?? null;
   const initial = useMemo(loadSnapshot, []);
   const [data, setData] = useState<Snapshot | null>(initial);
   const [status, setStatus] = useState<Status>({ kind: 'loading' });
@@ -141,7 +159,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   const [stravaRequested, setStravaRequested] = useState(false);
 
   const [mode, setMode] = useState<Mode>(initial?.sampleId === CUSTOM_ID ? 'custom' : 'demo');
-  const [draft, setDraft] = useState<RaceDraft>(() => loadDraft() ?? emptyDraft());
+  const [draft, setDraft] = useState<RaceDraft>(() => activeRace?.draft ?? emptyDraft());
   const [gpx, setGpx] = useState<File | null>(null);
   const [draftErrors, setDraftErrors] = useState<string[]>([]);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -149,8 +167,14 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   const [computedSignature, setComputedSignature] = useState<string | null>(null);
 
   // Dernière référence demandée : l'éditeur de course relance le calcul avec elle.
-  const [references, setReferences] = useState<Reference[]>(initial?.references.length ? initial.references : DEFAULT_REFERENCES);
-  const [source, setSource] = useState<ElevationSource>(initial?.source ?? 'AUTO');
+  // Tes références servent à toutes tes courses (gardées à part ; les premières versions les gardaient avec le plan).
+  const storedReferences = useMemo(() => {
+    const stored = loadReferences();
+    if (stored) return stored;
+    return { references: initial?.references.length ? initial.references : DEFAULT_REFERENCES, source: initial?.source ?? 'AUTO' as ElevationSource };
+  }, [initial]);
+  const [references, setReferences] = useState<Reference[]>(storedReferences.references.length ? storedReferences.references : DEFAULT_REFERENCES);
+  const [source, setSource] = useState<ElevationSource>(storedReferences.source);
   const hasData = useRef(initial !== null);
   // Onglet affiché, avec sa propre adresse (#ravitos, #algorithme…) pour pouvoir partager le lien.
   // Le jour de la course, l'appli s'ouvre sur « En course » (sauf lien vers un autre onglet).
@@ -200,23 +224,36 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   const [runner, setRunner] = useState<StoredRunnerProfile>(loadRunnerProfile);
   const runnerRef = useRef(runner);
 
+  // Calcul d'un plan : celui de l'exemple (raceId null) ou d'une de tes courses, gardé avec elle. Si une autre course est
+  // affichée entre-temps, le plan est gardé sans être montré.
   const run = useCallback(async (sampleId: string, load: () => Promise<Pick<Snapshot, 'course' | 'plans'>>,
-    refs: Reference[], src: ElevationSource) => {
+    refs: Reference[], src: ElevationSource, raceId: string | null = null, signature?: string) => {
+    const current = () => raceId === null || activeRef.current === raceId;
     setStatus({ kind: 'loading' });
     try {
       const { course, plans } = await load();
-      const snapshot: Snapshot = { sampleId, references: refs, source: src, course, plans, savedAt: new Date().toISOString() };
-      setData(snapshot);
-      saveSnapshot(snapshot);
-      hasData.current = true;
-      setStatus({ kind: 'ready' });
+      const snapshot: Snapshot = {
+        sampleId, references: refs, source: src, course, plans, savedAt: new Date().toISOString(),
+        ...(raceId ? { raceId, signature } : {}),
+      };
+      if (raceId) {
+        void saveRacePlan(raceId, snapshot);
+        const summary = summarize(snapshot);
+        changeBook((b) => ({ ...b, races: b.races.map((r) => (r.id === raceId ? { ...r, summary } : r)) }));
+      }
+      if (current()) {
+        setData(snapshot);
+        saveSnapshot(snapshot);
+        hasData.current = true;
+        setStatus({ kind: 'ready' });
+      }
       return true;
     } catch (e) {
       const error = e instanceof Error ? e.message : String(e);
-      setStatus(e instanceof ApiError ? { kind: 'rejected', error } : { kind: 'unreachable', error });
+      if (current()) setStatus(e instanceof ApiError ? { kind: 'rejected', error } : { kind: 'unreachable', error });
       return false;
     }
-  }, []);
+  }, [changeBook]);
 
   const computeDemo = useCallback((refs: Reference[], src: ElevationSource) =>
     run(SAMPLE_ID, async () => {
@@ -232,9 +269,12 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
       return false;
     }
     setDraftErrors([]);
+    const raceId = activeRef.current;
+    if (!raceId) return false;
+    const signature = draftSignature(d, file);
     const ok = await run(CUSTOM_ID, () => fetchCustomPlans(result.race, result.night, file, refs, src, trainingRef.current,
-      appliedProfile(runnerRef.current)), refs, src);
-    if (ok) setComputedSignature(draftSignature(d, file));
+      appliedProfile(runnerRef.current)), refs, src, raceId, signature);
+    if (ok && activeRef.current === raceId) setComputedSignature(signature);
     return ok;
   }, [run]);
 
@@ -256,6 +296,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   const compute = (refs: Reference[], src: ElevationSource) => {
     setReferences(refs);
     setSource(src);
+    saveReferences(refs, src);
     return mode === 'demo' ? computeDemo(refs, src) : computeCustom(refs, src, draft, gpx);
   };
 
@@ -269,6 +310,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   function keepStrava(refs: Reference[], nextRunner: StoredRunnerProfile, scrub: boolean, notice: string | null) {
     const { data: snap, compute: recompute, source: src } = latest.current;
     const nextRefs = refs.length ? refs : DEFAULT_REFERENCES;
+    saveReferences(nextRefs, src);
     setRunner(nextRunner);
     runnerRef.current = nextRunner;
     saveRunnerProfile(nextRunner);
@@ -281,7 +323,8 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
       saveSnapshot(cleaned);
     }
     if (notice) setStravaNotice(notice);
-    void recompute(nextRefs, src);
+    // Les plans gardés de tes autres courses perdent aussi ce qu'ils tiraient de Strava.
+    void (scrub ? scrubRacePlans(bookRef.current.races.map((r) => r.id)) : Promise.resolve()).then(() => recompute(nextRefs, src));
   }
 
   /** Strava déconnecté ou accès révoqué : tout ce qui en vient est effacé, et le coureur en est averti (§7.4, §2.5). */
@@ -322,6 +365,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
         else {
           // Rien n'a changé sur Strava : seule la date de vérification des références avance.
           setReferences(r.references);
+          saveReferences(r.references, latest.current.source);
           const snap = latest.current.data;
           if (snap) saveSnapshot({ ...snap, references: r.references });
         }
@@ -345,7 +389,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     if (file && previous && d.name.trim() && d.name.trim() !== previous) {
       file = null;
       setGpx(null);
-      void saveGpx(null);
+      if (activeRef.current) void saveRaceGpx(activeRef.current, null);
     }
     if (!(await computeCustom(references, source, d, file))) {
       requestAnimationFrame(() => document.querySelector('.editor-errors')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
@@ -354,18 +398,23 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
 
   // Premier chargement : on recalcule ce qui était affiché la dernière fois (la trace GPX est relue
   // depuis IndexedDB). Hors ligne, le dernier plan reste affiché.
+  // Une course passée garde le plan qu'elle avait : il n'est recalculé que si sa saisie a changé.
+  const startup = useRef(false);
   useEffect(() => {
-    const refs = initial?.references.length ? initial.references : DEFAULT_REFERENCES;
-    const src = initial?.source ?? 'AUTO';
-    if (initial?.sampleId === CUSTOM_ID) {
-      void loadGpx().then((file) => {
-        setGpx(file);
-        void computeCustom(refs, src, loadDraft() ?? emptyDraft(), file).then(() => setBooted(true));
-      });
+    if (startup.current) return;
+    startup.current = true;
+    const { references: refs, source: src } = latest.current;
+    if (initial?.sampleId === CUSTOM_ID && bookRef.current.active) {
+      const pick = defaultRaceId(bookRef.current);
+      if (pick && pick !== bookRef.current.active) {
+        void openRaceRef.current(pick).then(() => setBooted(true));
+        return;
+      }
+      void openRaceRef.current(bookRef.current.active, initial.raceId === bookRef.current.active ? initial : null).then(() => setBooted(true));
     } else {
       void computeDemo(refs, src).then(() => setBooted(true));
     }
-  }, [initial, computeDemo, computeCustom]);
+  }, [initial, computeDemo]);
   // Une fois le premier plan affiché (le serveur est réveillé), puis à chaque retour dans l'appli : vérification Strava.
   const [booted, setBooted] = useState(false);
   const verifyRef = useRef(verifyStrava);
@@ -378,21 +427,79 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [booted]);
 
+  /**
+   * Affiche une de tes courses : sa saisie, sa trace et son plan gardé, puis recalcule le plan (tes références ont pu
+   * changer). Une course passée garde son plan tel quel, sauf si sa saisie a changé. Course pas encore complète : place
+   * à la saisie. `shown` : son plan, déjà affiché à l'ouverture de l'appli.
+   */
+  async function openRace(id: string, shownPlan: Snapshot | null = null) {
+    const entry = bookRef.current.races.find((r) => r.id === id);
+    if (!entry) return;
+    changeBook((b) => ({ ...b, active: id }));
+    setMode('custom');
+    setScenarioIndex(1);
+    setDraftErrors([]);
+    setEditorOpen(false);
+    setDraft(entry.draft);
+    const [file, stored] = await Promise.all([loadRaceGpx(bookRef.current, id), shownPlan ? Promise.resolve(shownPlan) : loadRacePlan(id)]);
+    if (activeRef.current !== id) return;
+    setGpx(file);
+    const signature = draftSignature(entry.draft, file);
+    if (stored) {
+      setData(stored);
+      saveSnapshot(stored);
+      hasData.current = true;
+      setComputedSignature(stored.signature ?? signature);
+    } else {
+      setComputedSignature(null);
+    }
+    if (stored && isPast(entry) && (stored.signature ?? signature) === signature) {
+      setStatus({ kind: 'ready' });
+      return;
+    }
+    const { references: refs, source: src } = latest.current;
+    if (draftToRace(entry.draft, file !== null).ok) await computeCustom(refs, src, entry.draft, file);
+    else {
+      setStatus({ kind: 'ready' });
+      setEditorOpen(true);
+    }
+  }
+  const openRaceRef = useRef(openRace);
+  openRaceRef.current = openRace;
+
+  /** Nouvelle course : vide, ouverte dans la saisie (roadbook lu par l'IA, trace GPX ou à la main). */
+  function createRace() {
+    const entry = newRace();
+    changeBook((b) => ({ ...b, races: [...b.races, entry] }));
+    void openRace(entry.id);
+    setEditorOpen(true);
+    goTab('plan');
+  }
+
+  /** Supprime une course et tout ce qui lui appartient ; on passe à la suivante, ou à l'exemple s'il n'en reste pas. */
+  function deleteRace(id: string) {
+    const wasActive = bookRef.current.active === id;
+    changeBook((b) => ({ ...b, races: b.races.filter((r) => r.id !== id), active: b.active === id ? null : b.active }));
+    void deleteRaceFiles(id);
+    if (!wasActive) return;
+    const next = defaultRaceId(bookRef.current);
+    if (next) void openRace(next);
+    else switchMode('demo');
+  }
+
   function switchMode(next: Mode) {
     if (next === mode) return;
-    setMode(next);
-    setScenarioIndex(1);
     if (next === 'demo') {
+      setMode('demo');
+      setScenarioIndex(1);
       setEditorOpen(false);
       void computeDemo(references, source);
-    } else {
-      // Course déjà saisie : on calcule tout de suite ; sinon, place à la saisie (sans erreurs d'emblée).
-      void loadGpx().then((file) => {
-        setGpx(file);
-        if (draftToRace(draft, file !== null).ok) void computeCustom(references, source, draft, file);
-        else setEditorOpen(true);
-      });
+      return;
     }
+    // Ta course : celle d'avant (ou la prochaine à venir), sinon une nouvelle.
+    const id = defaultRaceId(bookRef.current);
+    if (id) void openRace(id);
+    else createRace();
   }
 
   // Une fois des erreurs affichées, elles suivent la saisie : chaque correction en fait disparaître une.
@@ -402,26 +509,33 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     setDraftErrors(result.ok ? [] : result.errors);
   }
 
+  function storeDraft(next: RaceDraft) {
+    const id = activeRef.current;
+    if (id) changeBook((b) => updateDraft(b, id, next));
+  }
+
   function changeDraft(next: RaceDraft) {
     setDraft(next);
-    saveDraft(next);
+    storeDraft(next);
     revalidate(next, gpx);
   }
 
   function changeGpx(file: File | null) {
     setGpx(file);
-    void saveGpx(file);
+    if (activeRef.current) void saveRaceGpx(activeRef.current, file);
     // Les ravitos placés à la main l'étaient sur l'ancienne trace.
     const next = withoutTrackPositions(draft);
     if (next !== draft) {
       setDraft(next);
-      saveDraft(next);
+      storeDraft(next);
     }
     revalidate(next, file);
   }
 
   // En mode "ma course", on n'affiche pas le plan de l'exemple (et inversement).
-  const shown = data && (data.sampleId === CUSTOM_ID) === (mode === 'custom') ? data : null;
+  // Et pour ta course, seulement le plan de la course affichée (pas celui d'une autre de tes courses).
+  const shown = data && (data.sampleId === CUSTOM_ID) === (mode === 'custom')
+    && (mode === 'demo' || !data.raceId || data.raceId === book.active) ? data : null;
   const plans = shown?.plans ?? [];
   const plan = plans[Math.min(scenarioIndex, plans.length - 1)];
   const course = shown?.course;
@@ -465,8 +579,10 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
     saveNutrition(next);
   };
 
-  // Points où l'assistance attend le coureur : gardés course par course.
-  const crewRace = shown?.course.race.name ?? '';
+  // Matériel, assistance et pointages : gardés course par course (l'exemple, sous son nom).
+  const raceKey = mode === 'custom' && book.active ? book.active : shown?.course.race.name ?? '';
+  // Points où l'assistance attend le coureur.
+  const crewRace = shown ? raceKey : '';
   const [crew, setCrew] = useState<string[]>([]);
   useEffect(() => { setCrew(crewRace ? loadCrew(crewRace) : []); }, [crewRace]);
   const changeCrew = (codes: string[]) => {
@@ -505,7 +621,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
       const { downloadPlanPdf } = await import('./lib/pdf');
       await downloadPlanPdf({
         course, plans, selected: Math.min(scenarioIndex, plans.length - 1),
-        services, nutrition: nutritionProfile, gear: loadGear(course.race.name), crew, variant,
+        services, nutrition: nutritionProfile, gear: loadGear(raceKey), crew, variant,
       });
     } finally {
       setSavingPdf(false);
@@ -535,6 +651,49 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
   );
   const planReady = !!plan && !!course && !otherRace;
   const exampleReferences = references.some(isExampleReference);
+
+  // Mes courses : la liste (feuille sur téléphone, menu et colonne sur ordinateur) et ce qui reste à préparer.
+  const [racesOpen, setRacesOpen] = useState(false);
+  const reviewed = useMemo(() => new Set(runner.races.flatMap((r) => (r.raceId ? [r.raceId] : []))), [runner]);
+  const raceList: RaceListProps = {
+    book, shownId: mode === 'custom' ? book.active : null, reviewed,
+    onOpen: (id) => { if (id !== book.active || mode !== 'custom') void openRace(id); },
+    onNew: createRace,
+    onExample: () => switchMode('demo'),
+    onDelete: deleteRace,
+  };
+  const gear = raceKey ? loadGear(raceKey) : [];
+  const packed = gear.filter((g) => g.packed).length;
+  const runnerUsed = runner.use && (runner.profile !== null || runner.races.some((r) => r.use && r.fatigueExponent !== null));
+  const prep: PrepItem[] = [
+    {
+      title: 'Roadbook et trace',
+      state: mode === 'demo' || (gpx && planReady) ? 'ok' : 'todo',
+      detail: !planReady ? 'Course à saisir' : mode === 'demo' || gpx
+        ? `${plan!.checkpoints.length} points, trace GPX` : `${plan!.checkpoints.length} points · trace GPX à ajouter`,
+      onClick: () => { if (mode === 'demo') goTab('plan'); else { setEditorOpen(true); goTab('plan'); } },
+    },
+    {
+      title: 'Tes références', state: exampleReferences ? 'todo' : 'ok', href: TAB_HASH.references,
+      detail: exampleReferences ? "Course d'exemple : mets les tiennes" : `${references.length} course${references.length > 1 ? 's' : ''}`,
+    },
+    {
+      title: 'Ton profil de coureur', state: runnerUsed ? 'ok' : 'optional', href: TAB_HASH.profil,
+      detail: runnerUsed ? 'Utilisé dans le plan' : 'Facultatif : ta pente, ta fatigue',
+    },
+    {
+      title: 'Ton sac', state: gear.length > 0 && packed === gear.length ? 'ok' : 'todo', href: TAB_HASH.sac,
+      detail: gear.length === 0 ? 'Liste du matériel à faire' : packed === gear.length ? 'Tout est prêt' : `${packed} / ${gear.length} cochés`,
+    },
+    {
+      title: 'Ton assistance', state: crew.length > 0 ? 'ok' : 'optional', href: TAB_HASH.ravitos,
+      detail: crew.length > 0 ? `L'attend à ${crew.length} point${crew.length > 1 ? 's' : ''}` : "Facultatif : où elle t'attend",
+    },
+  ];
+  const pickerTitle = otherRace ? draftName : course?.race.name ?? (activeRace && mode === 'custom' ? raceName(activeRace) : 'Ta course');
+  const pickerSubtitle = mode === 'demo' ? 'Exemple · choisir une de tes courses' : plan && course && !otherRace
+    ? `${formatClock(course.race.start)} · ${formatKm(plan.totalDistanceKm)} km · ${formatMeters(plan.totalGainM)} D+`
+    : 'Plan à calculer';
   // Sur téléphone, les références sont dans Moi : le plan y renvoie par une ligne « Ton rythme ».
   const rhythmRow = (
       <ListRow icon={<RouteIcon size={18} />} tone={exampleReferences ? 'warm' : 'accent'}
@@ -574,7 +733,8 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           <img src="/icon.svg" alt="" width={28} height={28} />
           <span>Ravitaille</span>
         </a>
-        {tab === 'accueil' ? <div className="race-title" /> : otherRace ? (
+        {book.races.length > 0 ? <RacePicker title={pickerTitle} subtitle={pickerSubtitle} {...raceList} />
+          : tab === 'accueil' ? <div className="race-title" /> : otherRace ? (
           <div className="race-title">
             <h1>{draftName}</h1>
             <p>Plan à calculer</p>
@@ -674,10 +834,21 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
             onStrava={() => { setStravaRequested(true); goTab('references'); }}
             onWatch={() => setGarminOpen(true)}
             onPdf={() => void savePdf('summary')}
-            exportBlocked={pdfBlocked} />
+            exportBlocked={pdfBlocked}
+            onRaces={() => setRacesOpen(true)} draftName={draftName} prep={prep} raceKey={raceKey} />
         </main>
       )}
-      {tab === 'accueil' && !phone && (
+      {racesOpen && <RacesSheet {...raceList} onClose={() => setRacesOpen(false)} />}
+      {tab === 'accueil' && !phone && book.races.length > 0 && (
+        <main className="layout single">
+          <RaceDashboard plan={planReady ? plan! : null} course={planReady ? course! : null} isExample={mode === 'demo'}
+            loading={status.kind === 'loading'} list={raceList}
+            prep={[...prep, { title: 'Ta montre', state: 'optional', detail: pdfBlocked ? 'Après le calcul du plan' : 'Parcours et champ Prochain Ravito',
+              onClick: () => { if (!pdfBlocked) setGarminOpen(true); } }]}
+            onEditRace={() => { if (mode === 'demo') switchMode('custom'); else setEditorOpen(true); goTab('plan'); }} />
+        </main>
+      )}
+      {tab === 'accueil' && !phone && book.races.length === 0 && (
         <WelcomePage plan={plan} isExample={mode === 'demo'} feedbackUrl={feedbackUrl}
           onOpenPlan={() => goTab('plan')}
           onMyRace={() => { switchMode('custom'); goTab('plan'); }}
@@ -685,7 +856,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
       )}
 
       {tab === 'course' && (plan && course
-        ? <RaceView plan={plan} course={course} services={services} profile={nutritionProfile} crew={crew}
+        ? <RaceView raceKey={raceKey} plan={plan} course={course} services={services} profile={nutritionProfile} crew={crew}
           onShareCrew={crew.length > 0 ? (fix, message) => shareCrew(fix, null, message) : undefined} />
         : <p className="muted race-empty">Calcule d'abord le plan de ta course dans « Mon plan » : cette page te guidera point
           par point le jour J.</p>)}
@@ -726,7 +897,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           {tab === 'retour' && <>
             {subPage('Retours de course')}
             {mode === 'custom' && plan && course && !otherRace
-              ? <RaceReviewCard plan={plan} course={course} stored={runner} onChange={changeRunner} />
+              ? <RaceReviewCard plan={plan} course={course} stored={runner} onChange={changeRunner} raceId={book.active} />
               : <p className="muted">Le retour de course compare ton activité Strava au plan de ta course : prépare d'abord ta
                 course (Accueil, « Préparer ma course »).</p>}
           </>}
@@ -844,11 +1015,11 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
           {tab === 'ravitos' && plan && course && !phone && <div className="tab-tools"><Legend /></div>}
           {tab === 'ravitos' && plan && course && (
             <RavitosView plan={plan} services={services} profile={nutritionProfile} onProfileChange={changeNutritionProfile}
-              onShareCrew={(runner) => shareCrew(loadFix(course.race.name, plan.start), runner)}
+              onShareCrew={(runner) => shareCrew(loadFix(raceKey, plan.start), runner)}
               crew={crew} onCrewChange={changeCrew} />
           )}
 
-          {tab === 'sac' && course && <GearCard raceName={course.race.name} plan={plan} profile={nutritionProfile} />}
+          {tab === 'sac' && course && <GearCard raceKey={raceKey} raceName={course.race.name} plan={plan} profile={nutritionProfile} />}
 
           {tab === 'analyse' && <>
             <div className="tab-tools"><Legend /></div>
@@ -859,7 +1030,7 @@ export function App({ feedbackUrl = null }: { feedbackUrl?: string | null } = {}
             {/* Sur téléphone, le profil et les retours de course ont leur page dans Moi. */}
             {!phone && <RunnerProfileCard stored={runner} onChange={changeRunner} isExample={mode === 'demo'} />}
             {!phone && mode === 'custom' && plan && course && !otherRace && (
-              <RaceReviewCard plan={plan} course={course} stored={runner} onChange={changeRunner} />
+              <RaceReviewCard plan={plan} course={course} stored={runner} onChange={changeRunner} raceId={book.active} />
             )}
             {plans.length > 1 && (
               <div className="plan-hero-scenarios analyse-scenario" role="group" aria-label="Scénario du tableau détaillé">

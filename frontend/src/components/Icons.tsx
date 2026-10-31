@@ -66,3 +66,12 @@ export const LinkIcon = ({ size = 22 }: IconProps) => (
 export const ShieldIcon = ({ size = 22 }: IconProps) => (
   <svg {...base} width={size} height={size}><path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z" /><path d="M9 12l2 2 4-4" /></svg>
 );
+export const TrashIcon = ({ size = 22 }: IconProps) => (
+  <svg {...base} width={size} height={size}><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" /></svg>
+);
+export const PlusIcon = ({ size = 22 }: IconProps) => (
+  <svg {...base} width={size} height={size}><path d="M12 5v14M5 12h14" /></svg>
+);
+export const ChevronDownIcon = ({ size = 22 }: IconProps) => (
+  <svg {...base} width={size} height={size}><path d="M6 9l6 6 6-6" /></svg>
+);

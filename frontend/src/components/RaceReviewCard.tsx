@@ -12,6 +12,8 @@ interface Props {
   course: CourseView;
   stored: StoredRunnerProfile;
   onChange: (next: StoredRunnerProfile) => void;
+  /** Course de « Mes courses » comparée (api/races). */
+  raceId: string | null;
 }
 
 const SHOWN = 8;
@@ -34,7 +36,7 @@ function addDays(iso: string, days: number): string {
  * Retour de course : après la course, son activité Strava est comparée au plan, ravito par ravito, et la fatigue
  * mesurée dessus sert aux plans suivants (si le coureur la compte).
  */
-export function RaceReviewCard({ plan, course, stored, onChange }: Props) {
+export function RaceReviewCard({ plan, course, stored, onChange, raceId }: Props) {
   const [connected, setConnected] = useState<boolean | null>(null);
   const [activities, setActivities] = useState<StravaActivity[] | null>(null);
   const [chosen, setChosen] = useState<number | null>(null);
@@ -89,7 +91,7 @@ export function RaceReviewCard({ plan, course, stored, onChange }: Props) {
     // Le nom et la distance sont ceux de la course préparée : de Strava, on ne garde que l'activité (pour l'effacer si
     // elle disparaît de Strava), sa date (vérifiée chaque jour avec elle) et la fatigue mesurée.
     const result: RaceResult = { activityId: a.id, name: course.race.name, date: a.date, distanceKm: plan.totalDistanceKm,
-      fatigueExponent: review.fatigueExponent, use: count && review.fatigueExponent !== null };
+      fatigueExponent: review.fatigueExponent, use: count && review.fatigueExponent !== null, ...(raceId ? { raceId } : {}) };
     onChange({ ...stored, use: stored.use || result.use, races: [...stored.races.filter((r) => r.activityId !== a.id), result] });
     setReview(null);
     setActivities(null);

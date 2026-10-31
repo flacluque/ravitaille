@@ -176,6 +176,10 @@ export interface Snapshot {
   course: CourseView;
   plans: RacePlan[];
   savedAt: string;
+  /** Course de « Mes courses » (api/races) dont c'est le plan ; absent pour l'exemple. */
+  raceId?: string;
+  /** Empreinte de la saisie qui a donné ce plan (lib/draft draftSignature) : il est périmé si elle a changé. */
+  signature?: string;
 }
 
 const SNAPSHOT_KEY = 'trail-planner:dernier-plan';
