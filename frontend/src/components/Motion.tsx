@@ -99,14 +99,24 @@ export function SoftText({ value, className }: { value: string; className?: stri
 
 /**
  * Page side-by-side (08), pour une page qu'on ouvre ou qu'on referme : la page qui arrive vient de la droite (on
- * avance) ou de la gauche (on revient), dans un léger flou.
+ * avance) ou de la gauche (on revient), dans un léger flou. Jouée par l'API d'animation du navigateur, avec des
+ * valeurs calculées ici : Safari (iPhone) ignorait l'animation CSS, dont le décalage passait par une variable CSS
+ * dans les @keyframes.
  */
 export function playPageIn(el: HTMLElement | null, direction: 'forward' | 'back') {
-  if (!el) return;
-  el.classList.remove('t-page-in', 'forward', 'back');
-  void el.offsetWidth;
-  el.classList.add('t-page-in', direction);
-  window.setTimeout(() => el.classList.remove('t-page-in', 'forward', 'back'), ms('--page-slide-dur') + 60);
+  if (!el || typeof el.animate !== 'function' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const root = getComputedStyle(document.documentElement);
+  const distance = parseFloat(root.getPropertyValue('--page-slide-distance')) || 8;
+  const blur = parseFloat(root.getPropertyValue('--page-blur')) || 3;
+  const from = direction === 'forward' ? distance : -distance;
+  el.getAnimations().forEach((a) => a.cancel());
+  el.animate([
+    { opacity: 0, transform: `translateX(${from}px)`, filter: `blur(${blur}px)` },
+    { opacity: 1, transform: 'translateX(0)', filter: 'blur(0)' },
+  ], {
+    duration: ms('--page-slide-dur') || 250,
+    easing: root.getPropertyValue('--page-slide-ease').trim() || 'cubic-bezier(0.22, 1, 0.36, 1)',
+  });
 }
 
 /** Modal (06) : délai de fermeture, lu dans les jetons pour rester en phase avec le CSS. */

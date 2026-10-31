@@ -1591,14 +1591,7 @@ button.ravitos-back.done { justify-self: end; font-weight: 700; }
 .roadbook-time .t-text-soft { --text-soft-align: end; }
 
 /* Page side-by-side : la page qui arrive glisse de 8 px dans un léger flou (de la droite en avançant, de la
-   gauche en revenant). */
-.t-page-in { animation: t-page-in var(--page-slide-dur) var(--page-slide-ease); }
-.t-page-in.forward { --t-page-from-x: var(--page-slide-distance); }
-.t-page-in.back { --t-page-from-x: calc(var(--page-slide-distance) * -1); }
-@keyframes t-page-in {
-  from { opacity: 0; transform: translateX(var(--t-page-from-x, 0px)); filter: blur(var(--page-blur)); }
-  to { opacity: 1; transform: translateX(0); filter: blur(0); }
-}
+   gauche en revenant). Jouée en JavaScript (playPageIn, components/Motion.tsx) avec ces jetons. */
 
 /* Checkbox check : la case se remplit, puis la coche se dessine. La vraie case à cocher reste dessous (clavier,
    lecteurs d'écran), invisible. */
@@ -1643,7 +1636,7 @@ button.ravitos-back.done { justify-self: end; font-weight: 700; }
 @media (prefers-reduced-motion: reduce) {
   .t-tabs-pill, .segmented > a, .plan-hero-scenarios > button { transition: none !important; }
   .t-text-soft, .t-text-soft > span { transition: none !important; }
-  .t-page-in, .modal { animation: none !important; }
+  .modal { animation: none !important; }
   .t-check, .t-check svg path { transition: none !important; }
   .t-modal, .t-modal::backdrop { animation: none !important; }
 }
