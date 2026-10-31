@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { fetchStravaStatus, humanError } from '../api/client';
 import { STRAVA_MAX_AGE_DAYS } from '../lib/stravaData';
 
+/** Contact pour la confidentialité (à remplacer par l'adresse du nom de domaine de Ravitaille). */
+export const CONTACT_EMAIL = 'lacluque.flv@gmail.com';
+
 interface Props {
   /** Déconnecte Strava et efface ce qui en venait. */
   onDisconnectStrava: () => Promise<void>;
@@ -95,13 +98,12 @@ export function PrivacyPage({ onDisconnectStrava, feedbackUrl }: Props) {
         {error && <p className="field-error" role="alert">{error}</p>}
       </section>
 
-      {feedbackUrl && (
-        <section>
-          <h2>Une question</h2>
-          <p><a href={feedbackUrl} target="_blank" rel="noreferrer">Écris-nous</a> : une question sur tes données, une demande
-            d'effacement.</p>
-        </section>
-      )}
+      <section>
+        <h2>Une question</h2>
+        <p>Une question sur tes données, une demande d'effacement : écris à{' '}
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+          {feedbackUrl && <> Pour un bug ou une idée : <a href={feedbackUrl} target="_blank" rel="noreferrer">donner mon avis</a>.</>}</p>
+      </section>
     </article>
   );
 }
